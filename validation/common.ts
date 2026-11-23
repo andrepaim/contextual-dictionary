@@ -1,0 +1,139 @@
+// Shared pieces of the stage 3 measurement scripts (docs/validation.md).
+// These scripts read local inputs (the Kaikki extract, the real pack, the
+// model export) and write their outputs under ~/.cache/contextual-dictionary/
+// validation/; nothing they read or write is committed except the item lists
+// in validation/data/.
+import { createHash } from 'node:crypto'
+import fs from 'node:fs'
+import fsp from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
+import { Tokenizer } from '@huggingface/tokenizers'
+import { senseRequest } from '../src/sense/prompt'
+import { SELECTION_LIMITS, type ByteSource, type DictionaryResult, type Selection, type SenseFormat } from '../src/shared/contracts'
+
+const home = os.homedir()
+const expand = (value: string) => value.replace(/^~(?=\/|$)/, home)
+
+export const PATHS = {
+  kaikki: expand(process.env.CD_KAIKKI ?? '~/.cache/contextual-dictionary/kaikki/english-2026-10-30.jsonl.gz'),
+  pack: expand(process.env.CD_PACK ?? '~/.cache/contextual-dictionary/packs/wiktionary-en-v1.pack'),
+  model: expand(process.env.CD_MODEL_DIR ?? '~/src/sense-model/artifacts/upstream-english'),
+  out: expand(process.env.CD_VALIDATION_OUT ?? '~/.cache/contextual-dictionary/validation'),
+}
+fs.mkdirSync(PATHS.out, { recursive: true })
+
+export const CAPS = [8, 12, 16, 24, 48] as const
+/** The caps evaluated, and the model's own limit (127) as "no cap". */
+export const EVAL_CAPS = [...CAPS, 127] as const
+
+/**
+ * Ways of building the prompt that are evaluated: a cap on meanings, and
+ * optionally a cap on the prompt's length in characters (a stand-in for
+ * tokens, which the extension's offscreen document cannot count) and
+ * definitions shortened in the prompt only.
+ */
+export interface Variant { key: string; cap: number; maxChars?: number; shorten?: boolean }
+export const VARIANTS: Variant[] = [
+  ...EVAL_CAPS.map(cap => ({ key: String(cap), cap })),
+  { key: '48|c900', cap: 48, maxChars: 900 },
+  { key: '48|c1200', cap: 48, maxChars: 1200 },
+  { key: '48|c1600', cap: 48, maxChars: 1600 },
+  { key: '48|s|c1200', cap: 48, maxChars: 1200, shorten: true },
+  { key: '16|s', cap: 16, shorten: true },
+]
+
+/**
+ * A long definition as it could appear in the prompt only: wiktextract's
+ * joined gloss levels ("Parent: child") keep the label and the last level,
+ * and anything still over 200 characters is cut at a word boundary.
+ */
+export function shortDefinition(definition: string): string {
+  if (definition.length <= 150) return definition
+  const label = /^\([^()]*\)\s+/u.exec(definition)?.[0] ?? ''
+  const body = definition.slice(label.length)
+  const at = body.lastIndexOf(': ')
+  let text = at > 0 && body.length - at - 2 >= 25 ? label + body.slice(at + 2) : definition
+  if (text.length > 200) text = `${text.slice(0, 200).replace(/\s+\S*$/u, '')}…`
+  return text
+}
+
+/** senseRequest for one variant; the meanings' indices are those of `result`. */
+export function variantRequest(result: DictionaryResult, selection: Selection, format: SenseFormat, variant: Variant) {
+  const shown = variant.shorten
+    ? { ...result, entries: result.entries.map(entry => ({ ...entry, senses: entry.senses.map(sense => ({ ...sense, definition: shortDefinition(sense.definition) })) })) }
+    : result
+  // senseRequest bounds the prompt at max_length * 8 characters and drops meanings until it fits.
+  const bounded = variant.maxChars ? { ...format, max_length: variant.maxChars / 8 } : format
+  return senseRequest(shown, selection, bounded, variant.cap)
+}
+export const BUDGETS = [250, 350, 500, 750, 1000, 2000] as const
+
+/** Reads a file by byte range, as the extension reads its stored copy. */
+export async function fileSource(file: string): Promise<ByteSource & { close(): Promise<void> }> {
+  const handle = await fsp.open(file, 'r')
+  const { size } = await handle.stat()
+  return {
+    size,
+    read: async (start, end) => {
+      const buffer = new Uint8Array(end - start)
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, start)
+      return buffer.subarray(0, bytesRead)
+    },
+    close: () => handle.close(),
+  }
+}
+
+/** The compact-v1 format as the model worker reports it (src/model/session.ts readFormat). */
+export function readFormat(directory = PATHS.model): SenseFormat {
+  const metadata = JSON.parse(fs.readFileSync(path.join(directory, 'model_metadata.json'), 'utf8'))
+  const calibration = JSON.parse(fs.readFileSync(path.join(directory, 'calibration.json'), 'utf8'))
+  const config = JSON.parse(fs.readFileSync(path.join(directory, 'tokenizer_config.json'), 'utf8'))
+  return {
+    letters: metadata.letters, nota_index: metadata.nota_index, none_text: metadata.none_text, separator: metadata.separator,
+    mask_token: config.mask_token, max_length: metadata.max_length, temperature: calibration.temperature ?? 1,
+  }
+}
+
+export function tokenCounter(directory = PATHS.model): (text: string) => number {
+  const tokenizer = new Tokenizer(
+    JSON.parse(fs.readFileSync(path.join(directory, 'tokenizer.json'), 'utf8')),
+    JSON.parse(fs.readFileSync(path.join(directory, 'tokenizer_config.json'), 'utf8')),
+  )
+  return text => tokenizer.encode(text).ids.length
+}
+
+export const sha256Hex = (text: string) => createHash('sha256').update(text).digest('hex')
+
+const collapse = (text: string) => text.replace(/\s+/g, ' ')
+
+/**
+ * The selection the content script would send for the span [start, end) of a
+ * passage: white space collapsed, at most 120 characters on each side
+ * (src/content/selection.ts).
+ */
+export function selectionAt(text: string, start: number, end: number): Selection {
+  return {
+    text: text.slice(start, end),
+    before: collapse(text.slice(0, start)).trimStart().slice(-SELECTION_LIMITS.contextChars),
+    after: collapse(text.slice(end)).trimEnd().slice(0, SELECTION_LIMITS.contextChars),
+  }
+}
+
+export function readJsonl<T>(file: string): T[] {
+  if (!fs.existsSync(file)) return []
+  return fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map(line => JSON.parse(line) as T)
+}
+
+export const percentile = (sorted: number[], p: number) => {
+  if (!sorted.length) return NaN
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1))
+  return sorted[index]!
+}
+
+/** Buckets of meanings offered, as docs/validation.md reports them. */
+export const OFFERED_BUCKETS = [[1, 4], [5, 8], [9, 16], [17, 32], [33, Infinity]] as const
+/** Strata of meanings in the labelled entry. */
+export const ENTRY_BUCKETS = [[2, 2], [3, 4], [5, 8], [9, 16], [17, 32], [33, Infinity]] as const
+export const bucketLabel = ([low, high]: readonly [number, number]) => (high === Infinity ? `${low}+` : low === high ? `${low}` : `${low}–${high}`)
+export const bucketOf = <B extends readonly (readonly [number, number])[]>(buckets: B, value: number) => buckets.find(([low, high]) => value >= low && value <= high)
