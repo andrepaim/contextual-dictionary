@@ -4,7 +4,7 @@ import { CodedError } from '../../../src/shared/contracts'
 import { MemoryFileStore } from '../../../src/assets/file-store'
 import { ASSET_MANIFEST, type AssetManifest } from '../../../src/assets/manifest'
 import { LocalAssetService, createAssetService } from '../../../src/assets/service'
-import { abortable, body, fixture, gate, mockFetch, until } from './helpers'
+import { abortable, body, fixture, gate, mockFetch, tick, until } from './helpers'
 
 const idle = (requiredBytes: number, extra: Partial<BundleStatus> = {}): BundleStatus => ({ phase: 'missing', error: null, requiredBytes, receivedBytes: 0, totalBytes: 0, storedBytes: 0, ...extra })
 
@@ -328,6 +328,35 @@ describe('open and verification', () => {
     await service.open('wiktionary-test.pack')
     await service.checked()
     expect(reads).toBe(afterFirst)
+  })
+
+  test('background checks run one file at a time, so lookups and the model load share the thread with only one hash', async () => {
+    const first = setup()
+    await install(first.service, 'model')
+    const held = gate()
+    const reading = new Set<string>()
+    const order: string[] = []
+    const store: FileStore = {
+      open: async name => {
+        const source = await first.store.open(name)
+        return source && { size: source.size, read: async (a, b) => {
+          if (!reading.has(name)) { reading.add(name); order.push(name) }
+          if (name === 'model.onnx') await held.promise
+          return source.read(a, b)
+        } }
+      },
+      create: name => first.store.create(name), remove: name => first.store.remove(name), list: () => first.store.list(),
+    }
+    const service = new LocalAssetService({ store, manifest: first.manifest, fetch: first.fetch, hashChunkBytes: 1024 })
+    for (const name of ['model.onnx', 'model_metadata.json', 'tokenizer.json']) expect(await service.open(name)).toBeDefined()
+    await tick(20)
+    // The first file's hash is held up, and the others wait for it.
+    expect(order).toEqual(['model.onnx'])
+    held.open()
+    await service.checked()
+    expect(order).toEqual(['model.onnx', 'model_metadata.json', 'tokenizer.json'])
+    // Opening a file again while its check waits does not queue it twice.
+    expect(reading.size).toBe(3)
   })
 
   test('a tampered file of the same size is found by the background check, removed, reported and downloaded again', async () => {
