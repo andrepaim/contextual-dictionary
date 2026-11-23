@@ -5,7 +5,7 @@
   "version": "0.0.0",
   "minimum_chrome_version": "124",
   "permissions": ["storage", "offscreen", "unlimitedStorage"],
-  "host_permissions": [],
+  "host_permissions": ["https://github.com/andrepaim/contextual-dictionary/releases/download/*", "https://release-assets.githubusercontent.com/*"],
   "background": { "service_worker": "service-worker.js", "type": "module" },
   "action": { "default_title": "Contextual Dictionary", "default_popup": "popup.html" },
   "content_scripts": [
@@ -14,6 +14,6 @@
   "cross_origin_embedder_policy": { "value": "require-corp" },
   "cross_origin_opener_policy": { "value": "same-origin" },
   "content_security_policy": {
-    "extension_pages": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'"
+    "extension_pages": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://github.com/andrepaim/contextual-dictionary/releases/download/ https://release-assets.githubusercontent.com; object-src 'none'"
   }
 }
