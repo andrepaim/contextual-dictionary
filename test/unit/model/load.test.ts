@@ -68,7 +68,7 @@ describe('readModelLoad', () => {
     expect(Array.from(new Uint8Array(message.model))).toEqual([7, 7, 7])
   })
 
-  test('fails with MODEL_MISSING naming the first missing file', async () => {
+  test('fails with MODEL_MISSING naming the missing file', async () => {
     const files = { ...complete(), [MODEL_FILES.tokenizer]: undefined }
     const error = await readModelLoad(store(files).open, { threads: 1, wasmBase: '/ort/' }).catch(caught => caught)
     expect(error).toBeInstanceOf(CodedError)

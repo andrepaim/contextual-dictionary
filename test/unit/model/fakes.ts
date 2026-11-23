@@ -33,8 +33,12 @@ export class FakeTensor {
  */
 export class FakeTokenizer {
   static instances: FakeTokenizer[] = []
-  constructor(readonly json: Record<string, unknown>, readonly config: Record<string, unknown>) {
-    if (json.broken) throw new Error('bad tokenizer')
+  readonly json: Record<string, unknown>
+  readonly config: Record<string, unknown>
+  constructor(json: object, config: object) {
+    this.json = json as Record<string, unknown>
+    this.config = config as Record<string, unknown>
+    if (this.json.broken) throw new Error('bad tokenizer')
     FakeTokenizer.instances.push(this)
   }
   encode(text: string): { ids: number[] } {
