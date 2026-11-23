@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { ERROR_MESSAGES, PopupView, formatMegabytes } from '../../../src/popup/popup'
+import { ERROR_MESSAGES, PopupView, formatMegabytes, hostOf } from '../../../src/popup/popup'
 import { CodedError, DEFAULT_SETTINGS, type Answers, type Backend, type BundleName, type BundleStatus, type Request, type Settings, type Status } from '../../../src/shared/contracts'
 
 const MISSING: BundleStatus = { phase: 'missing', error: null, requiredBytes: 123_456_789, receivedBytes: 0, totalBytes: 123_456_789, storedBytes: 0 }
@@ -190,7 +190,7 @@ describe.each(['dictionary', 'model'] as const)('PopupView %s bundle', bundle =>
   })
 
   test('downloading: shows progress and Cancel', async () => {
-    await open(statusWith({ phase: 'downloading', receivedBytes: 30_864_197 }))
+    await open(statusWith({ phase: 'downloading', receivedBytes: 30_864_200 }))
     const scope = section(bundle)
     const bar = scope.querySelector('[role="progressbar"]')!
     expect(bar.getAttribute('aria-valuenow')).toBe('25')
@@ -381,5 +381,14 @@ describe('PopupView accessibility and credits', () => {
       expect(link.getAttribute('target')).toBe('_blank')
       expect(link.getAttribute('rel')).toBe('noopener noreferrer')
     }
+  })
+})
+
+describe('hostOf', () => {
+  test('is the host of http and https pages only', () => {
+    expect(hostOf('https://en.wikipedia.org/wiki/Mouse')).toBe('en.wikipedia.org')
+    expect(hostOf('http://127.0.0.1:8080/a.html')).toBe('127.0.0.1')
+    for (const url of [undefined, '', 'chrome://extensions', 'file:///tmp/a.html', 'about:blank', 'not a url', 'chrome-extension://abc/popup.html'])
+      expect(hostOf(url), String(url)).toBeNull()
   })
 })

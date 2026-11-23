@@ -123,7 +123,7 @@ describe('Card', () => {
     expect(toggle().textContent).toBe('Show all meanings')
     expect(toggle().getAttribute('aria-expanded')).toBe('false')
     toggle().click()
-    expect(texts(card, 'ol:first-of-type [data-part="definition"]')).toEqual(['A small rodent.', 'A pointing device.', 'A shy person.', 'A black eye.', 'A knot on a rope.'])
+    expect(texts(card, 'section:first-of-type [data-part="definition"]')).toEqual(['A small rodent.', 'A pointing device.', 'A shy person.', 'A black eye.', 'A knot on a rope.'])
     expect(toggle().textContent).toBe('Show fewer')
     expect(toggle().getAttribute('aria-expanded')).toBe('true')
     toggle().click()
