@@ -7,7 +7,19 @@
       <p id="mouse">Drag the mouse to move the cursor on screen, then press the left button to select the file.</p>
       <p id="bank">We walked along the bank of the river until the path turned <em>towards</em> the old mill.</p>
       <p id="split">The neural <span>network</span> was trained on a large set of labelled examples.</p>
+      <p id="slow">The tortoise moved slowly across the garden and ate every green leaf it found.</p>
+      <p id="unknown">The word qwzxqvplk is in no dictionary at all.</p>
       <p><input id="field" value="mouse in an input"> <span contenteditable="true" id="editable">mouse in editable text</span></p>
+      <p><textarea id="area">mouse in a textarea</textarea></p>
+      <shadow-note id="shadow"></shadow-note>
     </article>
+    <script>
+      customElements.define('shadow-note', class extends HTMLElement {
+        connectedCallback() {
+          const root = this.attachShadow({ mode: 'open' })
+          root.innerHTML = '<p id="inside">In the shadow, a mouse moves the cursor across the screen.</p>'
+        }
+      })
+    </script>
   </body>
 </html>

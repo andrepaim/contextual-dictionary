@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Fixture with hostile styles</title>
+    <style>
+      * { color: rgb(255, 0, 0) !important; font-size: 40px !important; font-family: serif !important; background: rgb(0, 255, 0) !important; }
+      contextual-dictionary-card { display: none !important; opacity: 0 !important; transform: scale(0) !important; }
+      div, ol, li, span, section, a, button { all: unset !important; display: none !important; }
+      ::selection { color: rgb(0, 0, 255) !important; }
+    </style>
+  </head>
+  <body><p id="hostile">Drag the mouse to move the cursor on screen.</p></body>
+</html>
