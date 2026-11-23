@@ -1,7 +1,7 @@
 // The toolbar popup: switches, download consent and progress. Wiring only;
 // see docs/plan.md section 5.5.
 import { createBackend } from '../content/backend'
-import { PopupView, hostOf } from './popup'
+import { PopupView, hostOf, withHost } from './popup'
 
 async function activeHost(): Promise<string | null> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -16,10 +16,12 @@ async function activeHost(): Promise<string | null> {
   }
 }
 
+const host = await activeHost().catch(() => null)
 const view = new PopupView({
   root: document.getElementById('app')!,
-  backend: createBackend(message => chrome.runtime.sendMessage(message)),
-  host: await activeHost().catch(() => null),
+  // Every answer's site switch is then for the active tab.
+  backend: createBackend(message => chrome.runtime.sendMessage(withHost(message, host))),
+  host,
 })
 void view.start()
 addEventListener('pagehide', () => view.destroy())

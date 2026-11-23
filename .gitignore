@@ -13,3 +13,4 @@ playwright-report/
 .env
 .env.*
 .DS_Store
+dist-e2e/

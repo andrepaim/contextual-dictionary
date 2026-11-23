@@ -203,6 +203,10 @@ export class Controller {
       // Nothing selected. A mouse click outside already dismissed the card;
       // a selection cleared from the keyboard does it here.
       if (!byMouse && this.#lookup) this.#cancel()
+      // A lookup that ended without a card (an error, an unknown word) is
+      // forgotten once the selection is gone, so selecting the same word
+      // again asks again, for example after the dictionary was installed.
+      else if (this.#lookup?.settled && this.#card?.state !== 'card') this.#lookup = null
       return
     }
     const selection = readSelection(range, focusedElement(this.#window.document))
