@@ -19,7 +19,8 @@
     "check": "npm run check:secrets && npm run typecheck && npm test && npm run build && npm run check:build",
     "check:build": "node scripts/check-build.mjs dist",
     "package": "node scripts/package.mjs",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "build:site": "node scripts/build-site.mjs"
   },
   "dependencies": {
     "@huggingface/tokenizers": "0.2.0",
