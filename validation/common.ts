@@ -39,6 +39,8 @@ export const VARIANTS: Variant[] = [
   { key: '48|c900', cap: 48, maxChars: 900 },
   { key: '48|c1200', cap: 48, maxChars: 1200 },
   { key: '48|c1600', cap: 48, maxChars: 1600 },
+  // The defaults chosen in stage 3: at most 24 meanings and 1,600 characters.
+  { key: '24|c1600', cap: 24, maxChars: 1600 },
   { key: '48|s|c1200', cap: 48, maxChars: 1200, shorten: true },
   { key: '16|s', cap: 16, shorten: true },
 ]

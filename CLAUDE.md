@@ -21,6 +21,7 @@ A Chrome (Manifest V3) extension: select a word on any page and a card shows its
 - `src/content/`, `src/popup/`: selection, card, controller, popup.
 - `src/background/`, `src/offscreen/`: service worker and offscreen document wiring.
 - `test/unit/` mirrors `src/`; `test/e2e/` holds Playwright tests; `test/fixtures/` holds small inputs.
+- `validation/`: the stage 3 measurement scripts (evaluation sets, scoring with the real model, the real extension benchmark, release acceptance) and `validation/data/` (item lists and the hand-written set). Run by hand with local inputs or the network, never in CI; results in `docs/validation.md`. Type-checked, not counted in coverage.
 
 ## Commands
 
@@ -35,6 +36,7 @@ npm run package     # reproducible release ZIP and SHA256SUMS.txt in package/
 npm run icons       # redraws src/icons/ (scripts/make-icons.mjs)
 ```
 
+- Measurements (`docs/validation.md`, "How to rerun"): `npx tsx validation/build-wiktionary-set.ts`, `validation/score-prompts.ts --threads 8`, `validation/analyze.ts`, `validation/extension-bench.ts`, and `validation/acceptance.ts` (downloads the real release). They write under `~/.cache/contextual-dictionary/validation/`.
 - End-to-end tests use `dist-e2e/` (`node scripts/build.mjs --e2e`): a fake model worker, an asset manifest read from `e2e-config.json` and loopback access, all swapped in at build time from `test/e2e/variant/`. The production build must contain none of it; `npm run check:build` fails if it does.
 
 ## Rules
@@ -47,7 +49,8 @@ npm run icons       # redraws src/icons/ (scripts/make-icons.mjs)
 - **Privacy.** Selections and their context stay inside the extension. No telemetry, no logging of page text, no remote code. The answer cache holds prompt hashes and numbers only.
 - **Untrusted input.** Page text, dictionary text and messages from pages are untrusted. Render text with `textContent`, never as HTML. Validate messages with `isRequest`.
 - **Published assets never change.** A new model or dictionary payload gets a new release tag and new pins.
-- **Do not commit** models, packs, Kaikki extracts or anything under `.data/`.
+- **Do not commit** models, packs, Kaikki extracts or anything under `.data/`, nor Wiktionary or pilot text from the evaluation sets: commit item identifiers only.
+- **Defaults come from measurements.** `DEFAULT_SETTINGS` and `RANKER_DEFAULTS.maxPromptChars` were chosen in `docs/validation.md`; change them only with new numbers there.
 
 ## Working on a task
 

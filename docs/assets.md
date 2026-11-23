@@ -1,6 +1,6 @@
 # Release assets
 
-The extension downloads its dictionary and its model from one GitHub release of this repository, once, after the reader confirms each download. Every file is pinned by size and SHA-256 in `src/assets/manifest.ts`, and the extension checks them while they arrive (`src/assets/download.ts`) and again on first use in each session (`src/assets/service.ts`). Published assets never change: a new payload gets a new tag and new pins.
+The extension downloads its dictionary and its model from one GitHub release of this repository, once, after the reader confirms each download. Every file is pinned by size and SHA-256 in `src/assets/manifest.ts`, and the extension checks them while they arrive (`src/assets/download.ts`) and again in the background after their first use in each session (`src/assets/service.ts`; a lookup does not wait for it, see `docs/validation.md`). Published assets never change: a new payload gets a new tag and new pins.
 
 ## What is published
 

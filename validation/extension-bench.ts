@@ -30,6 +30,7 @@ const { values } = parseArgs({ options: {
   cap: { type: 'string', default: '48' },
   budget: { type: 'string', default: '2000' },
   idle: { type: 'boolean', default: false },
+  'start-on': { type: 'boolean', default: false },
 } })
 const BENCH = path.join(PATHS.out, 'bench')
 const EXTENSION = path.join(BENCH, 'extension')
@@ -108,7 +109,7 @@ if (values.install) {
   try {
     for (const bundle of ['dictionary', 'model'] as const) {
       const before = await status(page)
-      const started = Date.now()
+      const started = performance.now()
       const reply = await send(page, { type: 'download', bundle, acceptBytes: before.bundles[bundle].requiredBytes })
       if (!reply.ok) throw new Error(`${bundle}: ${reply.code}`)
       for (;;) {
@@ -117,7 +118,7 @@ if (values.install) {
         if (now.bundles[bundle].phase === 'failed') throw new Error(`${bundle}: ${now.bundles[bundle].error}`)
         await sleep(500)
       }
-      console.log(`${bundle}: ${before.bundles[bundle].requiredBytes} bytes in ${((Date.now() - started) / 1000).toFixed(1)} s`)
+      console.log(`${bundle}: ${before.bundles[bundle].requiredBytes} bytes in ${((performance.now() - started) / 1000).toFixed(1)} s`)
     }
   } finally {
     await context.close()
@@ -138,6 +139,16 @@ const sample = items.filter((_, i) => i % 5 === 0).slice(0, Number(values.lookup
 const report: Record<string, unknown> = { label: values.label, build: values.build, cap: Number(values.cap), budget: Number(values.budget), load: os.loadavg(), at: new Date().toISOString() }
 const { context, page } = await launch(profile)
 try {
+  if (values['start-on']) {
+    // A session that starts with ordering on (the default since stage 3): the first lookups open the pack while the model loads.
+    await send(page, { type: 'set-settings', patch: { orderByContext: true, budgetMs: Number(values.budget), maxCandidates: Number(values.cap) } })
+    const startOn: number[] = []
+    const t0 = performance.now()
+    for (const [i, item] of sample.slice(0, 8).entries()) startOn.push(Math.round((await define(page, item.selection, `s${i}`)).ms))
+    report.startOnLookupsMs = startOn
+    for (;;) { const now = await status(page); if (now.ranker.state === 'ready' || now.ranker.state === 'failed') break; await sleep(20) }
+    report.startOnReadyMs = Math.round(performance.now() - t0)
+  }
   await send(page, { type: 'set-settings', patch: { orderByContext: false, budgetMs: Number(values.budget), maxCandidates: Number(values.cap) } })
   // The first lookup of the session: creates the offscreen document, opens the stored pack (and, before the fix, hashes all 66 MB of it).
   const first = await define(page, { text: 'mouse', before: 'Drag the ', after: ' to move the cursor on screen.' }, 'first')
@@ -153,15 +164,19 @@ try {
   report.dictionaryOnly = { n: dictionaryMs.length, p50: percentile(dictionaryMs, 50), p90: percentile(dictionaryMs, 90), p99: percentile(dictionaryMs, 99), max: dictionaryMs.at(-1) }
 
   // Turning ordering on: time until the model is ready (reading the files, before the fix hashing them, creating the session, two warm-up prompts).
-  const switched = Date.now()
+  const switched = performance.now()
   await send(page, { type: 'set-settings', patch: { orderByContext: true } })
+  // Lookups while the model is loading get dictionary order; how long do they take?
+  const duringLoad: number[] = []
+  for (const [i, item] of sample.slice(0, 5).entries()) duringLoad.push(Math.round((await define(page, item.selection, `l${i}`)).ms))
+  report.lookupsDuringModelLoadMs = duringLoad
   for (;;) {
     const now = await status(page)
     if (now.ranker.state === 'ready') break
     if (now.ranker.state === 'failed') throw new Error(`model failed: ${now.ranker.code}`)
     await sleep(20)
   }
-  report.modelReadyMs = Date.now() - switched
+  report.modelReadyMs = performance.now() - switched
   await sleep(1000)
   report.memoryModelLoaded = extensionMemory(profile)
 
@@ -173,6 +188,39 @@ try {
     rows.push({ id: item.id, ms: answer.ms, ordered: answer.ordered, offered: prompt?.offered ?? null, tokens: prompt?.tokens ?? null })
   }
   report.memoryAfterLookups = extensionMemory(profile)
+  // Common words with many meanings, in sentences like those of the acceptance run (docs/validation.md):
+  // their prompts reach the length limit, so they show the slowest case. Each passage is new to the cache.
+  const COMMON: Array<[string, string, string]> = [
+    ['Drag the ', 'mouse', ' to move the cursor on screen.'],
+    ['She deposited the cheque at the ', 'bank', ' on Monday morning before work.'],
+    ['The children sat on the grassy ', 'bank', ' of the river and watched the boats go by.'],
+    ['The dblclick event ', 'fires', ' when a pointing device button is clicked twice on a single element.'],
+    ['A hash character within a ', 'string', ' literal is just a hash character.'],
+    ['Python knows a number of compound data types, used to group together other values. The most versatile is the ', 'list', ', which can be written as a list of comma-separated values.'],
+    ['Cut the bread into thin slices, then toast each ', 'slice', ' until golden.'],
+    ['The officials said the ', 'fire', ' was contained by early morning.'],
+    ['Press any ', 'key', ' to continue the installation.'],
+    ['Set the environment variable before you ', 'run', ' the server.'],
+  ]
+  const common: Array<{ word: string; ms: number; ordered: boolean }> = []
+  for (const [i, [before, text, after]] of COMMON.entries()) {
+    const answer = await define(page, { text, before, after }, `c${i}`)
+    common.push({ word: text, ms: Math.round(answer.ms), ordered: answer.ordered })
+  }
+  report.commonWords = common
+  // The same with an ordinary page in front, as when a reader double-clicks on a page: the extension's
+  // pages are then all in the background.
+  const front = await context.newPage()
+  await front.goto('data:text/html,<p>An ordinary page in front.</p>')
+  await front.bringToFront()
+  await sleep(500)
+  const behind: typeof common = []
+  for (const [i, [before, text, after]] of COMMON.entries()) {
+    const answer = await define(page, { text, before: `${before} `.trimEnd() + ' ', after: `${after} Again.` }, `b${i}`)
+    behind.push({ word: text, ms: Math.round(answer.ms), ordered: answer.ordered })
+  }
+  report.commonWordsPageInFront = behind
+  await front.close()
   const byBucket = [...OFFERED_BUCKETS, [0, 0] as const].map(bucket => {
     const group = rows.filter(row => (bucket[1] === 0 ? row.offered === null : row.offered !== null && row.offered >= bucket[0] && row.offered <= bucket[1]))
     const ms = group.map(row => row.ms).sort((a, b) => a - b)
@@ -181,6 +229,22 @@ try {
   const all = rows.map(row => row.ms).sort((a, b) => a - b)
   report.ordering = { n: rows.length, ordered: rows.filter(row => row.ordered).length, p50: percentile(all, 50), p90: percentile(all, 90), p99: percentile(all, 99), byBucket }
   fs.writeFileSync(path.join(PATHS.out, `bench-${values.label}-lookups.jsonl`), rows.map(row => JSON.stringify(row)).join('\n') + '\n')
+
+  // The same model loaded again in the same session: files already checked, so this is reading, sending and starting only.
+  await send(page, { type: 'set-settings', patch: { orderByContext: false } })
+  await sleep(1000)
+  const again = performance.now()
+  await send(page, { type: 'set-settings', patch: { orderByContext: true } })
+  for (;;) {
+    const now = await status(page)
+    if (now.ranker.state === 'ready') break
+    if (now.ranker.state === 'failed') throw new Error(`model failed: ${now.ranker.code}`)
+    await sleep(20)
+  }
+  report.modelReadyAgainMs = performance.now() - again
+  const mouse = await define(page, { text: 'mouse', before: 'Drag the ', after: ' to move the cursor on screen.' }, 'mouse-1')
+  const mouseAgain = await define(page, { text: 'mouse', before: 'Drag the ', after: ' to move the cursor on screen.' }, 'mouse-2')
+  report.mouse = { first: { ms: mouse.ms, ordered: mouse.ordered }, repeat: { ms: mouseAgain.ms, ordered: mouseAgain.ordered } }
 
   if (values.idle) {
     console.error('waiting 10.5 minutes for the idle unload')

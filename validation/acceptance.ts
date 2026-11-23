@@ -22,7 +22,7 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { chromium, type BrowserContext, type Page } from '@playwright/test'
 import type { Status } from '../src/shared/contracts'
-import { card, doubleClickWord, shownEntries } from '../test/e2e/support/card'
+import { doubleClickWord, shownEntries } from '../test/e2e/support/card'
 import { PATHS } from './common'
 
 const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version as string
@@ -52,21 +52,30 @@ async function launch(): Promise<{ context: BrowserContext; id: string }> {
 }
 const statusOf = (page: Page) => page.evaluate(() => chrome.runtime.sendMessage({ type: 'status' })).then(reply => (reply as { value: Status }).value)
 async function waitFor(page: Page, test: (status: Status) => boolean, what: string, timeoutMs = 600_000) {
-  const started = Date.now()
+  const started = performance.now()
   for (;;) {
     const status = await statusOf(page)
-    if (test(status)) return Date.now() - started
-    if (Date.now() - started > timeoutMs) throw new Error(`timed out waiting for ${what}: ${JSON.stringify(status.bundles)}`)
+    if (test(status)) return Math.round(performance.now() - started)
+    if (performance.now() - started > timeoutMs) throw new Error(`timed out waiting for ${what}: ${JSON.stringify(status.bundles)}`)
     await sleep(250)
   }
 }
+/**
+ * Resolves when the final card is in the page, polled on every animation
+ * frame (Playwright's own waits poll every 100–500 ms, too coarsely to time).
+ */
+const cardShown = (page: Page, timeout = 10_000) => page.waitForFunction(() => {
+  const host = document.querySelector('contextual-dictionary-card') as (Element & { shadowRoot: ShadowRoot | null }) | null
+  return !!host?.shadowRoot?.querySelector('[data-part="card"]')
+}, undefined, { polling: 'raf', timeout })
+
 /** Double-clicks `word` in paragraph `id` and returns the time to the card and its entries. */
 async function lookUp(page: Page, id: string, word: string) {
   await page.mouse.click(5, 5)
-  const started = Date.now()
+  const started = performance.now()
   await doubleClickWord(page.locator(`#${id}`), word)
-  await card(page).waitFor({ state: 'visible', timeout: 10_000 })
-  const ms = Date.now() - started
+  await cardShown(page)
+  const ms = Math.round(performance.now() - started)
   const entries = await shownEntries(page)
   return { ms, entries }
 }
@@ -79,17 +88,23 @@ try {
   await popup.goto(`chrome-extension://${id}/popup.html`)
   const before = await statusOf(popup)
   note(`fresh profile: dictionary ${before.bundles.dictionary.phase} (${before.bundles.dictionary.requiredBytes} bytes), model ${before.bundles.model.phase} (${before.bundles.model.requiredBytes} bytes), order by context ${before.settings.orderByContext}`)
-  let started = Date.now()
+  let started = performance.now()
   await popup.locator('[data-bundle="dictionary"] [data-action="download"]').click()
   await waitFor(popup, status => status.bundles.dictionary.phase === 'ready', 'the dictionary')
-  note(`dictionary downloaded and installed through the popup in ${((Date.now() - started) / 1000).toFixed(1)} s`)
+  note(`dictionary downloaded and installed through the popup in ${((performance.now() - started) / 1000).toFixed(1)} s`)
   await popup.reload()
-  started = Date.now()
-  await popup.locator('[data-control="orderByContext"]').click()
-  note(`consent: ${(await popup.locator('[data-part="consent"]').textContent())?.replace(/\s+/g, ' ').trim()}`)
-  await popup.locator('[data-action="confirm-order"]').click()
+  started = performance.now()
+  if (await popup.locator('[data-control="orderByContext"]').isChecked()) {
+    // Ordering is on by default: the model section offers the download with its size.
+    note(`model section: ${(await popup.locator('[data-bundle="model"]').textContent())?.replace(/\s+/g, ' ').trim()}`)
+    await popup.locator('[data-bundle="model"] [data-action="download"]').click()
+  } else {
+    await popup.locator('[data-control="orderByContext"]').click()
+    note(`consent: ${(await popup.locator('[data-part="consent"]').textContent())?.replace(/\s+/g, ' ').trim()}`)
+    await popup.locator('[data-action="confirm-order"]').click()
+  }
   await waitFor(popup, status => status.bundles.model.phase === 'ready', 'the model')
-  note(`model downloaded and installed through the popup in ${((Date.now() - started) / 1000).toFixed(1)} s`)
+  note(`model downloaded and installed through the popup in ${((performance.now() - started) / 1000).toFixed(1)} s`)
   const readyMs = await waitFor(popup, status => status.ranker.state === 'ready', 'the model to load', 60_000)
   note(`model ready ${readyMs} ms after the install finished`)
   const installed = await statusOf(popup)
@@ -144,6 +159,8 @@ try {
       { url: 'https://en.wikipedia.org/wiki/Computer_mouse', words: ['ball', 'button', 'wheel', 'pointer'] },
       { url: 'https://developer.mozilla.org/en-US/docs/Web/API/Element/dblclick_event', words: ['fires', 'element', 'pointing', 'event'] },
       { url: 'https://blog.mozilla.org/en/', words: ['browser', 'privacy', 'web'] },
+      // In case Wikipedia refuses automated access (it answered 429 to a headless browser on 2026-11-23).
+      { url: 'https://docs.python.org/3/tutorial/introduction.html', words: ['interpreter', 'string', 'slice', 'list'] },
     ]
     for (const site of sites) {
       const tab = await context.newPage()
@@ -159,7 +176,8 @@ try {
               const text = node.textContent ?? ''
               const match = new RegExp(`\\b${word}\\b`, 'i').exec(text)
               const parent = node.parentElement
-              if (!match || !parent || parent.closest('script,style,nav,header,input,textarea,[contenteditable]')) continue
+              // Not inside a link: a double-click on a link follows it, as in any browser.
+              if (!match || !parent || parent.closest('script,style,nav,header,a,button,input,textarea,[contenteditable]')) continue
               const range = document.createRange()
               range.setStart(node, match.index); range.setEnd(node, match.index + word.length)
               const box = range.getBoundingClientRect()
@@ -172,12 +190,12 @@ try {
           }, word)
           if (!found) { note(`  "${word}": not found as visible text`); continue }
           await tab.mouse.click(2, 2)
-          const clicked = Date.now()
+          const clicked = performance.now()
           await tab.mouse.dblclick(found.x, found.y)
-          const shown = await card(tab).waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false)
+          const shown = await cardShown(tab, 5000).then(() => true, () => false)
           if (!shown) { note(`  "${word}" in "…${found.context}…": no card within 5 s`); continue }
           const entries = await shownEntries(tab)
-          note(`  "${word}" in "…${found.context}…": card in ${Date.now() - clicked} ms; ${entries.slice(0, 3).map(entry => `${entry.lemma}/${entry.pos}: ${JSON.stringify(entry.definitions[0]?.slice(0, 60))}`).join('; ')}`)
+          note(`  "${word}" in "…${found.context}…": card in ${Math.round(performance.now() - clicked)} ms; ${entries.slice(0, 3).map(entry => `${entry.lemma}/${entry.pos}: ${JSON.stringify(entry.definitions[0]?.slice(0, 60))}`).join('; ')}`)
           await tab.keyboard.press('Escape')
         }
       } catch (error) {
