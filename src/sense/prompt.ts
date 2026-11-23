@@ -35,10 +35,13 @@ export function codePointSpan(text: string, start: number, end: number): SenseTa
   return { start: Array.from(text.slice(0, start)).length, end: Array.from(text.slice(0, end)).length, text: text.slice(start, end) }
 }
 
-// Very common English function words, and common function words of the
-// European languages whose text an English dictionary could otherwise appear
-// to match. Words that are also English ("do", "die", "per", "van") are left out.
-const ENGLISH = new Set('the of and to in is are was were be been being that this these those for with as by on at from it its we our they their which or not but can has have had an will would should may also than such into between each used using he she his her who there'.split(' '))
+// Very common English words, and common function words of the European
+// languages whose text an English dictionary could otherwise appear to match.
+// Words that are also function words there ("do", "die", "per", "van", "me",
+// "over", "so", "a") are left out of the English list.
+const ENGLISH = new Set(('the of and to in is are was were be been being that this these those for with as by on at from it its we our they their which or not but can has have had an will would should may also than such into between each used using he she his her who there'
+  // Added in stage 3: everyday words of short sentences (docs/validation.md).
+  + ' i you your my what how when where why all if does did just more very about out up after before then now here some any only because could must might too much many one like get got go going know think want need make made him them us').split(' '))
 const FOREIGN = new Set(('de da das dos que não nao uma um para com por em os ela ele seu sua são é ao à na no' // Portuguese
   + ' el la los las del con y es una lo muy pero más como' // Spanish
   + ' le les et des du est une pour dans sur ce qui pas très avec' // French
@@ -50,7 +53,8 @@ for (const word of ['no', 'na']) FOREIGN.delete(word)
 
 /**
  * A conservative check that a passage is English: Latin script, few
- * accented letters, and English rather than other languages' function words.
+ * accented letters, and at least one common English word and twice as many
+ * as other languages' function words.
  */
 export function looksEnglish(passage: string): boolean {
   const letters = passage.match(/\p{L}/gu) ?? []
@@ -62,7 +66,7 @@ export function looksEnglish(passage: string): boolean {
   const english = words.filter(word => ENGLISH.has(word)).length
   const foreign = words.filter(word => FOREIGN.has(word)).length
   if (words.length < 6) return foreign === 0
-  return english >= 2 && english >= 2 * foreign
+  return english >= 1 && english >= 2 * foreign
 }
 
 /** Whether `value` is a usable compact-v1 format: a letter for every candidate and for "none of the above". */
@@ -125,10 +129,13 @@ const dictionaryOrder = (a: SenseCandidate, b: SenseCandidate) => a.entry - b.en
  * its surrounding whitespace only separates it from `before` and `after`.
  *
  * At most `maxCandidates` meanings are offered (see `roundRobin` for which),
- * and fewer when the prompt would exceed the length bound; the rest keep
- * dictionary order after the scored ones (`contextualOrder`).
+ * and fewer when the prompt would be longer than `maxPromptChars` characters
+ * or the model's own bound; the rest keep dictionary order after the scored
+ * ones (`contextualOrder`). The model's time grows with the prompt's length,
+ * so a length limit keeps it near the lookup budget whatever the definitions'
+ * lengths (docs/validation.md).
  */
-export function senseRequest(result: DictionaryResult, selection: Selection, format: SenseFormat, maxCandidates?: number): SenseRequest | { skip: SkipReason } {
+export function senseRequest(result: DictionaryResult, selection: Selection, format: SenseFormat, maxCandidates?: number, maxPromptChars?: number): SenseRequest | { skip: SkipReason } {
   if (!result.entries.length) return { skip: 'NO_ENTRIES' }
   if (result.entries.every(entry => entry.senses.length < 2)) return { skip: 'SINGLE_SENSES' }
   if (!isSenseFormat(format)) return { skip: 'INVALID_FORMAT' }
@@ -161,7 +168,8 @@ export function senseRequest(result: DictionaryResult, selection: Selection, for
   const marked = points.slice(0, target.start).join('') + '*' + target.text + '*' + points.slice(target.end).join('')
   const none = `${format.letters[format.nota_index]}. ${format.none_text}`
   // Every token is at least one character, so a longer prompt cannot fit; the worker checks tokens.
-  const bound = format.max_length * 8
+  const limit = maxPromptChars !== undefined && maxPromptChars > 0 ? maxPromptChars : Number.POSITIVE_INFINITY
+  const bound = Math.min(format.max_length * 8, limit)
   // Too long: drop the last meaning of the round-robin order and try again, while some entry keeps two.
   for (let count = picks.length; count >= 2; count--) {
     const candidates = picks.slice(0, count).sort(dictionaryOrder)

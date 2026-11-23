@@ -150,7 +150,11 @@ export interface Settings {
   maxCandidates: number
 }
 
-export const DEFAULT_SETTINGS: Settings = { definitions: true, orderByContext: false, disabledSites: [], budgetMs: 350, maxCandidates: 48 }
+// Chosen from the stage 3 measurements (docs/validation.md): model order beat
+// dictionary order clearly, so ordering is on (the model is still downloaded
+// only after the reader confirms it); with the ranker's prompt length limit a
+// 750 ms budget answers every lookup of the evaluation set on 8 and 4 threads.
+export const DEFAULT_SETTINGS: Settings = { definitions: true, orderByContext: true, disabledSites: [], budgetMs: 750, maxCandidates: 24 }
 export const SETTING_LIMITS = { budgetMs: { min: 50, max: 2000 }, maxCandidates: { min: 2, max: 127 } } as const
 
 export interface Status {

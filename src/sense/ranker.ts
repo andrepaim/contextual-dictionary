@@ -24,6 +24,8 @@ export interface SenseRankerOptions {
   budgetMs?: number
   /** The most meanings offered to the model in one lookup. */
   maxCandidates?: number
+  /** The longest prompt, in characters; fewer meanings are offered to stay within it. */
+  maxPromptChars?: number
   /** The pause before a failed model is loaded again. */
   retryMs?: number
   /** Loading (including `createWorker`) taking longer than this fails with LOAD_TIMEOUT. */
@@ -39,6 +41,11 @@ export interface SenseRankerOptions {
 export const RANKER_DEFAULTS = {
   budgetMs: DEFAULT_SETTINGS.budgetMs,
   maxCandidates: DEFAULT_SETTINGS.maxCandidates,
+  // About 420 tokens. The model's time grows with the prompt; on the stage 3
+  // machine every prompt within this length was answered within 750 ms with 8
+  // or 4 threads (docs/validation.md). Below 2,048 characters the worker can
+  // never refuse a prompt as over its 2,048-token limit.
+  maxPromptChars: 1600,
   retryMs: 60_000,
   loadTimeoutMs: 120_000,
   runTimeoutMs: 10_000,
@@ -74,6 +81,7 @@ export class SenseRanker implements Ranker {
   private nextId = 1
   private budgetMs: number
   private maxCandidates: number
+  private readonly maxPromptChars: number
   private readonly retryMs: number
   private readonly loadTimeoutMs: number
   private readonly runTimeoutMs: number
@@ -83,6 +91,7 @@ export class SenseRanker implements Ranker {
   constructor(private readonly options: SenseRankerOptions) {
     this.budgetMs = options.budgetMs ?? RANKER_DEFAULTS.budgetMs
     this.maxCandidates = options.maxCandidates ?? RANKER_DEFAULTS.maxCandidates
+    this.maxPromptChars = options.maxPromptChars ?? RANKER_DEFAULTS.maxPromptChars
     this.retryMs = options.retryMs ?? RANKER_DEFAULTS.retryMs
     this.loadTimeoutMs = options.loadTimeoutMs ?? RANKER_DEFAULTS.loadTimeoutMs
     this.runTimeoutMs = options.runTimeoutMs ?? RANKER_DEFAULTS.runTimeoutMs
@@ -131,7 +140,7 @@ export class SenseRanker implements Ranker {
       this.armIdle()
       const format = this.format
       if (this.state !== 'ready' || !format) { this.warm(); return result }
-      const request = senseRequest(result, selection, format, this.maxCandidates)
+      const request = senseRequest(result, selection, format, this.maxCandidates, this.maxPromptChars)
       if ('skip' in request) { this.stats.skipped++; return result }
       if (request.candidates.length < request.total) this.stats.capped++
       const key = bytesToHex(sha256(encoder.encode(request.prompt)))
