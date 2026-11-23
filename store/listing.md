@@ -1,0 +1,116 @@
+# Chrome Web Store listing
+
+Everything to paste into the Chrome Web Store Developer Dashboard, and the images to upload. Not submitted yet. The images are made by `validation/store-assets.ts` from the built extension with the real dictionary and model.
+
+## Package
+
+Upload `contextual-dictionary-<version>.zip` from the [release](https://github.com/andrepaim/contextual-dictionary/releases) of that version. The store reads the name, the summary and the version from its manifest.
+
+## Store listing
+
+| Field | Value |
+| --- | --- |
+| Name (from the manifest) | Contextual Dictionary |
+| Summary (from the manifest) | Select a word on any page to see its dictionary meanings, with the one that fits the passage first. Runs on your computer. |
+| Category | Education ("Tools" as the alternative) |
+| Language | English |
+| Homepage URL | https://github.com/andrepaim/contextual-dictionary |
+| Support URL | https://github.com/andrepaim/contextual-dictionary/issues |
+
+### Detailed description
+
+```
+Double-click a word on any web page and a card opens beside it with the word's meanings from the English Wiktionary. The meaning that fits the sentence you are reading is listed first.
+
+Most dictionary extensions show meanings in the dictionary's own order, so you read through five of them to find the one you need. Contextual Dictionary reads the sentence around the word and puts the best fit at the top.
+
+An example: in Hamlet's "enterprises of great pith and moment", Wiktionary lists "moment" as a point in space, then a point in time. Contextual Dictionary opens on "Weight or importance", which is what Hamlet means.
+
+HOW IT WORKS
+• Double-click a word, or select up to four words, on an ordinary web page.
+• A card shows each entry with three meanings and examples. "Show all meanings" shows the rest.
+• Press Escape or click elsewhere to close it.
+• Switch it off for a single site, or switch off the ordering, from the extension's window.
+
+PRIVATE BY DESIGN
+• The dictionary and the word-sense model both run on your computer.
+• The words you select and the pages you read are never sent anywhere.
+• No account, no analytics, no telemetry.
+• Works offline after setup.
+
+SETUP
+The first time you open the extension's window it offers two downloads, and each one asks for your confirmation:
+• Dictionary: 66.5 MB. About 1.2 million English headwords with examples.
+• Context model: 147 MB. Needed only for ordering by context.
+
+GOOD TO KNOW
+• English only.
+• The ordering is a help, not an oracle. On 2,300 test sentences it put the right meaning first 55% of the time, against 28% for dictionary order. No meaning is ever hidden.
+• While the model is in use the extension needs about 1 GB of memory. It is released after ten idle minutes.
+• It does not run on Chrome's own pages, the Chrome Web Store, PDFs or inside text fields.
+
+OPEN SOURCE
+Code under the MIT licence: https://github.com/andrepaim/contextual-dictionary
+Definitions from Wiktionary (CC BY-SA 4.0), via Kaikki.org. Model: Ettin-150m-WSD (Apache-2.0).
+```
+
+### Images
+
+| Slot | File | Size |
+| --- | --- | --- |
+| Store icon | `icon-128.png` | 128 × 128, artwork 100 × 100 on a transparent margin |
+| Screenshot 1 | `screenshot-1-context.png` | 1280 × 800 |
+| Screenshot 2 | `screenshot-2-compare.png` | 1280 × 800 |
+| Screenshot 3 | `screenshot-3-any-page.png` | 1280 × 800 |
+| Screenshot 4 | `screenshot-4-private.png` | 1280 × 800 |
+| Screenshot 5 | `screenshot-5-dark.png` | 1280 × 800 |
+| Small promo tile | `promo-small-440x280.png` | 440 × 280 |
+| Marquee promo tile (optional) | `promo-marquee-1400x560.png` | 1400 × 560 |
+
+Screenshots 1 and 2 show `shakespeare.mit.edu/hamlet/hamlet.3.1.html`; 3 and 5 show a demonstration page written for this purpose; 4 shows the extension's window. The cards and the window are captures of the running extension, set in a frame with a headline. The screenshots are 24-bit PNG without transparency, as the store asks.
+
+## Privacy tab
+
+### Single purpose
+
+```
+Shows dictionary definitions for the word or short phrase the user selects on a web page, with the meaning that fits the surrounding sentence listed first.
+```
+
+### Permission justifications
+
+| Permission | Justification |
+| --- | --- |
+| `storage` | Keeps the user's settings (definitions on or off, ordering on or off, sites switched off) and the last status of the downloads. |
+| `unlimitedStorage` | Keeps the downloaded dictionary (66.5 MB) and word-sense model (about 270 MB) in the extension's private file storage so the browser does not evict them. |
+| `offscreen` | Runs the dictionary lookup and the word-sense model in a hidden extension page with a Web Worker and WebAssembly threads, which a service worker cannot do. |
+| Host permission `https://github.com/andrepaim/contextual-dictionary/releases/download/*` and `https://release-assets.githubusercontent.com/*` | Downloads the dictionary and the model files from this project's GitHub release, once, after the user confirms each download. They are data files checked against SHA-256 digests pinned in the extension; no code is downloaded. |
+| Content script on all sites (`<all_urls>`) | A dictionary has to work on whatever page the user is reading. The script waits for a double-click or a short selection, reads the selected text and up to 120 characters on each side of it, and shows the card. It reads nothing else and sends nothing off the device. |
+
+### Remote code
+
+```
+No, I am not using remote code. All JavaScript and WebAssembly is inside the package. The two downloads are data: a dictionary file and an ONNX model, each verified against a SHA-256 digest pinned in the extension.
+```
+
+### Data usage
+
+The extension transmits no user data. It does read the selected text and the text around it on the page, and processes them on the device only. The cautious answer on the form is to tick **Website content** and nothing else, since that text is used, though never collected or sent. Then tick all three certifications; each is true:
+
+- User data is not sold or transferred to third parties.
+- User data is not used or transferred for purposes unrelated to the single purpose.
+- User data is not used or transferred to determine creditworthiness or for lending.
+
+### Privacy policy URL
+
+https://github.com/andrepaim/contextual-dictionary/blob/main/docs/privacy.md
+
+## Distribution
+
+Free, public, all regions.
+
+## Notes for the review
+
+- A content script on all sites usually means a longer, in-depth review.
+- If a reviewer asks about the downloads: they are data files from this repository's release `assets-v1`, described in `docs/assets.md` and `docs/privacy.md`.
+- Each upload needs a higher version than the last; the release workflow enforces that the tag equals the version.
