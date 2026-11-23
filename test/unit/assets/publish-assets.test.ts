@@ -512,11 +512,13 @@ describe('parseOptions and main', () => {
     expect(log.join('\n')).toMatch(/ERROR .*already exists/)
   })
 
-  test('stages in a new temporary directory and removes it unless --keep', async () => {
-    const { argv, deps, log } = await mainSetup()
+  test('stages in a new directory under ~/.cache (a snap-installed gh cannot read /tmp) and removes it unless --keep', async () => {
+    const { argv, deps, log, setup } = await mainSetup()
     const withoutOut = argv.filter(arg => !arg.startsWith('--out='))
     expect(await main(['--dry-run', ...withoutOut], deps(fakeRun().run, fakeFetch([]).fetch))).toBe(0)
     const removed = /Staged in (\S+)/.exec(log.join('\n'))![1]!
+    expect(path.dirname(removed)).toBe(path.join(setup.dir, '.cache/contextual-dictionary'))
+    expect(path.basename(removed)).toMatch(/^publish-assets-v1-/)
     expect(fs.existsSync(removed)).toBe(false)
     log.length = 0
     expect(await main(['--dry-run', '--keep', ...withoutOut], deps(fakeRun().run, fakeFetch([]).fetch))).toBe(0)
