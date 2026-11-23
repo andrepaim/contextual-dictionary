@@ -1,0 +1,131 @@
+# Publishes the extension ZIP as a GitHub release when a v* tag is pushed.
+# The tag must equal the package version (also in package-lock.json and the
+# built manifest). Every check runs first; the ZIP is built twice and must
+# come out byte-identical.
+#
+# Dry runs stop before publishing:
+# - run by hand (workflow_dispatch) with dry_run on, the default;
+# - on pull requests that change this workflow or the packaging scripts.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - scripts/package.mjs
+      - scripts/release-version.mjs
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Stop before publishing
+        type: boolean
+        default: true
+      tag:
+        description: Tag to check the versions against (default v<package version>)
+        type: string
+        required: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:secrets
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:build
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: release-playwright-traces
+          path: test-results/
+          retention-days: 7
+
+  release:
+    name: Package and publish
+    needs: [check, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      PUBLISH: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Choose the tag
+        id: tag
+        env:
+          PUSHED: ${{ github.event_name == 'push' && github.ref_name || '' }}
+          GIVEN: ${{ inputs.tag }}
+        run: |
+          tag="${PUSHED:-$GIVEN}"
+          if [ -z "$tag" ]; then tag="v$(node -p "require('./package.json').version")"; fi
+          echo "name=$tag" >> "$GITHUB_OUTPUT"
+          echo "Tag: $tag (publish: $PUBLISH)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Package the extension
+        run: npm run package
+      - name: The tag must equal the version
+        run: node scripts/release-version.mjs "${{ steps.tag.outputs.name }}" dist/manifest.json
+      - name: A second build gives the same ZIP
+        run: |
+          mkdir -p "$RUNNER_TEMP/again"
+          node --input-type=module -e "import { packageExtension } from './scripts/package.mjs'; const { sha256 } = await packageExtension({ buildDir: process.env.RUNNER_TEMP + '/again/dist', outDir: process.env.RUNNER_TEMP + '/again/package' }); console.log(sha256)"
+          diff package/SHA256SUMS.txt "$RUNNER_TEMP/again/package/SHA256SUMS.txt"
+          cat package/SHA256SUMS.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ steps.tag.outputs.name }}
+          path: |
+            package/*.zip
+            package/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish the release
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then echo "Release $TAG exists already; published releases never change." >&2; exit 1; fi
+          gh release create "$TAG" package/*.zip package/SHA256SUMS.txt --verify-tag --title "Contextual Dictionary ${TAG#v}" \
+            --notes "Chrome extension ZIP built by CI from $GITHUB_SHA. Load it unpacked or submit it to the Chrome Web Store. Check it with: sha256sum -c SHA256SUMS.txt"
+      - name: Dry run
+        if: env.PUBLISH != 'true'
+        run: |
+          echo "Dry run: stopped before publishing ${{ steps.tag.outputs.name }}." >> "$GITHUB_STEP_SUMMARY"

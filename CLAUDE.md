@@ -29,9 +29,13 @@ npm ci
 npm run typecheck
 npm test            # unit tests with coverage thresholds (85% lines, 80% branches)
 npm run build       # unpacked extension in dist/
-npm run test:e2e    # builds, then runs Playwright with the extension (npx playwright install chromium once)
-npm run check       # secret scan, typecheck, unit tests, build
+npm run test:e2e    # builds dist/ and the end-to-end variant dist-e2e/, then runs Playwright (npx playwright install chromium once)
+npm run check       # secret scan, typecheck, unit tests, build, build check (scripts/check-build.mjs)
+npm run package     # reproducible release ZIP and SHA256SUMS.txt in package/
+npm run icons       # redraws src/icons/ (scripts/make-icons.mjs)
 ```
+
+- End-to-end tests use `dist-e2e/` (`node scripts/build.mjs --e2e`): a fake model worker, an asset manifest read from `e2e-config.json` and loopback access, all swapped in at build time from `test/e2e/variant/`. The production build must contain none of it; `npm run check:build` fails if it does.
 
 ## Rules
 
