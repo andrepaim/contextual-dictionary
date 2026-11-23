@@ -1,0 +1,108 @@
+# id	lemma	part of speech	meaning index in its entry	start of the definition (checked by build-written-set.ts)
+# Labels chosen by the agent that ran stage 3 before the model was run on these sentences; no human review.
+# A label "-" means no meaning in the pack fits; the item is left out and counted.
+w001	bank	noun	0	(countable) An institution where one can
+w002	bank	noun	0	(hydrology) An edge of river, lake, or o
+w003	run	verb	25	(intransitive) To be a candidate in an e
+w004	charge	verb	5	(transitive, criminal law, law enforceme
+w005	cut	verb	12	To separate, remove, reject or reduce: T
+w006	share	noun	1	(finance) A financial instrument that sh
+w007	power	noun	11	(specifically) Strength; energy: Electri
+w008	draft	noun	7	(Preliminary) written work: A version of
+w009	crane	noun	2	A mechanical lifting machine or device, 
+w010	match	noun	1	(sports) Any contest or trial of strengt
+w011	yield	noun	6	(finance) The quantity of something prod
+w012	case	noun	4	(law) A legal proceeding; a lawsuit or p
+w013	tax	noun	0	Money or goods collected by a government
+w014	fire	noun	2	(countable) The occurrence, often accide
+w015	bill	noun	2	A draft of a law, presented to a legisla
+w016	fan	noun	0	A person who is fond of something or som
+w017	hub	noun	1	A point where many routes meet and traff
+w018	spring	noun	1	(countable, uncountable) The season of t
+w019	barrage	noun	3	(by extension) An overwhelming outburst 
+w020	competition	noun	0	(uncountable) The action of competing.
+w021	string	noun	19	(by extension) A thread or cord on which
+w022	strike	verb	14	(intransitive) To have a sharp or severe
+w023	tackle	verb	1	To face or deal with, attempting to over
+w024	poll	noun	2	A polling place (usually as plural, poll
+w025	pump	noun	2	A device for dispensing liquid or gas to
+w026	wing	noun	11	A part of something that is lesser in si
+w027	rally	verb	3	(business, trading, of the market, stock
+w028	mouse	noun	4	(computing) An input device that is move
+w029	key	noun	20	(computing) Senses relating to a set of 
+w030	file	noun	3	(computing) An aggregation of data on a 
+w031	table	noun	15	A two-dimensional presentation of data; 
+w032	run	verb	38	(transitive) To execute or carry out a p
+w033	function	noun	7	(computing) A routine that receives zero
+w034	-	-	-	-
+w035	branch	noun	10	(computing) A group of related files in 
+w036	port	noun	8	(also networking) A number that delimits
+w037	shell	noun	31	(computing) An operating system software
+w038	cell	noun	19	(statistics) The unit in a statistical a
+w039	memory	noun	2	(computing) The part of a computer that 
+w040	fork	noun	10	(metonymic) (software development, conte
+w041	thread	noun	9	(computing) A unit of execution, lighter
+w042	log	noun	2	(computer science) Specifically, an appe
+w043	driver	noun	5	(computing) Something that drives someth
+w044	button	noun	2	(graphical user interface) An on-screen 
+w045	commit	verb	6	(transitive, programming) To integrate n
+w046	build	noun	1	(computing, countable) Any of various ve
+w047	volume	noun	10	(computing) An accessible storage area w
+w048	column	noun	1	A vertical line of entries in a table, u
+w049	scale	noun	1	An ordered, usually numerical sequence u
+w050	token	noun	9	An object or disclosure to attest or aut
+w051	cache	noun	1	(computing) A store, protected and often
+w052	package	noun	2	(software) A piece of software which has
+w053	socket	noun	0	(electricity) Any of various concave obj
+w054	bug	noun	8	(chiefly computing, engineering jargon) 
+w055	bug	noun	3	Any minibeast: Any insect, arachnid, myr
+w056	bark	noun	0	(countable, uncountable) The exterior co
+w057	bark	verb	0	(intransitive) To make a short, loud, ex
+w058	bat	noun	1	A club made of wood or aluminium used fo
+w059	bat	noun	0	Any flying mammal of the order Chiropter
+w060	plot	noun	0	(narratology) The course of a story, com
+w061	plot	noun	1	An area or land used for building on or 
+w062	fan	noun	1	An electrical or mechanical device for m
+w063	fan	noun	0	A person who is fond of something or som
+w064	train	noun	19	Connected sequence of people or things: 
+w065	train	verb	1	(transitive) To teach and form (someone)
+w066	pitch	noun	0	(music, phonetics) The perceived frequen
+w067	pitch	noun	5	An effort to sell or promote something.
+w068	pitch	noun	2	(sports, UK, Australia, New Zealand) The
+w069	tip	noun	1	A piece of advice.
+w070	tip	verb	0	To give a small gratuity to, especially 
+w071	flat	adj	15	(of a tire or other inflated object) Def
+w072	flat	noun	0	(chiefly UK, New England, South Africa, 
+w073	match	noun	0	A small wooden stick specially treated w
+w074	case	noun	1	A box, sheath, or covering generally.
+w075	mate	noun	2	(colloquial, UK, Australia, New Zealand,
+w076	policy	noun	0	A principle of behaviour, conduct which 
+w077	bolt	noun	0	A (usually) metal fastener consisting of
+w078	bolt	noun	9	Senses involving sudden movement: A ligh
+w079	spring	noun	10	Something which springs, springs forth, 
+w080	whisk	verb	1	(transitive) In cooking, to whip e.g. eg
+w081	season	verb	0	(transitive) To flavour food with spices
+w082	fold	verb	3	(transitive, cooking) To stir (semisolid
+w083	boil	noun	0	The point at which fluid begins to chang
+w084	reduce	verb	6	(transitive, cooking) To decrease the li
+w085	cream	verb	6	(transitive, cooking) To rub, stir, or b
+w086	zest	noun	0	The outer skin of a citrus fruit, used a
+w087	line	verb	0	(transitive) To cover the inner surface 
+w088	drain	verb	2	(transitive, ergative) To cause liquid t
+w089	rest	verb	2	(intransitive) To be free from that whic
+w090	stir	verb	0	(transitive) To disturb the relative pos
+w091	square	noun	4	(Canada, US) Something characterized by 
+w092	pinch	noun	2	A small amount of powder or granules, su
+w093	peak	noun	0	A point; the sharp end or top of anythin
+w094	pan	noun	0	A wide, flat receptacle used around the 
+w095	toss	verb	6	To stir or mix (a salad).
+w096	steam	verb	0	(transitive, cooking) To cook with steam
+w097	serve	verb	4	(transitive) To provide a service (or, b
+w098	chop	verb	0	(transitive) To cut into pieces with sho
+w099	dough	noun	0	A thick, malleable substance made by mix
+w100	grill	noun	3	(UK) A cooking device comprising a sourc
+w101	stock	noun	12	(cooking, uncountable, countable) The ra
+w102	dress	verb	16	(cooking) To prepare (food) for cooking 
+w103	score	verb	0	(transitive) To cut a notch or a groove 
+w104	set	verb	17	(intransitive) To gel; to solidify.
+w105	run	verb	16	(intransitive) To flow: Of a liquid or e

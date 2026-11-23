@@ -1,0 +1,105 @@
+news	The central bank raised interest rates for the third time this year, citing persistent inflation.	bank
+news	Floodwaters breached the river bank overnight, forcing hundreds of residents to evacuate.	bank
+news	The senator plans to run for governor next year, according to people familiar with her thinking.	run
+news	Police said the suspect was charged with fraud and released on bail pending a hearing.	charged
+news	The company will cut 2,000 jobs as part of a plan to reduce costs.	cut
+news	Shares of the carmaker fell sharply after it lowered its forecast for the year.	Shares
+news	The storm left thousands without power across the region on Tuesday.	power
+news	The minister refused to comment on the leaked draft of the budget.	draft
+news	Rescue teams used a crane to lift the wreckage from the canal.	crane
+news	The striker scored twice in the second half to seal the match.	match
+news	Investors are watching the yield on ten-year bonds closely.	yield
+news	The court will hear the case in March after the appeal was granted.	case
+news	The government announced a new tax on sugary drinks to fund school sports.	tax
+news	Officials said the fire was contained by early morning but the cause is still unknown.	fire
+news	The president signed the bill into law on Friday.	bill
+news	Thousands of fans lined the streets to watch the parade.	fans
+news	The airline grounded its entire fleet after a software failure at its main hub.	hub
+news	The band will release its first album in a decade this spring.	spring
+news	The minister faced a barrage of questions from reporters after the vote.	barrage
+news	Analysts expect the merger to face scrutiny from competition regulators.	competition
+news	The team's coach was fired after a string of defeats.	string
+news	A strong earthquake struck off the coast early on Sunday, but no tsunami warning was issued.	struck
+news	The mayor promised to tackle the housing shortage within two years.	tackle
+news	Voters head to the polls on Thursday in a closely watched election.	polls
+news	Prices at the pump have climbed for six straight weeks.	pump
+news	The museum's new wing will house its collection of modern art.	wing
+news	Stocks rallied on Wall Street after the jobs report beat expectations.	rallied
+docs	Drag the mouse to move the cursor on screen.	mouse
+docs	Press any key to continue the installation.	key
+docs	Save the file before closing the editor, or your changes will be lost.	file
+docs	Each table in the database must have a primary key.	table
+docs	Run the script with the verbose flag to print every step.	Run
+docs	The function returns null if the list is empty.	function
+docs	Set the environment variable before you start the server.	Set
+docs	Clone the repository and switch to the development branch.	branch
+docs	The server listens on port 8080 by default.	port
+docs	Open a shell and type the following command.	shell
+docs	Each cell in the spreadsheet can hold a number, text or a formula.	cell
+docs	The garbage collector frees memory that is no longer reachable.	memory
+docs	Use a fork of the project if you want to make changes without affecting the original.	fork
+docs	The thread pool size can be configured in the settings file.	thread
+docs	Each record in the log contains a timestamp and a message.	log
+docs	The driver for the printer must be installed before it can be used.	driver
+docs	Click the button in the toolbar to export the current page as a PDF.	button
+docs	Commit your changes with a short message describing what you did.	Commit
+docs	If the build fails, check the output of the compiler for errors.	build
+docs	Mount the volume before copying files to it.	volume
+docs	The query returns every row where the status column is empty.	column
+docs	This option controls the scale of the chart's vertical axis.	scale
+docs	Paste the token into the field labelled API key.	token
+docs	The cache stores recent results so repeated requests are served faster.	cache
+docs	Each package lists its dependencies in a manifest file.	package
+docs	Make sure the cable is plugged into the correct socket.	socket
+forum	I've been trying to fix this bug for three days and I'm about to lose my mind.	bug
+forum	Found a huge bug in my kitchen this morning, any idea what kind it is?	bug
+forum	Does anyone know a good way to get rid of the bark on old logs before splitting them?	bark
+forum	My dog won't stop barking at the mailman, any tips?	barking
+forum	Just picked up a used bat for my son's little league team, is aluminum better than wood?	bat
+forum	We saw a bat flying around the porch light last night, should we be worried?	bat
+forum	The plot of the second season was a mess, honestly.	plot
+forum	We rented a plot at the community garden and grew way too many zucchini.	plot
+forum	Is it worth upgrading the fan on my laptop? It gets really loud under load.	fan
+forum	I've been a fan of the band since their first record came out.	fan
+forum	Anyone else's train delayed this morning? Stuck outside the station for forty minutes.	train
+forum	I'm trying to train my puppy to sit but she keeps getting distracted.	train
+forum	Is there a way to change the pitch of a song without changing its speed?	pitch
+forum	Our pitch to the investors went better than expected, they want a second meeting.	pitch
+forum	The kids played football on the pitch until it got dark.	pitch
+forum	Thanks for the tip, I'll try lowering the temperature next time.	tip
+forum	How much do you usually tip at a restaurant in the US?	tip
+forum	My tire went flat on the highway and the spare was flat too.	flat
+forum	We just moved into a small flat near the city centre.	flat
+forum	The match won't light because the box got wet in the rain.	match
+forum	I can't find a case that fits my phone with the camera bump.	case
+forum	My mate lent me his spare charger for the weekend.	mate
+forum	This forum has a strict policy against posting personal information.	policy
+forum	Does anyone know how to remove a rusted bolt without stripping it?	bolt
+forum	A bolt of lightning hit the tree right next to our house.	bolt
+forum	The spring in my garage door snapped this morning, is that something I can replace myself?	spring
+recipe	Whisk the eggs and sugar until the mixture is pale and fluffy.	Whisk
+recipe	Season the chicken with salt and pepper before roasting.	Season
+recipe	Fold the egg whites gently into the batter with a spatula.	Fold
+recipe	Bring the water to a boil, then lower the heat and simmer for ten minutes.	boil
+recipe	Simmer the sauce until it has reduced by half.	reduced
+recipe	Cream the butter and sugar together until light.	Cream
+recipe	Grate the zest of one lemon into the bowl.	zest
+recipe	Line a baking tray with parchment paper.	Line
+recipe	Drain the pasta, reserving a cup of the cooking water.	Drain
+recipe	Let the dough rest in the fridge for at least an hour.	rest
+recipe	Stir in the beans and cook until heated through.	Stir
+recipe	Cut the cake into twelve squares once it has cooled.	squares
+recipe	Add a pinch of salt to bring out the flavour.	pinch
+recipe	Beat the cream until it forms soft peaks.	peaks
+recipe	Pour the batter into the pan and bake for 25 minutes.	pan
+recipe	Toss the salad with the dressing just before serving.	Toss
+recipe	Cover the pot with a lid and steam the mussels until they open.	steam
+recipe	Garnish with a sprig of mint and serve immediately.	serve
+recipe	Chop the onions finely and fry them until golden.	Chop
+recipe	Knead the dough on a floured surface until smooth and elastic.	dough
+recipe	Slice the loaf thinly and toast the bread under the grill.	grill
+recipe	Keep the stock at a gentle simmer while you prepare the vegetables.	stock
+recipe	Dress the leaves with olive oil and a squeeze of lemon.	Dress
+recipe	Use a sharp knife to score the skin of the duck in a criss-cross pattern.	score
+recipe	Leave the jam to set for a few hours before you open the jar.	set
+recipe	Rinse the rice under cold water until the water runs clear.	runs
