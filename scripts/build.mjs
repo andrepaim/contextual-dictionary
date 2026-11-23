@@ -3,7 +3,8 @@
 //   node scripts/build.mjs [--outdir=<directory>] [--e2e]
 //
 // Bundles every *.entry.ts, copies the manifest (with the package version),
-// the HTML pages and the ONNX Runtime WebAssembly files. The output depends
+// the HTML pages, the icons, the licence texts and the ONNX Runtime
+// WebAssembly files. The output depends
 // only on the sources, so two builds of one commit are identical.
 //
 // --e2e builds the end-to-end test variant (default directory dist-e2e/): the
@@ -31,6 +32,18 @@ export const ENTRIES = [
   { source: 'src/popup/popup.entry.ts', output: 'popup.js', format: 'esm' },
 ]
 const PAGES = ['src/offscreen/offscreen.html', 'src/popup/popup.html']
+const ICONS = ['icon-16.png', 'icon-32.png', 'icon-48.png', 'icon-128.png']
+/** Licence texts shipped with the extension: [source in the repository, path in the build]. */
+export const LICENSES = [
+  ['LICENSE', 'LICENSE'],
+  ['NOTICE.md', 'NOTICE.md'],
+  ['notices/NOTICES-dictionary.txt', 'licenses/NOTICES-dictionary.txt'],
+  ['notices/NOTICES-model.txt', 'licenses/NOTICES-model.txt'],
+  ['licenses/onnxruntime/LICENSE', 'licenses/onnxruntime-LICENSE.txt'],
+  ['licenses/onnxruntime/ThirdPartyNotices.txt', 'licenses/onnxruntime-ThirdPartyNotices.txt'],
+  ['node_modules/@huggingface/tokenizers/LICENSE', 'licenses/huggingface-tokenizers-LICENSE.txt'],
+  ['node_modules/@noble/hashes/LICENSE', 'licenses/noble-hashes-LICENSE.txt'],
+]
 /** The CPU (WebAssembly) runtime: one loader and one binary. */
 const RUNTIME = ['ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm']
 
@@ -91,6 +104,10 @@ export async function buildExtension(target, { e2e = false } = {}) {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'src/manifest.json'), 'utf8'))
   fs.writeFileSync(path.join(target, 'manifest.json'), `${JSON.stringify(buildManifest(manifest, version, e2e), null, 2)}\n`)
   for (const page of PAGES) fs.copyFileSync(path.join(root, page), path.join(target, path.basename(page)))
+  fs.mkdirSync(path.join(target, 'icons'))
+  for (const icon of ICONS) fs.copyFileSync(path.join(root, 'src/icons', icon), path.join(target, 'icons', icon))
+  fs.mkdirSync(path.join(target, 'licenses'))
+  for (const [source, output] of LICENSES) fs.copyFileSync(path.join(root, source), path.join(target, output))
   if (!e2e) for (const file of RUNTIME) fs.copyFileSync(path.join(root, 'node_modules/onnxruntime-web/dist', file), path.join(target, 'ort', file))
   return target
 }
