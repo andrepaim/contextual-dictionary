@@ -38,7 +38,7 @@ const temporary = (prefix: string) => fs.mkdtempSync(path.join(os.tmpdir(), `cd-
  * a new asset server. Pass `reuse` to start again on the same profile and
  * extension directory (the extension keeps its id and private files).
  */
-export async function launch(options: { reuse?: Session; control?: boolean; args?: string[] } = {}): Promise<Session> {
+export async function launch(options: { reuse?: Session; control?: boolean; args?: string[]; defaults?: boolean } = {}): Promise<Session> {
   if (!fs.existsSync(path.join(E2E_DIR, 'manifest.json'))) throw new Error('Build the end-to-end variant first: node scripts/build.mjs --e2e')
   const fixture = await assetFixture()
   const server = await startAssetServer(fixture)
@@ -54,6 +54,9 @@ export async function launch(options: { reuse?: Session; control?: boolean; args
   })
   const worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker')
   const extensionId = new URL(worker.url()).host
+  // The tests start with "Order by context" off, as a reader who switched it off, unless they ask for
+  // the shipped defaults (ordering on since stage 3). A restarted session keeps what it had.
+  if (!options.reuse && !options.defaults) await worker.evaluate(() => chrome.storage.local.set({ settings: { orderByContext: false } }))
   // Opening it creates the offscreen document (the popup asks for the live status).
   const control = await context.newPage()
   if (options.control ?? true) await control.goto(`chrome-extension://${extensionId}/popup.html`)

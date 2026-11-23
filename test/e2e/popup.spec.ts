@@ -117,3 +117,19 @@ test('the real popup finds the tab host through the page and its site switch sil
   await expect(cardHost(page)).toBeHidden()
   expect((await requestCounts(session)).define).toBe(before)
 })
+
+test('a fresh profile has "Order by context" on; without the model it says so, downloads nothing, and the model starts once confirmed', async () => {
+  const fresh = await launch({ defaults: true })
+  try {
+    const popup = fresh.control
+    await install(fresh, 'dictionary')
+    await expect(popup.locator('[data-control="orderByContext"]')).toBeChecked()
+    await expect(popup.locator('[data-part="ranker"]')).toContainText('Order by context needs the model')
+    expect((await status(popup)).settings).toMatchObject({ orderByContext: true, budgetMs: 750, maxCandidates: 24 })
+    expect(fresh.server.requests).toEqual(fresh.fixture.files.dictionary.map(file => file.name))
+    await install(fresh, 'model')
+    await expect.poll(async () => (await status(popup)).ranker.state).toBe('ready')
+  } finally {
+    await fresh.close()
+  }
+})
