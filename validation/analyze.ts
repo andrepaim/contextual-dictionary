@@ -84,13 +84,14 @@ const table = (header: string[], rows: string[][]) => {
   out()
 }
 
-const DEFAULT_CAP = 48
+/** The shipped defaults: at most 24 meanings and 1,600 characters. */
+const DEFAULT_CAP = '24|c1600'
 const groupBy = (key: (item: Item) => string) => {
   const groups = new Map<string, Item[]>()
   for (const item of items) groups.set(key(item), [...(groups.get(key(item)) ?? []), item])
   return groups
 }
-const accuracyRows = (groups: Map<string, Item[]>, cap: number, order?: string[]) => [...groups.entries()]
+const accuracyRows = (groups: Map<string, Item[]>, cap: number | string, order?: string[]) => [...groups.entries()]
   .sort((a, b) => (order ? order.indexOf(a[0]) - order.indexOf(b[0]) : b[1].length - a[1].length))
   .map(([name, group]) => {
     const dictionary = summary(group.map(item => item.labelled.sense + 1))
@@ -104,16 +105,16 @@ out()
 const missing = items.filter(item => PRESENT.some(({ key }) => outcome(item, key).result === 'missing')).length
 if (missing) out(`**${missing} items have prompts without an answer yet.**\n`)
 
-for (const cap of [DEFAULT_CAP, 16, 127]) {
+for (const cap of [DEFAULT_CAP, '48', '16', '127']) {
   const model = items.map(item => (outcome(item, cap).rank === 1 ? 1 : 0)), dictionary = items.map(item => (item.labelled.sense === 0 ? 1 : 0))
   const model3 = items.map(item => (outcome(item, cap).rank <= 3 ? 1 : 0)), dictionary3 = items.map(item => (item.labelled.sense <= 2 ? 1 : 0))
   const [low, high] = pairedInterval(model, dictionary, Number(values.seed))
   const [low3, high3] = pairedInterval(model3, dictionary3, Number(values.seed) + 1)
-  out(`Cap ${cap === 127 ? 'none (127)' : cap}: first meaning, model minus dictionary ${pct(mean(model) - mean(dictionary))} (95% bootstrap interval ${pct(low)} to ${pct(high)}); top three ${pct(mean(model3) - mean(dictionary3))} (${pct(low3)} to ${pct(high3)}).`)
+  out(`Cap ${cap === '127' ? 'none (127)' : cap}: first meaning, model minus dictionary ${pct(mean(model) - mean(dictionary))} (95% bootstrap interval ${pct(low)} to ${pct(high)}); top three ${pct(mean(model3) - mean(dictionary3))} (${pct(low3)} to ${pct(high3)}).`)
   out()
 }
 
-out(`### Accuracy at cap ${DEFAULT_CAP}, no budget, by meanings in the labelled entry`)
+out(`### Accuracy at the defaults (${DEFAULT_CAP}), no budget, by meanings in the labelled entry`)
 out()
 const strata = ['1', ...ENTRY_BUCKETS.map(bucketLabel)]
 const stratumOf = (item: Item) => { const bucket = bucketOf(ENTRY_BUCKETS, item.meanings); return bucket ? bucketLabel(bucket) : String(item.meanings) }
@@ -134,7 +135,7 @@ if (values.set === 'wiktionary' && fs.existsSync(path.join(PATHS.out, 'wiktionar
   out()
 }
 
-out(`### Accuracy at cap ${DEFAULT_CAP}, no budget, by part of speech`)
+out(`### Accuracy at the defaults (${DEFAULT_CAP}), no budget, by part of speech`)
 out()
 const mainPos = ['noun', 'verb', 'adj', 'adv']
 table(ACC_HEADER, accuracyRows(groupBy(item => (mainPos.includes(item.pos) ? item.pos : 'other')), DEFAULT_CAP))

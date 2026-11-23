@@ -38,6 +38,8 @@ This is a port of pdfpal's "Order by context" feature (`~/src/pdfpal-ettin-defin
 
 **Unproven, validated in stage 3:** inference speed under WebAssembly, and ranking accuracy on Wiktionary definitions (the model was trained on WordNet glosses).
 
+**Stage 3 results** (`docs/validation.md`): with 8 threads a prompt of up to 1,600 characters is scored in 0.28 s at the median and at most 0.69 s; on 2,300 Wiktionary-labelled items model order puts the labelled meaning first 55.4% of the time against 28.2% for dictionary order (top three 77.9% against 60.1%). The model costs about 1 GB of memory while loaded.
+
 ## 3. Product decisions
 
 | Topic | Decision |
@@ -47,10 +49,10 @@ This is a port of pdfpal's "Order by context" feature (`~/src/pdfpal-ettin-defin
 | Trigger | Double-click, or a selection of at most 4 words and 80 characters containing a letter. Never inside inputs, textareas, `contenteditable` or password fields. |
 | Card | Shadow DOM, positioned near the selection, keyboard dismiss (Escape), "Show all meanings", attribution line "Wiktionary, CC BY-SA 4.0" with a link to the entry. |
 | Render policy | One final render. A lightweight placeholder appears at once; the card renders when the order is known or the budget ends, whichever is first. A late answer is cached for the next lookup of the same passage and never reorders a visible card. |
-| Budget | Default 350 ms for a ready model, configurable 50–2000 ms. Revisit with stage 3 numbers. |
-| Candidates | All meanings are offered when they fit. Above `maxCandidates` (default 48, revisit in stage 3) or the token limit, only the first meanings in dictionary order are scored; the rest keep their order after the scored ones. |
+| Budget | Default 350 ms for a ready model, configurable 50–2000 ms. Revisit with stage 3 numbers. **Stage 3: 750 ms**, with the prompt length limit below: every lookup of the evaluation set answered in time on 8 and 4 threads (`docs/validation.md`). |
+| Candidates | All meanings are offered when they fit. Above `maxCandidates` (default 48, revisit in stage 3) or the token limit, only the first meanings in dictionary order are scored; the rest keep their order after the scored ones. **Stage 3:** the time depends on the prompt's length, not the number of meanings, so the ranker also limits prompts to 1,600 characters (about 420 tokens, below the 2,048-token limit, so no prompt is refused as too long); `maxCandidates` default 24. |
 | Ordering policy | Same as pdfpal: stable sort inside each entry; dictionary order on "none of the above" win or tie, single-meaning entries, non-English passage, unsafe text (`*`, control tokens), failure or timeout. |
-| Opt-in | Definitions work as soon as the dictionary is installed. "Order by context" is a separate switch. Each download shows its size and starts only after confirmation. |
+| Opt-in | Definitions work as soon as the dictionary is installed. "Order by context" is a separate switch. Each download shows its size and starts only after confirmation. **Stage 3:** the switch is on by default, because model order clearly beat dictionary order; the model still downloads only after confirmation. |
 | Sites | Works on all sites by default with a per-site off switch in the popup. |
 | Assets | Published as a GitHub release `assets-v1` of this repository: `ettin-150m-wsd-int8.onnx.gz`, the small model files, `wiktionary-en-v1.pack`, and notices. Every file is pinned by size and SHA-256 in `src/assets/manifest.ts`. Published assets are never changed; a new payload gets a new tag. |
 | Licenses | Code MIT. Dictionary pack CC BY-SA 4.0 (Wiktionary). Model Apache-2.0 (base MIT). ONNX Runtime MIT. Notices ship in the extension and next to the assets. |
@@ -126,7 +128,7 @@ The header holds `{ version, language, source, license, createdFrom, snapshot, e
 - `manifest.ts`: release tag and, per file, `{ name, url, size, sha256, storedName, storedSize, storedSha256, encoding: 'identity' | 'gzip' }`, grouped into the bundles `dictionary` and `model`.
 - `file-store.ts`: `FileStore` over the origin private file system, plus an in-memory implementation for tests. Writes go to a temporary name and are moved into place only after verification.
 - `download.ts`: streaming fetch with progress, a stall timer, an abort signal, incremental SHA-256 of the transferred bytes (`@noble/hashes`), size limit enforcement, optional gunzip, incremental SHA-256 of the stored bytes. Coded errors: `DOWNLOAD_FAILED`, `DOWNLOAD_STALLED`, `DOWNLOAD_CANCELLED`, `ASSET_CORRUPT`, `ASSET_MISMATCH`, `DISK_FULL`, `INSTALL_FAILED`.
-- `service.ts`: per bundle `missing | downloading | installing | ready | failed`, `startDownload(bundle, acceptBytes)` (refused with `DOWNLOAD_SIZE_CHANGED` when the size differs from what was shown), `cancel`, verification of stored files on first use in a session, repair of a file that no longer matches.
+- `service.ts`: per bundle `missing | downloading | installing | ready | failed`, `startDownload(bundle, acceptBytes)` (refused with `DOWNLOAD_SIZE_CHANGED` when the size differs from what was shown), `cancel`, verification of stored files on first use in a session (stage 3: in the background, one file at a time, so a lookup never waits for a full hash), repair of a file that no longer matches.
 
 ### 5.5 Content script and popup (`src/content/`, `src/popup/`)
 
@@ -171,6 +173,8 @@ Repository, this plan, `CLAUDE.md`, shared contracts, build, unit and end-to-end
 | --- | --- | --- |
 | H. Validation | Real model and real dictionary inside Chromium: cold load time, warm latency by number of candidates (p50, p90, p99), memory; accuracy on a labelled set of at least 100 passages with Wiktionary meanings (reuse the pdfpal pilot passages in `~/src/sense-model/data/pilot` where they apply), comparing dictionary order with model order, first meaning and top three; tune `budgetMs` and `maxCandidates` from the numbers; `docs/validation.md` with method, numbers and limits; README, privacy statement, user guide; tag `v0.1.0` | The report states measured numbers and how labels were made. Model order is at least as good as dictionary order on the labelled set, or the report says plainly that it is not and the default for "Order by context" stays off with the finding recorded. `v0.1.0` release holds the extension ZIP built by CI. A manual check of the unpacked extension on three real sites is recorded. |
 
+**Status (2026-11-23):** task H is done except the `v0.1.0` tag and release, which the coordinator makes: measurements and decisions in `docs/validation.md` (#9, #10, #11, #12 and the documentation pull request), acceptance on a fresh profile and on public pages recorded there. Model order was better than dictionary order, so "Order by context" now defaults to on. Tasks A–G were merged in #1–#8.
+
 ## 7. Validation matrix
 
 | Layer | Tool | Runs in CI | What it proves |
@@ -182,7 +186,7 @@ Repository, this plan, `CLAUDE.md`, shared contracts, build, unit and end-to-end
 | Package | Reproducible ZIP hash, size budget for the ZIP (under 30 MB) | yes | Release artefact is deterministic |
 | Real model | Opt-in (`CD_TEST_MODEL_DIR`) | no (local, stage 3) | The real checkpoint runs under WebAssembly and orders by context |
 | Real assets | Opt-in (`CD_TEST_REAL_ASSETS=1`) | no (local, stage 2/3) | Published files match their pins |
-| Performance and accuracy | Stage 3 scripts, results in `docs/validation.md` | no | The two unproven assumptions |
+| Performance and accuracy | Stage 3 scripts in `validation/`, results in `docs/validation.md` | no | The two unproven assumptions |
 | Secrets | `scripts/check-secrets.mjs` | yes | No keys or tokens are committed |
 
 Tests never touch the network or a real model unless an opt-in variable is set.
@@ -201,7 +205,7 @@ Tests never touch the network or a real model unless an opt-in variable is set.
 | The model ranks Wiktionary definitions poorly | Stage 3 measures it before anything is promoted; "none of the above" keeps dictionary order; the ordering switch is separate and can ship off. |
 | Words with 100+ meanings | Candidate cap in dictionary order; measured in stage 3. |
 | Release download blocked by CORS or redirects | Host permissions for the release hosts; opt-in real download test in Chromium in stage 2. |
-| Storage eviction or quota | `unlimitedStorage`; verification on first use each session; repair path. |
+| Storage eviction or quota | `unlimitedStorage`; verification on first use each session (in the background since stage 3); repair path. |
 | Memory of a 267 MB model in a hidden page | Measured in stage 3; the model unloads after an idle period (default 10 minutes) and reloads on demand. |
 | Web Store review of `<all_urls>` | Out of scope for v1; the privacy statement and single-purpose description are written in stage 3. |
 | Wiktionary markup or odd entries | Builder strips markup and has fixture tests for templates, empty glosses and form-of chains. |
