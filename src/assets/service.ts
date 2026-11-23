@@ -52,8 +52,10 @@ export class LocalAssetService implements AssetService {
   private readonly starting = new Map<BundleName, Promise<unknown>>()
   /** Stored names whose content was hashed this session, or is being hashed. */
   private readonly verified = new Map<string, Promise<boolean>>()
-  /** Background checks still running. */
+  /** Background checks still running, and the stored names still waiting for their turn. */
   private readonly checking = new Set<Promise<unknown>>()
+  private readonly waiting = new Set<string>()
+  private queue: Promise<unknown> = Promise.resolve()
   private readonly invalidListeners = new Set<(bundle: BundleName) => void>()
 
   constructor(options: AssetServiceOptions) {
@@ -102,8 +104,7 @@ export class LocalAssetService implements AssetService {
     const { missing } = await this.inspect(bundle, await this.listing())
     if (missing.length) return undefined
     const file = this.manifest.bundles[bundle].find(entry => entry.storedName === storedName) as PinnedFile
-    const known = this.verified.get(storedName)
-    if (!known) this.checkInBackground(bundle, file)
+    if (!this.verified.has(storedName) && !this.waiting.has(storedName)) this.checkInBackground(bundle, file)
     return this.store.open(storedName)
   }
 
@@ -216,13 +217,19 @@ export class LocalAssetService implements AssetService {
     }
   }
 
+  /** Background checks run one at a time, in the order the files were first opened. */
   private checkInBackground(bundle: BundleName, file: PinnedFile): void {
-    const task = this.check(file, false).then(ok => {
+    this.waiting.add(file.storedName)
+    const task = this.queue.then(() => {
+      this.waiting.delete(file.storedName)
+      return this.check(file, false)
+    }).then(ok => {
       if (ok) return
       for (const listener of [...this.invalidListeners]) {
         try { listener(bundle) } catch { /* a listener's problem is its own */ }
       }
     }).finally(() => this.checking.delete(task))
+    this.queue = task.catch(() => undefined)
     this.checking.add(task)
   }
 
