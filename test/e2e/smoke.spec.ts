@@ -8,7 +8,7 @@ test('the built extension loads and its content script runs on an ordinary page'
     expect(worker.url()).toBe(`chrome-extension://${extensionId}/service-worker.js`)
     const page = await context.newPage()
     await page.goto(`${fixtures.url}/article.html`)
-    await expect(page.locator('html')).toHaveAttribute('data-contextual-dictionary', 'loaded')
+    await expect(page.locator('html')).toHaveAttribute('data-contextual-dictionary', /^(loaded|ready)$/)
   } finally {
     await context.close()
     await fixtures.close()

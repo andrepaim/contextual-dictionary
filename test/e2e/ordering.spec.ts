@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { card, cardHost, doubleClickWord, meanings } from './support/card'
+import { card, cardHost, doubleClickWord, meanings, gotoReady } from './support/card'
 import { MOUSE_CONTEXT_ORDER, MOUSE_DICTIONARY_ORDER } from './support/assets'
 import { install, launch, send, status, type Session } from './support/extension'
 
@@ -28,7 +28,7 @@ async function setOrdering(session: Session, on: boolean): Promise<void> {
 
 test('the order follows the context when "Order by context" is on, and returns when it is off, without a reload', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await lookUp(page, '#mouse', 'mouse')
   expect(await meanings(page, 'mouse', 'noun')).toEqual(MOUSE_DICTIONARY_ORDER)
 
@@ -46,7 +46,7 @@ test('the order follows the context when "Order by context" is on, and returns w
 
 test('a model answer later than the budget leaves dictionary order, and orders the next lookup of the same passage', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await setOrdering(session, true)
   await expect.poll(async () => (await status(session.control)).ranker.state).toBe('ready')
   const dictionary = ['A single sheet of paper in a book.', 'The flat green part of a plant that grows from a stem.']
@@ -63,7 +63,7 @@ test('a model answer later than the budget leaves dictionary order, and orders t
 
 test('the budget setting applies at once', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await setOrdering(session, true)
   await expect.poll(async () => (await status(session.control)).ranker.state).toBe('ready')
   const reply = await send(session.control, { type: 'set-settings', patch: { budgetMs: 2000 } })

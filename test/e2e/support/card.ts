@@ -47,3 +47,10 @@ export async function doubleClickWord(element: Locator, word: string): Promise<v
   const box = await wordBox(element, word)
   await element.dblclick({ position: { x: box.x + box.width / 2, y: box.y + box.height / 2 } })
 }
+
+/** Opens `url` and waits until the content script of the page (and of `frames`) has applied its first status. */
+export async function gotoReady(page: Page, url: string, frames: string[] = []): Promise<void> {
+  await page.goto(url)
+  await expect(page.locator('html')).toHaveAttribute('data-contextual-dictionary', 'ready')
+  for (const frame of frames) await expect(page.frameLocator(frame).locator('html')).toHaveAttribute('data-contextual-dictionary', 'ready')
+}
