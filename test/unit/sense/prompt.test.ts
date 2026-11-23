@@ -1,0 +1,297 @@
+import { describe, expect, test } from 'vitest'
+import { codePointSpan, contextualOrder, looksEnglish, senseRequest, type SenseRequest } from '../../../src/sense/prompt'
+import type { DictionaryEntry, DictionaryResult, SenseFormat } from '../../../src/shared/contracts'
+
+// The checkpoint's prompt format, with letters that cannot be mistaken for prompt text.
+const format: SenseFormat = {
+  letters: Array.from({ length: 128 }, (_, i) => String.fromCharCode(0x400 + i)),
+  nota_index: 127, none_text: 'none of the above', separator: '[unused0]', mask_token: '[MASK]', max_length: 2048, temperature: 1,
+}
+const L = (i: number) => format.letters[i]!
+const source = { name: 'Wiktionary', license: 'CC BY-SA 4.0', url: 'https://en.wiktionary.org/wiki/bank' }
+
+const bank: DictionaryResult = {
+  query: 'bank', source,
+  entries: [
+    { lemma: 'bank', partOfSpeech: 'noun', senses: [
+      { definition: 'sloping land beside a body of water', examples: ['they pulled the canoe up on the bank'] },
+      { definition: 'a financial institution that accepts deposits', examples: ['he cashed a check at the bank', 'that bank holds the mortgage'] },
+      { definition: 'a long ridge or pile', examples: [] },
+    ] },
+    { lemma: 'bank', partOfSpeech: 'verb', senses: [
+      { definition: 'tip laterally', examples: ['the pilot had to bank the aircraft'] },
+      { definition: 'do business with a bank', examples: [] },
+    ] },
+    { lemma: 'banker', partOfSpeech: 'noun', senses: [{ definition: 'someone who works at a bank', examples: [] }] },
+  ],
+}
+const deposit = { before: 'After the meeting, he walked over and deposited the money at the ', text: 'bank', after: ' before it closed for the day.' }
+const request = (result = bank, selection = deposit, maxCandidates?: number): SenseRequest => {
+  const built = senseRequest(result, selection, format, maxCandidates)
+  if (!('prompt' in built)) throw new Error(`expected a request, got ${JSON.stringify(built)}`)
+  return built
+}
+/** Logits in candidate order, with the "none of the above" logit last. */
+function logits(values: number[], none = -10): Float32Array {
+  const all = new Float32Array(128).fill(-50)
+  values.forEach((value, i) => { all[i] = value })
+  all[127] = none
+  return all
+}
+const entry = (partOfSpeech: string, count: number, name = partOfSpeech): DictionaryEntry =>
+  ({ lemma: 'run', partOfSpeech, senses: Array.from({ length: count }, (_, i) => ({ definition: `${name} meaning ${i}`, examples: [] })) })
+const run = (...entries: DictionaryEntry[]): DictionaryResult => ({ query: 'run', source, entries })
+/** How many candidates each entry got, in entry order. */
+const perEntry = (built: SenseRequest, entries: number) => Array.from({ length: entries }, (_, e) => built.candidates.filter(c => c.entry === e).length)
+/** The meaning lines of the prompt, without "none of the above". */
+const choices = (built: SenseRequest) => built.prompt.split('\n').slice(1, -2)
+
+describe('codePointSpan', () => {
+  test('JavaScript UTF-16 selection offsets become Unicode code point offsets', () => {
+    expect(codePointSpan('😀 bank bank', 8, 12)).toEqual({ start: 7, end: 11, text: 'bank' })
+    expect(codePointSpan('plain bank', 6, 10)).toEqual({ start: 6, end: 10, text: 'bank' })
+    expect(codePointSpan('😀bank', 1, 3), 'a span that splits a surrogate pair is rejected').toBeNull()
+    expect(codePointSpan('bank', 2, 2)).toBeNull()
+    expect(codePointSpan('bank', 0, 5)).toBeNull()
+    expect(codePointSpan('bank', -1, 2)).toBeNull()
+    expect(codePointSpan('bank', 0.5, 2)).toBeNull()
+  })
+})
+
+describe('senseRequest', () => {
+  test('one prompt scores every original candidate on the exact selected span', () => {
+    const built = request()
+    expect(built.prompt).toBe([
+      'After the meeting, he walked over and deposited the money at the *bank* before it closed for the day.',
+      `${L(0)}. sloping land beside a body of water`,
+      `${L(1)}. a financial institution that accepts deposits`,
+      `${L(2)}. a long ridge or pile`,
+      `${L(3)}. tip laterally`,
+      `${L(4)}. do business with a bank`,
+      `${L(5)}. someone who works at a bank`,
+      `${L(127)}. none of the above`,
+      '[unused0] [MASK]',
+    ].join('\n'))
+    expect(built.candidates).toEqual([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [2, 0]].map(([entry, sense]) => ({ entry, sense })))
+    expect(built.target).toEqual({ start: 65, end: 69, text: 'bank' })
+    expect(built.total).toBe(6)
+  })
+
+  test('the target counts code points after an emoji and keeps the selection exact, not its completion', () => {
+    const built = request(bank, { before: '😀 The money is in the ', text: 'bank ', after: 'vault, and it is safe there.' })
+    expect(built.target).toEqual({ start: 22, end: 26, text: 'bank' })
+    expect(built.prompt).toMatch(/^😀 The money is in the \*bank\* vault, and it is safe there\.\n/)
+    // Half of a hyphenated word is marked as selected; the dictionary completes it separately.
+    const half = request(bank, { before: 'The data was stored in a river-', text: 'bank', after: ' for the analysis of the region.' })
+    expect(half.prompt).toMatch(/river-\*bank\* for/)
+  })
+
+  test('line breaks and runs of spaces in the page text become single spaces', () => {
+    const built = request(bank, { before: 'He paid the money\n into the  ', text: 'bank', after: '\tand the account that was there.' })
+    expect(built.prompt).toMatch(/^He paid the money into the \*bank\* and the account that was there\.\n/)
+  })
+
+  test('unsupported inputs are not scored', () => {
+    const single: DictionaryResult = { ...bank, entries: [bank.entries[2]!, { ...bank.entries[0]!, senses: bank.entries[0]!.senses.slice(0, 1) }] }
+    expect(senseRequest(single, deposit, format)).toEqual({ skip: 'SINGLE_SENSES' })
+    expect(senseRequest({ ...bank, entries: [] }, deposit, format)).toEqual({ skip: 'NO_ENTRIES' })
+    expect(senseRequest(bank, { ...deposit, after: ' before it closed*.' }, format)).toEqual({ skip: 'UNSAFE_TEXT' })
+    expect(senseRequest(bank, { ...deposit, before: 'He saw [MASK] and the money at the ' }, format)).toEqual({ skip: 'UNSAFE_TEXT' })
+    expect(senseRequest(bank, { ...deposit, before: 'He saw [SEP] and the money at the ' }, format)).toEqual({ skip: 'UNSAFE_TEXT' })
+    expect(senseRequest(bank, { ...deposit, before: 'He saw \u0007 and the money at the ' }, format)).toEqual({ skip: 'UNSAFE_TEXT' })
+    const starred: DictionaryResult = { ...bank, entries: [{ ...bank.entries[0]!, senses: [...bank.entries[0]!.senses, { definition: 'a *special* bank', examples: [] }] }] }
+    expect(senseRequest(starred, deposit, format)).toEqual({ skip: 'UNSAFE_TEXT' })
+    const separator: DictionaryResult = { ...bank, entries: [{ ...bank.entries[0]!, senses: [...bank.entries[0]!.senses, { definition: 'a bank [unused0] here', examples: [] }] }] }
+    expect(senseRequest(separator, deposit, format)).toEqual({ skip: 'UNSAFE_TEXT' })
+    expect(senseRequest(bank, { before: 'Ele depositou o dinheiro no ', text: 'bank', after: ' antes de fechar para o dia.' }, format)).toEqual({ skip: 'NOT_ENGLISH' })
+    expect(senseRequest(bank, { ...deposit, text: '   ' }, format)).toEqual({ skip: 'INVALID_SPAN' })
+    expect(senseRequest(bank, { ...deposit, before: 'the money at the \uDC00' }, format)).toEqual({ skip: 'INVALID_SPAN' })
+  })
+
+  test('a lone surrogate cut off at the edge of the context is dropped, not sent', () => {
+    const built = request(bank, { before: '\uDE00 he deposited the money at the ', text: 'bank', after: ' and then he left \uD83D' })
+    expect(built.prompt).toMatch(/^he deposited the money at the \*bank\* and then he left\n/)
+  })
+
+  test('a format whose letters do not reach "none of the above" is refused', () => {
+    expect(senseRequest(bank, deposit, { ...format, letters: format.letters.slice(0, 127) })).toEqual({ skip: 'INVALID_FORMAT' })
+    expect(senseRequest(bank, deposit, { ...format, nota_index: 1 })).toEqual({ skip: 'INVALID_FORMAT' })
+  })
+})
+
+describe('the candidate cap', () => {
+  test('more meanings than the model takes are capped, not skipped (pdfpal returned TOO_MANY_SENSES)', () => {
+    const many = run(entry('verb', 128))
+    const built = request(many, deposit)
+    expect(built.candidates).toHaveLength(127)
+    expect(built.total).toBe(128)
+    expect(built.candidates.at(-1)).toEqual({ entry: 0, sense: 126 })
+    expect(choices(built)).toHaveLength(127)
+    expect(choices(built).at(-1)).toBe(`${L(126)}. verb meaning 126`)
+    expect(built.prompt.split('\n').at(-2)).toBe(`${L(127)}. none of the above`)
+  })
+
+  test('under the cap every meaning is offered', () => {
+    const built = request(run(entry('noun', 10), entry('verb', 10)), deposit, 20)
+    expect(built.candidates).toHaveLength(20)
+    expect(built.total).toBe(20)
+  })
+
+  test('the cap is shared round-robin by entry in dictionary order, so a large first entry cannot starve the others', () => {
+    const result = run(entry('noun', 100), entry('verb', 10), entry('adj', 1))
+    const built = request(result, deposit, 20)
+    // Round 0 takes the first meaning of each entry, every later round the next one of each entry that still has one.
+    expect(perEntry(built, 3)).toEqual([10, 9, 1])
+    expect(built.total).toBe(111)
+    // Each entry contributes its first meanings, in dictionary order.
+    for (const e of [0, 1, 2]) {
+      const senses = built.candidates.filter(c => c.entry === e).map(c => c.sense)
+      expect(senses).toEqual(senses.map((_, i) => i))
+    }
+    // Room an exhausted entry leaves goes to the entries that still have meanings.
+    expect(perEntry(request(result, deposit, 48), 3)).toEqual([37, 10, 1])
+  })
+
+  test('the prompt lists the offered meanings in dictionary order with consecutive letters', () => {
+    const built = request(run(entry('noun', 5), entry('verb', 5)), deposit, 4)
+    expect(built.candidates).toEqual([{ entry: 0, sense: 0 }, { entry: 0, sense: 1 }, { entry: 1, sense: 0 }, { entry: 1, sense: 1 }])
+    expect(choices(built)).toEqual([`${L(0)}. noun meaning 0`, `${L(1)}. noun meaning 1`, `${L(2)}. verb meaning 0`, `${L(3)}. verb meaning 1`])
+  })
+
+  test('a cap above the model limit is lowered to it, and an unusable cap is read as the model limit or the smallest useful one', () => {
+    const many = run(entry('verb', 200))
+    expect(request(many, deposit, 500).candidates).toHaveLength(127)
+    expect(request(many, deposit, Number.NaN).candidates).toHaveLength(127)
+    expect(request(many, deposit, 1).candidates).toHaveLength(2)
+    expect(request(many, deposit, 7.9).candidates).toHaveLength(7)
+    expect(request(run(entry('verb', 10)), deposit, 4.5).candidates).toHaveLength(4)
+  })
+
+  test('a cap too small to give any entry two meanings is skipped', () => {
+    const three = run(entry('noun', 3), entry('verb', 3), entry('adj', 3))
+    expect(senseRequest(three, deposit, format, 2)).toEqual({ skip: 'TOO_MANY_SENSES' })
+    expect(perEntry(request(three, deposit, 4), 3)).toEqual([2, 1, 1])
+  })
+
+  test('only offered definitions are checked for unsafe text', () => {
+    const result = run({ ...entry('noun', 4), senses: [...entry('noun', 4).senses, { definition: 'a *starred* meaning', examples: [] }] })
+    expect(request(result, deposit, 4).candidates).toHaveLength(4)
+    expect(senseRequest(result, deposit, format, 5)).toEqual({ skip: 'UNSAFE_TEXT' })
+  })
+
+  test('a prompt over the length bound offers fewer meanings instead of being skipped', () => {
+    const long = (name: string, count: number): DictionaryEntry =>
+      ({ lemma: 'set', partOfSpeech: name, senses: Array.from({ length: count }, (_, i) => ({ definition: `${name} ${i} ${'x'.repeat(1000)}`, examples: [] })) })
+    const result: DictionaryResult = { query: 'set', source, entries: [long('noun', 20), long('verb', 20)] }
+    const built = request(result, deposit, 48)
+    expect(built.prompt.length).toBeLessThanOrEqual(format.max_length * 8)
+    expect(built.candidates.length).toBeLessThan(40)
+    expect(built.candidates.length).toBeGreaterThan(10)
+    expect(built.total).toBe(40)
+    // Meanings are dropped from the end of the round-robin order, so the entries stay balanced.
+    const [noun, verb] = perEntry(built, 2)
+    expect(Math.abs(noun! - verb!)).toBeLessThanOrEqual(1)
+    // One more meaning would not have fitted.
+    expect(request(result, deposit, built.candidates.length + 1).candidates).toHaveLength(built.candidates.length)
+  })
+
+  test('a passage or definitions too long for even two meanings are skipped', () => {
+    const huge: DictionaryResult = { ...bank, entries: [{ ...bank.entries[0]!, senses: [{ definition: 'x'.repeat(9000), examples: [] }, { definition: 'y'.repeat(9000), examples: [] }] }] }
+    expect(senseRequest(huge, deposit, format)).toEqual({ skip: 'TOO_LONG' })
+    expect(senseRequest(bank, deposit, { ...format, max_length: 10 })).toEqual({ skip: 'TOO_LONG' })
+  })
+})
+
+describe('contextualOrder', () => {
+  test('senses are sorted by score only inside each entry, stably, keeping every definition and example', () => {
+    const built = request()
+    const ordered = contextualOrder(bank, built, logits([1, 5, 1, -2, 3, 0]), format)
+    expect(ordered.applied).toBe(true)
+    expect(ordered.result.entries.map(entry => [entry.lemma, entry.partOfSpeech])).toEqual([['bank', 'noun'], ['bank', 'verb'], ['banker', 'noun']])
+    expect(ordered.result.entries[0]!.senses).toEqual([bank.entries[0]!.senses[1], bank.entries[0]!.senses[0], bank.entries[0]!.senses[2]])
+    expect(ordered.result.entries[1]!.senses).toEqual([bank.entries[1]!.senses[1], bank.entries[1]!.senses[0]])
+    expect(ordered.result.entries[2]).toEqual(bank.entries[2])
+    expect(Object.keys(ordered.result)).toEqual(Object.keys(bank))
+    expect(ordered.result.query).toBe(bank.query)
+    expect(ordered.result.source).toEqual(bank.source)
+    // The original result is not modified.
+    expect(bank.entries[0]!.senses[0]!.definition).toBe('sloping land beside a body of water')
+  })
+
+  test('an entry note is kept', () => {
+    const noted: DictionaryResult = { ...bank, entries: [{ ...bank.entries[0]!, note: 'plural of bank' }] }
+    const ordered = contextualOrder(noted, request(noted), logits([1, 5, 1]), format)
+    expect(ordered.applied).toBe(true)
+    expect(ordered.result.entries[0]!.note).toBe('plural of bank')
+  })
+
+  test('equal scores keep dictionary order', () => {
+    const ordered = contextualOrder(bank, request(), logits([2, 2, 2, 1, 1, 0]), format)
+    expect(ordered.result).toEqual(bank)
+  })
+
+  test('dictionary order is kept, as the very same object, when "none of the above" wins or ties, or the scores are unusable', () => {
+    const built = request()
+    for (const [scores, reason] of [
+      [logits([1, 5, 1, -2, 3, 0], 6), 'NONE_FITS'],
+      [logits([1, 5, 1, -2, 3, 0], 5), 'NONE_FITS'],
+      [logits([1, Number.NaN, 1, -2, 3, 0]), 'INVALID_SCORES'],
+      [new Float32Array(12), 'INVALID_SCORES'],
+    ] as const) {
+      const outcome = contextualOrder(bank, built, scores, format)
+      expect(outcome).toEqual({ result: bank, applied: false, reason })
+      expect(outcome.result).toBe(bank)
+    }
+    expect(contextualOrder(bank, { ...built, candidates: [] }, logits([1]), format).result).toBe(bank)
+  })
+
+  test('a temperature divides the logits before the softmax', () => {
+    // "None" at 6 still beats 5 after dividing by 10; a temperature of 0 is read as 1.
+    const built = request()
+    expect(contextualOrder(bank, built, logits([1, 5, 1, -2, 3, 0], 6), { ...format, temperature: 10 }).applied).toBe(false)
+    expect(contextualOrder(bank, built, logits([1, 5, 1, -2, 3, 0]), { ...format, temperature: 0 }).applied).toBe(true)
+  })
+
+  test('unscored meanings keep their relative order after the scored ones of the same entry', () => {
+    const result = run(entry('noun', 6), entry('verb', 3))
+    const built = request(result, deposit, 4)
+    expect(built.candidates).toEqual([{ entry: 0, sense: 0 }, { entry: 0, sense: 1 }, { entry: 1, sense: 0 }, { entry: 1, sense: 1 }])
+    const ordered = contextualOrder(result, built, logits([-3, 4, -1, 2]), format)
+    expect(ordered.applied).toBe(true)
+    const names = (e: number) => ordered.result.entries[e]!.senses.map(sense => sense.definition)
+    expect(names(0)).toEqual(['noun meaning 1', 'noun meaning 0', 'noun meaning 2', 'noun meaning 3', 'noun meaning 4', 'noun meaning 5'])
+    expect(names(1)).toEqual(['verb meaning 1', 'verb meaning 0', 'verb meaning 2'])
+  })
+
+  test('a scored meaning whose probability underflows to zero still comes before the unscored ones', () => {
+    const result = run(entry('noun', 4))
+    const built = { ...request(result, deposit, 2), candidates: [{ entry: 0, sense: 2 }, { entry: 0, sense: 3 }] }
+    const ordered = contextualOrder(result, built, logits([50, -2000], -2000), format)
+    expect(ordered.result.entries[0]!.senses.map(sense => sense.definition)).toEqual(['noun meaning 2', 'noun meaning 3', 'noun meaning 0', 'noun meaning 1'])
+  })
+
+  test('an entry with no scored meaning keeps dictionary order', () => {
+    const result = run(entry('noun', 3), entry('verb', 3), entry('adj', 3))
+    const built = request(result, deposit, 4)
+    const capped = { ...built, candidates: built.candidates.filter(c => c.entry !== 2) }
+    const ordered = contextualOrder(result, capped, logits([0, 3, 0]), format)
+    expect(ordered.result.entries[2]).toEqual(result.entries[2])
+    expect(ordered.result.entries[0]!.senses[0]!.definition).toBe('noun meaning 1')
+  })
+})
+
+describe('looksEnglish', () => {
+  test('only an English passage is scored', () => {
+    expect(looksEnglish('After the meeting, he walked over and deposited the money at the bank before it closed.')).toBe(true)
+    expect(looksEnglish('We train the model with gradient descent and evaluate it on held-out data.')).toBe(true)
+    expect(looksEnglish('the bank'), 'too short to judge, but in Latin script and without foreign words').toBe(true)
+    expect(looksEnglish('Ela depositou dinheiro no banco antes de fechar para o dia.')).toBe(false)
+    expect(looksEnglish('El modelo se entrena con los datos de la empresa y es muy bueno.')).toBe(false)
+    expect(looksEnglish('Das Modell wird mit den Daten trainiert und ist nicht schlecht.')).toBe(false)
+    expect(looksEnglish('Le modèle est entraîné sur les données et il est très bon pour la tâche.')).toBe(false)
+    expect(looksEnglish('Модель обучается на данных и работает хорошо в этой задаче.')).toBe(false)
+    expect(looksEnglish('模型在数据上训练并且效果很好。')).toBe(false)
+    expect(looksEnglish('123 456 789')).toBe(false)
+    expect(looksEnglish('der bank')).toBe(false)
+  })
+})
