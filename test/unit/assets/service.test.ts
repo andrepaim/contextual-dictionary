@@ -47,12 +47,26 @@ describe('status', () => {
     expect(calls).toHaveLength(0)
   })
 
-  test('the real manifest reports both bundles as not yet available', async () => {
-    const service = createAssetService({ store: new MemoryFileStore(), fetch: () => Promise.reject(new Error('no network')) })
+  test('a manifest without transfer pins reports both bundles as not yet available', async () => {
+    const unpublished = structuredClone(ASSET_MANIFEST)
+    for (const file of [...unpublished.bundles.dictionary, ...unpublished.bundles.model]) Object.assign(file, { size: null, sha256: null })
+    unpublished.bundles.dictionary[0] = { ...unpublished.bundles.dictionary[0]!, storedSize: null, storedSha256: null }
+    const service = createAssetService({ store: new MemoryFileStore(), manifest: unpublished, fetch: () => Promise.reject(new Error('no network')) })
     const status = await service.status()
     expect(status.model.error).toBe('DOWNLOAD_UNAVAILABLE')
     expect(status.dictionary.error).toBe('DOWNLOAD_UNAVAILABLE')
+    await expect(service.startDownload('dictionary', 0)).rejects.toMatchObject({ code: 'DOWNLOAD_UNAVAILABLE' })
+  })
+
+  test('the real manifest offers both bundles with their published transfer sizes, without touching the network', async () => {
+    const calls: string[] = []
+    const service = createAssetService({ store: new MemoryFileStore(), fetch: url => { calls.push(url); return Promise.reject(new Error('no network')) } })
+    const status = await service.status()
+    const bytes = (files: typeof ASSET_MANIFEST.bundles.model) => files.reduce((sum, file) => sum + file.size!, 0)
+    expect(status.dictionary).toEqual(idle(bytes(ASSET_MANIFEST.bundles.dictionary)))
+    expect(status.model).toEqual(idle(bytes(ASSET_MANIFEST.bundles.model)))
     expect(ASSET_MANIFEST.bundles.model).toHaveLength(5)
+    expect(calls).toHaveLength(0)
   })
 
   test('refuses an invalid manifest when constructed', () => {

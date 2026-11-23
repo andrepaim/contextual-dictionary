@@ -50,24 +50,25 @@ export const STORED_NAMES = {
 } as const
 
 /**
- * The release this build downloads. The publishing task fills in every null:
- * the transfer `size` and `sha256` of each file, and the dictionary's stored
- * pins (equal to its transfer pins, since it is sent as is).
+ * The release this build downloads: `assets-v1`, published by
+ * scripts/publish-assets.mjs (docs/assets.md). Files sent as is have equal
+ * transfer and stored pins; the model graph is sent gzipped.
  */
 export const ASSET_MANIFEST: AssetManifest = {
   tag: 'assets-v1',
   baseUrl: 'https://github.com/andrepaim/contextual-dictionary/releases/download',
   bundles: {
     dictionary: [
-      { name: 'wiktionary-en-v1.pack', size: null, sha256: null, storedName: STORED_NAMES.dictionary, storedSize: null, storedSha256: null, encoding: 'identity' },
+      // Built from the Kaikki.org English extract of 2026-10-30 (docs/dictionary-build.md).
+      { name: 'wiktionary-en-v1.pack', size: 66467698, sha256: 'e698a7117d4a684d554c1c5850674ed9035c2daab7dbd8125c6c63758b6e6c32', storedName: STORED_NAMES.dictionary, storedSize: 66467698, storedSha256: 'e698a7117d4a684d554c1c5850674ed9035c2daab7dbd8125c6c63758b6e6c32', encoding: 'identity' },
     ],
     // Stored pins: Ettin-150m-WSD dynamic INT8 ONNX, revision 8751b577199d1bb95b74fa2457da7065d57100ae.
     model: [
-      { name: 'ettin-150m-wsd-int8.onnx.gz', size: null, sha256: null, storedName: STORED_NAMES.model, storedSize: 266954889, storedSha256: '8649a1139b81a56b16ec6853d6127882a1b9539a4c33c09e3fce93ab62822d68', encoding: 'gzip' },
-      { name: 'model_metadata.json', size: null, sha256: null, storedName: STORED_NAMES.modelMetadata, storedSize: 1552, storedSha256: '7a07cdd82572cada84061c1cdb61670b2d220d9cc422397d18244874d9fb7707', encoding: 'identity' },
-      { name: 'calibration.json', size: null, sha256: null, storedName: STORED_NAMES.calibration, storedSize: 101, storedSha256: '84f67365897b09a6d6b7d2289f16dd6582d07e7e6e0f1b2094491a72b636d8ab', encoding: 'identity' },
-      { name: 'tokenizer.json', size: null, sha256: null, storedName: STORED_NAMES.tokenizer, storedSize: 3583228, storedSha256: '6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30', encoding: 'identity' },
-      { name: 'tokenizer_config.json', size: null, sha256: null, storedName: STORED_NAMES.tokenizerConfig, storedSize: 487, storedSha256: 'd0ec2c8141eec0fa98e31a43c3a453f9c40dcde862762762b0f1898bfb793183', encoding: 'identity' },
+      { name: 'ettin-150m-wsd-int8.onnx.gz', size: 143435614, sha256: 'e90034c01d6f2431b8af5b07c2af2d046ae3c84f7d71d54e63c02b32509205f4', storedName: STORED_NAMES.model, storedSize: 266954889, storedSha256: '8649a1139b81a56b16ec6853d6127882a1b9539a4c33c09e3fce93ab62822d68', encoding: 'gzip' },
+      { name: 'model_metadata.json', size: 1552, sha256: '7a07cdd82572cada84061c1cdb61670b2d220d9cc422397d18244874d9fb7707', storedName: STORED_NAMES.modelMetadata, storedSize: 1552, storedSha256: '7a07cdd82572cada84061c1cdb61670b2d220d9cc422397d18244874d9fb7707', encoding: 'identity' },
+      { name: 'calibration.json', size: 101, sha256: '84f67365897b09a6d6b7d2289f16dd6582d07e7e6e0f1b2094491a72b636d8ab', storedName: STORED_NAMES.calibration, storedSize: 101, storedSha256: '84f67365897b09a6d6b7d2289f16dd6582d07e7e6e0f1b2094491a72b636d8ab', encoding: 'identity' },
+      { name: 'tokenizer.json', size: 3583228, sha256: '6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30', storedName: STORED_NAMES.tokenizer, storedSize: 3583228, storedSha256: '6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30', encoding: 'identity' },
+      { name: 'tokenizer_config.json', size: 487, sha256: 'd0ec2c8141eec0fa98e31a43c3a453f9c40dcde862762762b0f1898bfb793183', storedName: STORED_NAMES.tokenizerConfig, storedSize: 487, storedSha256: 'd0ec2c8141eec0fa98e31a43c3a453f9c40dcde862762762b0f1898bfb793183', encoding: 'identity' },
     ],
   },
 }
