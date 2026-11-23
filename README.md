@@ -6,6 +6,16 @@ A Chrome extension that defines the word you select on any web page, from a copy
 - **Order by context** (on by default once the model is downloaded): the model Ettin-150m-WSD (INT8 ONNX, run with ONNX Runtime on WebAssembly) lists the meanings inside each entry by how well they fit the passage. No meaning is dropped and no score is shown.
 - **Privacy:** what you select never leaves your computer. The only network use is the one-time download of the dictionary and the model, each of which you confirm. See [docs/privacy.md](docs/privacy.md).
 
+## Example
+
+"And enterprises of great pith and moment" (*Hamlet*, act 3, scene 1, read on [shakespeare.mit.edu](https://shakespeare.mit.edu/hamlet/hamlet.3.1.html)). Wiktionary lists the meanings of "moment" starting with a point in space and a point in time. With "Order by context" the card opens on "Weight or importance", which is what Hamlet means.
+
+| Dictionary order | Order by context |
+| --- | --- |
+| ![The card for "moment" in dictionary order: a particular point of space comes first](docs/images/hamlet-moment-dictionary.png) | ![The card for "moment" ordered by context: "Weight or importance" comes first](docs/images/hamlet-moment-context.png) |
+
+Both are screenshots of version 0.1.0 on that page, with the switch off and on.
+
 ## Install
 
 Not in the Chrome Web Store yet. Install the release ZIP as an unpacked extension (Chrome 124 or later):
