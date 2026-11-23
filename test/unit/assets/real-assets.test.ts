@@ -1,6 +1,6 @@
 // Opt-in: downloads every published file of the pinned release through the
 // asset service with the real fetch, into memory, and checks both bundles
-// end up ready and verified. About 216 MB of transfer and 337 MB of memory.
+// end up ready and verified. About 214 MB of transfer and 337 MB of memory.
 //
 //   CD_TEST_REAL_ASSETS=1 npx vitest run test/unit/assets/real-assets.test.ts --silent=false
 //
