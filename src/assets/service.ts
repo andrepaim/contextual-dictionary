@@ -61,7 +61,9 @@ export class LocalAssetService implements AssetService {
     this.store = options.store
     this.fetch = options.fetch ?? ((url, init) => globalThis.fetch(url, init))
     this.stallMs = options.stallMs ?? DEFAULT_STALL_MS
-    this.hashChunkBytes = options.hashChunkBytes ?? 8 * 1024 * 1024
+    // 1 MB at a time: the background hash shares the offscreen document's thread with
+    // lookups and the model's load, so it must yield often (docs/validation.md).
+    this.hashChunkBytes = options.hashChunkBytes ?? 1024 * 1024
   }
 
   async status(): Promise<Record<BundleName, BundleStatus>> {
