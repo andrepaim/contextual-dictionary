@@ -3,10 +3,15 @@
 //
 // A file counts as installed when the store holds it with its pinned stored
 // size; anything else under that name is removed so it can be downloaded
-// again. Its full SHA-256 is checked once per session, on first open (files
-// downloaded in this session were hashed while they arrived), and again on
-// request through verify(), for example after the model failed to load. A
-// file that no longer matches is removed, so its bundle shows as missing.
+// again. Its full SHA-256 is checked once per session, in the background
+// after its first open (files downloaded in this session were hashed while
+// they arrived), so a lookup never waits for a whole file to be hashed; and
+// again on request through verify(), for example after the model failed to
+// load. A file that no longer matches is removed, so its bundle shows as
+// missing, and onInvalid listeners hear of it so they can let go of what
+// they opened. Until then a damaged file can at worst fail a lookup: the
+// pack's blocks are gzip-checked when read, and a model that fails to load
+// is verified again.
 
 import { sha256 } from '@noble/hashes/sha2.js'
 import { bytesToHex } from '@noble/hashes/utils.js'
@@ -47,6 +52,9 @@ export class LocalAssetService implements AssetService {
   private readonly starting = new Map<BundleName, Promise<unknown>>()
   /** Stored names whose content was hashed this session, or is being hashed. */
   private readonly verified = new Map<string, Promise<boolean>>()
+  /** Background checks still running. */
+  private readonly checking = new Set<Promise<unknown>>()
+  private readonly invalidListeners = new Set<(bundle: BundleName) => void>()
 
   constructor(options: AssetServiceOptions) {
     this.manifest = assertManifest(options.manifest ?? ASSET_MANIFEST)
@@ -92,8 +100,20 @@ export class LocalAssetService implements AssetService {
     const { missing } = await this.inspect(bundle, await this.listing())
     if (missing.length) return undefined
     const file = this.manifest.bundles[bundle].find(entry => entry.storedName === storedName) as PinnedFile
-    if (!(await this.check(file, false))) return undefined
+    const known = this.verified.get(storedName)
+    if (!known) this.checkInBackground(bundle, file)
     return this.store.open(storedName)
+  }
+
+  /** Calls `listener` with the bundle whenever a background check finds a file that no longer matches (and removed it). Returns a function that stops it. */
+  onInvalid(listener: (bundle: BundleName) => void): () => void {
+    this.invalidListeners.add(listener)
+    return () => { this.invalidListeners.delete(listener) }
+  }
+
+  /** Resolves once the background checks started so far have finished. */
+  async checked(): Promise<void> {
+    while (this.checking.size) await Promise.allSettled([...this.checking])
   }
 
   /** Hashes every installed file of `bundle` again; false when any is missing or no longer matches (and was removed). */
@@ -192,6 +212,16 @@ export class LocalAssetService implements AssetService {
     } finally {
       this.jobs.delete(bundle)
     }
+  }
+
+  private checkInBackground(bundle: BundleName, file: PinnedFile): void {
+    const task = this.check(file, false).then(ok => {
+      if (ok) return
+      for (const listener of [...this.invalidListeners]) {
+        try { listener(bundle) } catch { /* a listener's problem is its own */ }
+      }
+    }).finally(() => this.checking.delete(task))
+    this.checking.add(task)
   }
 
   /** Whether the stored file matches its digest; a file that does not is removed. Hashes once per session unless `again`. */
