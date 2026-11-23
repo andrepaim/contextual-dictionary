@@ -495,7 +495,13 @@ export async function main(argv: string[], deps: MainDeps): Promise<number> {
     const stats = JSON.parse(await fsp.readFile(options.statsFile, 'utf8')) as { snapshot: string; pack: { bytes: number; sha256: string } }
     const pack = { size: options.packSize ?? stats.pack.bytes, sha256: options.packSha256 ?? stats.pack.sha256 }
     if (options.out) outDir = options.out
-    else { outDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'cd-publish-assets-')); remove = !options.keep }
+    else {
+      // Not the system temporary directory: gh installed as a snap cannot read /tmp.
+      const parent = path.join(deps.home, '.cache/contextual-dictionary')
+      await fsp.mkdir(parent, { recursive: true })
+      outDir = await fsp.mkdtemp(path.join(parent, `publish-${deps.manifest.tag}-`))
+      remove = !options.keep
+    }
     await fsp.mkdir(outDir, { recursive: true })
     deps.log(`Verifying the inputs and staging ${deps.manifest.tag}…`)
     const files = await stageRelease(deps.manifest, { modelDir: options.modelDir, packPath: options.packPath, pack, noticesDir: options.noticesDir }, outDir)

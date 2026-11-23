@@ -9,8 +9,9 @@
 // Options: --model-dir=<export>   (default ~/src/sense-model/artifacts/upstream-english)
 //          --pack=<file>          (default ~/.cache/contextual-dictionary/packs/wiktionary-en-v1.pack)
 //          --pack-sha256=<hex> --pack-size=<bytes>   (default: docs/dictionary-stats.json)
-//          --out=<directory>      stage there instead of a temporary directory
-//          --keep                 keep the temporary staging directory
+//          --out=<directory>      stage there instead of a new ~/.cache/contextual-dictionary/publish-<tag>-*
+//                                 (not /tmp: gh installed as a snap cannot read it)
+//          --keep                 keep that new staging directory
 //
 // Refuses a tag that already exists: published assets never change. The
 // logic lives in scripts/assets-release.ts, loaded with tsx (a dev
