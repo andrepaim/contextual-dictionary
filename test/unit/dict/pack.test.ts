@@ -23,18 +23,23 @@ function countingSource(bytes: Uint8Array): ByteSource & { reads: Array<[number,
 
 function view(bytes: Uint8Array) { return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength) }
 
-function parsePack(bytes: Uint8Array): { header: PackHeader; index: PackIndexItem[]; headerEnd: number } {
+function parseHeader(bytes: Uint8Array): { header: PackHeader; headerEnd: number } {
   const headerLength = view(bytes).getUint32(8, true)
-  const header = JSON.parse(new TextDecoder().decode(bytes.subarray(PREAMBLE_BYTES, PREAMBLE_BYTES + headerLength))) as PackHeader
+  return { header: JSON.parse(new TextDecoder().decode(bytes.subarray(PREAMBLE_BYTES, PREAMBLE_BYTES + headerLength))) as PackHeader, headerEnd: PREAMBLE_BYTES + headerLength }
+}
+
+function parsePack(bytes: Uint8Array): { header: PackHeader; index: PackIndexItem[]; headerEnd: number } {
+  const { header, headerEnd } = parseHeader(bytes)
   const index = JSON.parse(gunzipSync(bytes.subarray(header.indexOffset, header.indexOffset + header.indexLength)).toString('utf8')) as PackIndexItem[]
-  return { header, index, headerEnd: PREAMBLE_BYTES + headerLength }
+  return { header, index, headerEnd }
 }
 
 /** A copy of `bytes` with the header replaced, the rest moved to match. */
 function withHeader(bytes: Uint8Array, change: (header: Record<string, unknown>) => Record<string, unknown> | string): Uint8Array {
-  const { header, headerEnd } = parsePack(bytes)
+  const { header, headerEnd } = parseHeader(bytes)
   const next = change({ ...header })
-  const text = new TextEncoder().encode(typeof next === 'string' ? next : JSON.stringify(next))
+  // Padded to the old length so the blocks keep their offsets.
+  const text = new TextEncoder().encode((typeof next === 'string' ? next : JSON.stringify(next)).padEnd(headerEnd - PREAMBLE_BYTES, ' '))
   const out = new Uint8Array(PREAMBLE_BYTES + text.length + bytes.length - headerEnd)
   out.set(bytes.subarray(0, PREAMBLE_BYTES))
   view(out).setUint32(8, text.length, true)
@@ -256,6 +261,7 @@ describe('PackReader errors', () => {
       encode(index.map((item, i) => (i === 0 ? { ...item, length: 'x' } : item))),
       encode(index.map((item, i) => (i === index.length - 1 ? { ...item, length: item.length - 1 } : item))),
     ]
+    expect(await (await PackReader.open(memoryByteSource(withIndex(bytes, encode(index))))).get(index[1]!.firstKey)).toBeDefined()
     for (const raw of cases) await expectCode(PackReader.open(memoryByteSource(withIndex(bytes, raw))), 'PACK_CORRUPT')
   })
 
@@ -292,6 +298,9 @@ describe('PackReader errors', () => {
       return withHeader(all, h => ({ ...h, indexOffset: body.length, indexLength: indexBytes.length }))
     }
     const key = index[0]!.firstKey
+    const original = gunzipSync(base.subarray(index[0]!.offset, index[0]!.offset + index[0]!.length)).toString('utf8')
+    expect(await (await PackReader.open(memoryByteSource(replaceBlock(original)))).get(key)).toBeDefined()
+    expect(await (await PackReader.open(memoryByteSource(replaceBlock(original.slice(0, -1))))).get(key).catch((e: CodedError) => e.code)).toBe('PACK_CORRUPT')
     for (const text of [`{"k":"${key}","e":[]}\nnot json\n`, `{"k":"${key}","e":[]}\n{"k":"a","e":[]}\n`, `{"k":"${key}"}\n`, `{"k":"other","e":[]}\n`, `[1]\n`]) {
       const reader = await PackReader.open(memoryByteSource(replaceBlock(text)))
       await expectCode(reader.get(key), 'PACK_CORRUPT')
