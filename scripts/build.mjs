@@ -19,7 +19,9 @@ export const ENTRIES = [
   { source: 'src/background/service-worker.entry.ts', output: 'service-worker.js', format: 'esm' },
   { source: 'src/content/content.entry.ts', output: 'content.js', format: 'iife' },
   { source: 'src/offscreen/offscreen.entry.ts', output: 'offscreen.js', format: 'esm' },
-  { source: 'src/model/worker.entry.ts', output: 'model-worker.js', format: 'esm' },
+  // The extern-wasm condition picks the ONNX Runtime build that imports its loader from
+  // dist/ort/ instead of embedding it, so the runtime's thread workers start from that loader.
+  { source: 'src/model/worker.entry.ts', output: 'model-worker.js', format: 'esm', conditions: ['onnxruntime-web-use-extern-wasm', 'module'] },
   { source: 'src/popup/popup.entry.ts', output: 'popup.js', format: 'esm' },
 ]
 const PAGES = ['src/offscreen/offscreen.html', 'src/popup/popup.html']
@@ -41,6 +43,7 @@ export async function buildExtension(target = outdir) {
       legalComments: 'none',
       logLevel: 'warning',
       define: { __VERSION__: JSON.stringify(version) },
+      ...(entry.conditions ? { conditions: entry.conditions } : {}),
     })
   }
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'src/manifest.json'), 'utf8'))
