@@ -13,6 +13,10 @@ import type { OffscreenRequest, RuntimeStatus } from '../shared/offscreen-protoc
 export interface AssetsLike extends AssetService {
   verify(bundle: BundleName): Promise<boolean>
   settled(bundle: BundleName): Promise<void>
+  /** Hears of a file that a background check found damaged (and removed). */
+  onInvalid(listener: (bundle: BundleName) => void): () => void
+  /** Resolves once the background checks started so far have finished. */
+  checked(): Promise<void>
 }
 
 export interface RankerLike extends Ranker {
@@ -44,6 +48,8 @@ export class OffscreenHost {
 
   constructor(private readonly options: OffscreenHostOptions) {
     this.#ranker = this.#newRanker()
+    // Files are hashed in the background after their first open in a session; one that fails is gone, so let go of it.
+    options.assets.onInvalid(bundle => this.#invalidated(bundle))
   }
 
   async handle(request: OffscreenRequest, settings: Settings): Promise<unknown> {
@@ -75,7 +81,10 @@ export class OffscreenHost {
 
   /** Resolves once background work (installs, model loads, checks) has finished; for tests. */
   async idle(): Promise<void> {
-    while (this.#tasks.size) await Promise.allSettled([...this.#tasks])
+    do {
+      while (this.#tasks.size) await Promise.allSettled([...this.#tasks])
+      await this.options.assets.checked()
+    } while (this.#tasks.size)
   }
 
   // ----------------------------------------------------------------- settings
@@ -171,6 +180,12 @@ export class OffscreenHost {
       // A fresh ranker loads at once after the next download instead of waiting out the retry pause.
       if (!intact && ranker === this.#ranker) this.#replaceRanker()
     }))
+  }
+
+  /** A background check removed a damaged file of `bundle`: the open dictionary or the loaded model is dropped. */
+  #invalidated(bundle: BundleName): void {
+    if (bundle === 'dictionary') this.#dictionary = undefined
+    else this.#replaceRanker()
   }
 
   async #installed(bundle: BundleName): Promise<void> {

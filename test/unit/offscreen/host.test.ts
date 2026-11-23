@@ -4,7 +4,7 @@ import { STORED_NAMES } from '../../../src/assets/manifest'
 import { openWiktionaryDictionary } from '../../../src/dict/lookup'
 import { CodedError, type DefineAnswer, type DictionaryResult } from '../../../src/shared/contracts'
 import type { RuntimeStatus } from '../../../src/shared/offscreen-protocol'
-import { until } from '../assets/helpers'
+import { gate, until } from '../assets/helpers'
 import { hostFixture, MOUSE_SELECTION, settings } from './fixture'
 
 const define = (fixture: Awaited<ReturnType<typeof hostFixture>>, requestId = 'r1', patch = {}, selection = MOUSE_SELECTION) =>
@@ -194,17 +194,53 @@ describe('OffscreenHost: order by context', () => {
     expect(fixture.store.files.has(STORED_NAMES.model)).toBe(false)
   })
 
-  test('a model file damaged before loading shows the model as missing', async () => {
+  test('a model file damaged before loading is found by the background check: the model closes and shows as missing', async () => {
     const fixture = await hostFixture()
     fixture.install('dictionary'); fixture.install('model')
     const tokenizer = fixture.store.files.get(STORED_NAMES.tokenizer)!
     tokenizer[10] = tokenizer[10]! ^ 0xff
+    // Loading does not wait for the files to be hashed.
     expect((await define(fixture, 'r1', { orderByContext: true })).ordered).toBe(false)
     await fixture.host.idle()
-    expect(fixture.workers).toHaveLength(0)
+    expect(fixture.workers).toHaveLength(1)
+    expect(fixture.workers[0]!.terminated).toBe(true)
     const answer = await status(fixture, { orderByContext: true })
     expect(answer.bundles.model.phase).toBe('missing')
     expect(answer.ranker).toEqual({ state: 'idle' })
+    expect((await define(fixture, 'r2', { orderByContext: true })).ordered).toBe(false)
+  })
+
+  test('the first lookup of a session does not wait for the dictionary to be hashed', async () => {
+    const fixture = await hostFixture()
+    fixture.install('dictionary')
+    // Reads of the whole file (the hash) wait; the reader's own reads of header, index and blocks do not.
+    const held = gate()
+    const open = fixture.store.open.bind(fixture.store)
+    fixture.store.open = async name => {
+      const source = await open(name)
+      return source && { size: source.size, read: async (start, end) => { if (start === 0 && end === source.size) await held.promise; return source.read(start, end) } }
+    }
+    const answer = await define(fixture)
+    expect(nounMeanings(answer.result)).toEqual(RODENT_FIRST)
+    let hashed = false
+    void fixture.assets.checked().then(() => { hashed = true })
+    await Promise.resolve()
+    expect(hashed).toBe(false)
+    held.open()
+    await fixture.host.idle()
+    expect(hashed).toBe(true)
+    expect((await status(fixture)).bundles.dictionary.phase).toBe('ready')
+  })
+
+  test('a dictionary found damaged by the background check is dropped: lookups fail quietly until it is downloaded again', async () => {
+    const fixture = await hostFixture()
+    fixture.install('dictionary')
+    const pack = fixture.store.files.get(STORED_NAMES.dictionary)!
+    pack[pack.length - 1] = pack[pack.length - 1]! ^ 0xff
+    await define(fixture).catch(() => undefined)
+    await fixture.host.idle()
+    expect((await status(fixture)).bundles.dictionary.phase).toBe('missing')
+    await expect(define(fixture, 'r2')).rejects.toMatchObject({ code: 'DICTIONARY_MISSING' })
   })
 })
 
@@ -239,9 +275,9 @@ describe('OffscreenHost: downloads', () => {
 
   test('a model download finishing with ordering off starts nothing', async () => {
     const fixture = await hostFixture()
-    await fixture.host.handle({ type: 'download', bundle: 'model', acceptBytes: fixture.sizeOf('model') }, settings())
+    await fixture.host.handle({ type: 'download', bundle: 'model', acceptBytes: fixture.sizeOf('model') }, settings({ orderByContext: false }))
     await fixture.host.idle()
-    expect((await status(fixture)).bundles.model.phase).toBe('ready')
+    expect((await status(fixture, { orderByContext: false })).bundles.model.phase).toBe('ready')
     expect(fixture.workers).toHaveLength(0)
   })
 
