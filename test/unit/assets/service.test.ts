@@ -297,7 +297,7 @@ describe('open and verification', () => {
     const first = setup()
     await install(first.service, 'dictionary')
     const tampered = first.pack.transfer.slice()
-    tampered[10] ^= 1
+    tampered[10] = tampered[10]! ^ 1
     first.store.files.set('wiktionary-test.pack', tampered)
     // The session that downloaded it already hashed it.
     expect(await read(first.service, 'wiktionary-test.pack')).toEqual(tampered)
@@ -331,7 +331,7 @@ describe('open and verification', () => {
     await install(service, 'model')
     expect(await service.verify('model')).toBe(true)
     const tampered = tokenizer.transfer.slice()
-    tampered[0] ^= 1
+    tampered[0] = tampered[0]! ^ 1
     store.files.set('tokenizer.json', tampered)
     expect(await service.verify('model')).toBe(false)
     expect((await service.status()).model).toEqual(idle(tokenizer.file.size, { storedBytes: onnx.file.storedSize + metadata.file.storedSize }))

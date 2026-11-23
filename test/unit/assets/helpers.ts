@@ -9,7 +9,7 @@ export const sha = (bytes: Uint8Array) => createHash('sha256').update(bytes).dig
 export function bytes(length: number, seed = 1): Uint8Array {
   const out = new Uint8Array(length)
   let state = seed
-  for (let i = 0; i < length; i++) { state = (state * 1103515245 + 12345) & 0x7fffffff; out[i] = state & 0xff }
+  for (let i = 0; i < length; i++) { state = (Math.imul(state, 1103515245) + 12345) >>> 0; out[i] = state >>> 24 }
   return out
 }
 

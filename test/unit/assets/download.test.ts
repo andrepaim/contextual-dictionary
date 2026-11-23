@@ -63,7 +63,7 @@ describe('a plain file', () => {
 
   test('a transfer with the right size but other bytes is refused as corrupt', async () => {
     const altered = transfer.slice()
-    altered[100] ^= 1
+    altered[100] = altered[100]! ^ 1
     const { store, run } = setup(file, respondWith(altered))
     await expectCode(run(), 'ASSET_CORRUPT')
     await expectNothing(store)
@@ -84,7 +84,7 @@ describe('a plain file', () => {
   })
 
   test('a transfer that stops sending stalls after the stall time', async () => {
-    const { store, progress, run } = setup(file, () => new Response(body(transfer.slice(0, 2000), { after: 'hang' })), { stallMs: 30 })
+    const { store, progress, run } = setup(file, () => new Response(body(transfer.slice(0, 2000), { chunk: 1000, after: 'hang' })), { stallMs: 30 })
     await expectCode(run(), 'DOWNLOAD_STALLED')
     expect(progress).toEqual([1000, 2000])
     await expectNothing(store)
@@ -221,7 +221,7 @@ describe('a gzip file', () => {
 
   test('a gzip stream whose checksum fails is refused as corrupt', async () => {
     const broken = transfer.slice()
-    broken[broken.length - 8] ^= 0xff
+    broken[broken.length - 8] = broken[broken.length - 8]! ^ 0xff
     const pinned: PinnedFile = { ...file, sha256: sha(broken) }
     const { store, run } = setup(pinned, respondWith(broken, 100))
     await expectCode(run(), 'ASSET_CORRUPT')
