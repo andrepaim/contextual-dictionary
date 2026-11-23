@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { STORED_NAMES } from '../../src/assets/manifest'
-import { card, cardHost, doubleClickWord, shownEntries } from './support/card'
+import { card, cardHost, doubleClickWord, shownEntries, gotoReady } from './support/card'
 import { closeOffscreen, install, launch, requestCounts, status, storedFiles, type Session } from './support/extension'
 
 // The extension's real private file storage (the origin private file system) in Chromium.
@@ -33,7 +33,7 @@ test('a stored file altered at the same size is detected and offered for downloa
     await writable.close()
   }, STORED_NAMES.dictionary)
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await doubleClickWord(page.locator('#mouse'), 'mouse')
   await expect.poll(async () => (await requestCounts(session)).define).toBeGreaterThan(0)
   await expect(cardHost(page)).toBeHidden()
@@ -61,7 +61,7 @@ test('installed files and settings persist across a browser restart with the sam
   expect(now.bundles.model.phase).toBe('ready')
   expect(now.settings.orderByContext).toBe(true)
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await doubleClickWord(page.locator('#mouse'), 'mouse')
   expect((await shownEntries(page))[0]!.lemma).toBe('mouse')
   expect(session.server.requests).toEqual([])

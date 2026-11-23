@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { ERROR_MESSAGES, formatMegabytes } from '../../src/popup/popup'
 import { STORED_NAMES } from '../../src/assets/manifest'
-import { card, cardHost, doubleClickWord } from './support/card'
+import { card, cardHost, doubleClickWord, gotoReady } from './support/card'
 import { install, launch, requestCounts, serviceWorker, status, storedFiles, type Session } from './support/extension'
 
 let session: Session
@@ -95,7 +95,7 @@ test('the real popup finds the tab host through the page and its site switch sil
   // localhost is outside the end-to-end host permission, so the popup cannot read the tab address
   // and asks the page's content script instead.
   const page = await session.context.newPage()
-  await page.goto(`${session.localhost}/article.html`)
+  await gotoReady(page, `${session.localhost}/article.html`)
   await doubleClickWord(page.locator('#mouse'), 'mouse')
   await expect(card(page)).toBeVisible()
   await page.mouse.click(2, 2)

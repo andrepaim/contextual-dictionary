@@ -10,7 +10,8 @@ document.documentElement.dataset.contextualDictionary = 'loaded'
 const host = pageHost(location)
 const backend = createBackend(message => chrome.runtime.sendMessage(message))
 const controller = new Controller({ backend, host })
-void controller.start()
+// "ready" once the first status is applied (the end-to-end tests wait for it); it says nothing about the settings.
+void controller.start().then(() => { document.documentElement.dataset.contextualDictionary = 'ready' })
 
 // A settings change switches the card on or off at once, without asking the back end.
 chrome.storage?.onChanged.addListener((changes, area) => {

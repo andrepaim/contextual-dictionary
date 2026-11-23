@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { card, cardHost, doubleClickWord, shownEntries, wordBox } from './support/card'
+import { card, cardHost, doubleClickWord, shownEntries, wordBox, gotoReady } from './support/card'
 import { install, launch, requestCounts, type Session } from './support/extension'
 
 let session: Session
@@ -14,7 +14,7 @@ const defines = async () => (await requestCounts(session)).define ?? 0
 
 test('a real double-click sends one lookup', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   const before = await defines()
   await doubleClickWord(page.locator('#mouse'), 'mouse')
   await expect(card(page)).toBeVisible()
@@ -25,7 +25,7 @@ test('a real double-click sends one lookup', async () => {
 
 test('a selection made with the keyboard is looked up', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await page.evaluate(() => {
     const text = document.querySelector('#bank')!.firstChild!
     getSelection()!.collapse(text, text.textContent!.indexOf('bank'))
@@ -38,7 +38,7 @@ test('a selection made with the keyboard is looked up', async () => {
 
 test('a selection across inline elements finds the compound', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   const paragraph = page.locator('#split')
   const origin = (await paragraph.boundingBox())!
   const start = await wordBox(paragraph, 'neural')
@@ -55,7 +55,7 @@ test('a selection across inline elements finds the compound', async () => {
 
 test('text in inputs, textareas and editable elements is ignored', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   const before = await defines()
   await page.locator('#field').dblclick({ position: { x: 20, y: 8 } })
   await page.locator('#area').dblclick({ position: { x: 20, y: 8 } })
@@ -68,7 +68,7 @@ test('text in inputs, textareas and editable elements is ignored', async () => {
 
 test('a word inside an open shadow root is looked up', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await doubleClickWord(page.locator('#inside'), 'mouse')
   await expect(card(page)).toBeVisible()
   expect((await shownEntries(page))[0]).toMatchObject({ lemma: 'mouse', pos: 'noun' })
@@ -78,7 +78,7 @@ test('a word inside an open shadow root is looked up', async () => {
 test('near the bottom right corner the card stays inside the viewport, above the word', async () => {
   const page = await session.context.newPage()
   await page.setViewportSize({ width: 800, height: 600 })
-  await page.goto(`${session.pages}/corner.html`)
+  await gotoReady(page, `${session.pages}/corner.html`)
   const corner = page.locator('#corner')
   const word = await wordBox(corner, 'mouse')
   const origin = (await corner.boundingBox())!
@@ -95,7 +95,7 @@ test('near the bottom right corner the card stays inside the viewport, above the
 test('the card follows a dark colour scheme', async () => {
   const page = await session.context.newPage()
   await page.emulateMedia({ colorScheme: 'dark' })
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await doubleClickWord(page.locator('#mouse'), 'mouse')
   await expect(card(page)).toBeVisible()
   await expect(card(page)).toHaveCSS('background-color', 'rgb(34, 39, 46)')
@@ -107,7 +107,7 @@ test('the card follows a dark colour scheme', async () => {
 
 test('hostile page styles do not reach the card', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/hostile.html`)
+  await gotoReady(page, `${session.pages}/hostile.html`)
   await doubleClickWord(page.locator('#hostile'), 'mouse')
   await expect(card(page)).toBeVisible()
   const host = cardHost(page)

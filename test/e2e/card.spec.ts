@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { card, cardHost, doubleClickWord, placeholder, shownEntries } from './support/card'
+import { card, cardHost, doubleClickWord, placeholder, shownEntries, gotoReady } from './support/card'
 import { MOUSE_DICTIONARY_ORDER } from './support/assets'
 import { install, launch, requestCounts, type Session } from './support/extension'
 
@@ -32,7 +32,7 @@ async function recordCard(page: Page): Promise<() => Promise<string[]>> {
 
 test('double-clicking a word shows a placeholder, then one card with its entries and attribution', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   const states = await recordCard(page)
   await doubleClickWord(page.locator('#mouse'), 'mouse')
   await expect(card(page)).toBeVisible()
@@ -51,7 +51,7 @@ test('double-clicking a word shows a placeholder, then one card with its entries
 
 test('an inflection shows the base word with a note', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await page.evaluate(() => { document.querySelector('#mouse')!.textContent = 'Three blind mice ran across the kitchen floor.' })
   await doubleClickWord(page.locator('#mouse'), 'mice')
   const [first] = await shownEntries(page)
@@ -60,7 +60,7 @@ test('an inflection shows the base word with a note', async () => {
 
 test('an unknown word shows no card', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   const states = await recordCard(page)
   await doubleClickWord(page.locator('#unknown'), 'qwzxqvplk')
   await expect.poll(async () => (await requestCounts(session)).define).toBe(1)
@@ -71,7 +71,7 @@ test('an unknown word shows no card', async () => {
 
 test('Escape and a click outside dismiss the card', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await doubleClickWord(page.locator('#mouse'), 'mouse')
   await expect(card(page)).toBeVisible()
   await page.keyboard.press('Escape')
@@ -86,7 +86,7 @@ test('Escape and a click outside dismiss the card', async () => {
 
 test('a click inside the card keeps it open, and "Show all meanings" is not needed for short entries', async () => {
   const page = await session.context.newPage()
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await doubleClickWord(page.locator('#mouse'), 'mouse')
   await expect(card(page)).toBeVisible()
   await card(page).locator('[data-part="lemma"]').first().click()
@@ -100,7 +100,7 @@ test('without the dictionary a double-click shows nothing and stays quiet', asyn
   const page = await session.context.newPage()
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
-  await page.goto(`${session.pages}/article.html`)
+  await gotoReady(page, `${session.pages}/article.html`)
   await doubleClickWord(page.locator('#mouse'), 'mouse')
   await expect.poll(async () => (await requestCounts(session)).define).toBe(1)
   await expect(cardHost(page)).toBeHidden()
