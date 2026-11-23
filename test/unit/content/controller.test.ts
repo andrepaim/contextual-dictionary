@@ -267,6 +267,23 @@ describe('Controller', () => {
     expect(errors).not.toHaveBeenCalled()
   })
 
+  test('after a failed or empty lookup, a new double-click on the same word asks again', async () => {
+    // For example the dictionary was missing and has been installed since.
+    await controller.start()
+    await doubleClick('mouse', 'mouse')
+    backend.pending[0]!.reject(new CodedError('DICTIONARY_MISSING'))
+    await flush()
+    await doubleClick('mouse', 'mouse')
+    expect(backend.defines()).toHaveLength(2)
+    backend.pending[1]!.resolve({ result: { query: 'mouse', entries: [], source: SOURCE }, ordered: false })
+    await flush()
+    await doubleClick('mouse', 'mouse')
+    expect(backend.defines()).toHaveLength(3)
+    backend.pending[2]!.resolve(answer('mouse'))
+    await flush()
+    expect(cardState()).toBe('card')
+  })
+
   test('the two clicks of a double-click on an unknown word still send one lookup', async () => {
     await controller.start()
     await doubleClick('mouse', 'mouse')
