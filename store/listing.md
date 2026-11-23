@@ -14,7 +14,8 @@ Upload `contextual-dictionary-<version>.zip` from the [release](https://github.c
 | Summary (from the manifest) | Select a word on any page to see its dictionary meanings, with the one that fits the passage first. Runs on your computer. |
 | Category | Education ("Tools" as the alternative) |
 | Language | English |
-| Homepage URL | https://github.com/andrepaim/contextual-dictionary |
+| Homepage URL | https://andrepaim.github.io/contextual-dictionary/ |
+| Official URL (optional) | https://andrepaim.github.io/contextual-dictionary/, once it is verified in Google Search Console (see below) |
 | Support URL | https://github.com/andrepaim/contextual-dictionary/issues |
 
 ### Detailed description
@@ -103,7 +104,13 @@ The extension transmits no user data. It does read the selected text and the tex
 
 ### Privacy policy URL
 
-https://github.com/andrepaim/contextual-dictionary/blob/main/docs/privacy.md
+https://andrepaim.github.io/contextual-dictionary/privacy.html
+
+The page is made from `docs/privacy.md` when the site is built.
+
+## Official URL
+
+The store offers as "Official URL" only sites verified in Google Search Console with the same Google account. To verify the project site: add the property `https://andrepaim.github.io/contextual-dictionary/` in Search Console as a URL prefix, choose the HTML file method, put the file it gives you in `site/` and merge it; the site is published again and the file is served from the site's root. (The HTML tag method works too: put the tag in the head of `site/index.html`.)
 
 ## Distribution
 

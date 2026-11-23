@@ -6,6 +6,8 @@ A Chrome extension that defines the word you select on any web page, from a copy
 - **Order by context** (on by default once the model is downloaded): the model Ettin-150m-WSD (INT8 ONNX, run with ONNX Runtime on WebAssembly) lists the meanings inside each entry by how well they fit the passage. No meaning is dropped and no score is shown.
 - **Privacy:** what you select never leaves your computer. The only network use is the one-time download of the dictionary and the model, each of which you confirm. See [docs/privacy.md](docs/privacy.md).
 
+Site: https://andrepaim.github.io/contextual-dictionary/
+
 ## Example
 
 "And enterprises of great pith and moment" (*Hamlet*, act 3, scene 1, read on [shakespeare.mit.edu](https://shakespeare.mit.edu/hamlet/hamlet.3.1.html)). Wiktionary lists the meanings of "moment" starting with a point in space and a point in time. With "Order by context" the card opens on "Weight or importance", which is what Hamlet means.
@@ -56,6 +58,10 @@ npm run package      # package/contextual-dictionary-<version>.zip and SHA256SUM
 ```
 
 Load `dist/` as an unpacked extension from `chrome://extensions` (Developer mode). The plan and the architecture are in [docs/plan.md](docs/plan.md), the developer rules in [CLAUDE.md](CLAUDE.md), and the measurements behind the defaults, with how to run them again, in [docs/validation.md](docs/validation.md) and `validation/`.
+
+## Site
+
+`site/` and `docs/privacy.md` are published at https://andrepaim.github.io/contextual-dictionary/ by `.github/workflows/pages.yml` on every push to `main` that changes them. `npm run build:site` builds it into `_site/`.
 
 ## Release
 
