@@ -65,6 +65,8 @@ export class PopupView {
   #status: Status | null = null
   #busy = false
   #consent = false
+  /** The bundle whose removal is being confirmed. */
+  #confirmRemove: BundleName | null = null
   #problem = ''
   #timer: ReturnType<typeof setTimeout> | undefined
   #destroyed = false
@@ -251,6 +253,7 @@ export class PopupView {
   #bundle(name: BundleName, status: Status): HTMLElement {
     const bundle = status.bundles[name]
     const { title, noun, description } = NAMES[name]
+    if (bundle.phase !== 'ready' && this.#confirmRemove === name) this.#confirmRemove = null
     const section = this.#el('section', 'bundle')
     section.dataset.bundle = name
     section.setAttribute('aria-label', title)
@@ -297,8 +300,14 @@ export class PopupView {
         break
       case 'ready': {
         state.textContent = `Installed, ${formatMegabytes(bundle.storedBytes)} used`
+        if (this.#confirmRemove === name) {
+          section.append(this.#removeQuestion(name, bundle))
+          break
+        }
         const remove = this.#button('Remove', `${name}:remove`, () => {
-          void this.#act(() => this.#backend.send({ type: 'remove-assets', bundle: name }))
+          this.#confirmRemove = name
+          this.#render()
+          this.#root.querySelector<HTMLElement>(`[data-bundle="${name}"] [data-action="keep"]`)?.focus()
         }, { ariaLabel: `Remove the downloaded ${noun}` })
         remove.dataset.action = 'remove'
         actions.append(remove)
@@ -319,6 +328,31 @@ export class PopupView {
     if (note) section.append(note)
     if (actions.childElementCount) section.append(actions)
     return section
+  }
+
+  /** Removal asks first: the files are large and downloading them again takes time. */
+  #removeQuestion(name: BundleName, bundle: BundleStatus): HTMLElement {
+    const { noun } = NAMES[name]
+    const block = this.#el('div', 'consent')
+    block.dataset.part = 'confirm-remove'
+    block.setAttribute('role', 'group')
+    block.setAttribute('aria-label', `Remove the downloaded ${noun}`)
+    block.append(this.#el('p', undefined, `Remove the ${noun}? This frees ${formatMegabytes(bundle.storedBytes)}. You can download it again later.`))
+    const actions = this.#el('div', 'actions')
+    const confirm = this.#button('Remove', `${name}:confirm-remove`, () => {
+      this.#confirmRemove = null
+      void this.#act(() => this.#backend.send({ type: 'remove-assets', bundle: name }))
+    }, { primary: true, ariaLabel: `Remove the ${noun} now` })
+    confirm.dataset.action = 'confirm-remove'
+    const keep = this.#button('Keep', `${name}:keep`, () => {
+      this.#confirmRemove = null
+      this.#render()
+      this.#root.querySelector<HTMLElement>(`[data-bundle="${name}"] [data-action="remove"]`)?.focus()
+    }, { ariaLabel: `Keep the ${noun}` })
+    keep.dataset.action = 'keep'
+    actions.append(confirm, keep)
+    block.append(actions)
+    return block
   }
 
   #dictionaryHint(status: Status): HTMLElement | null {
@@ -358,6 +392,14 @@ export class PopupView {
     footer.append(paragraph)
     return footer
   }
+}
+
+const HOSTED = new Set(['status', 'set-settings', 'download', 'cancel-download', 'remove-assets'])
+
+/** `request` naming `host` as the asking page, when it is answered with a Status and names none yet. */
+export function withHost<T extends Request>(request: T, host: string | null): T {
+  if (!host || !HOSTED.has(request.type) || (request as { host?: string }).host !== undefined) return request
+  return { ...request, host }
 }
 
 /** The host name of an ordinary web page address, or null for anything else. */

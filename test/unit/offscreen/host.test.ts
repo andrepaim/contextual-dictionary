@@ -99,7 +99,7 @@ describe('OffscreenHost: order by context', () => {
   })
 
   test('the settings that come with a lookup are applied first', async () => {
-    const fixture = await hostFixture({ prefer: 'computing' })
+    const fixture = await hostFixture({ prefer: 'computing', loadMs: 50 })
     fixture.install('dictionary'); fixture.install('model')
     // The first lookup after ordering was turned on elsewhere starts the model and gets dictionary order.
     expect((await define(fixture, 'r1', { orderByContext: true })).ordered).toBe(false)
@@ -135,12 +135,12 @@ describe('OffscreenHost: order by context', () => {
   test('maxCandidates from the settings reaches the ranker', async () => {
     const fixture = await hostFixture({ prefer: 'computing' })
     fixture.install('dictionary'); fixture.install('model')
-    const on = { orderByContext: true, maxCandidates: 2 }
+    const on = { orderByContext: true, maxCandidates: 4 }
     await fixture.host.handle({ type: 'settings' }, settings(on))
     await fixture.host.idle()
     await define(fixture, 'r1', on)
     const prompt = fixture.workers[0]!.prompts[0]!
-    expect(prompt.split('\n').length - 3).toBe(2)
+    expect(prompt.split('\n').length - 3).toBe(4)
   })
 
   test('cancel-define stops waiting for the model: the lookup gets dictionary order', async () => {

@@ -136,6 +136,8 @@ describe('OffscreenLink', () => {
     const api = new FakeApi()
     api.answer = () => ({ ok: false, code: 'DICTIONARY_MISSING', message: 'none' })
     const link = new OffscreenLink(api, options)
+    await link.ensure()
+    await vi.waitFor(() => expect(api.listening).toBe(true))
     await expect(link.call({ type: 'status' }, DEFAULT_SETTINGS, { create: true })).rejects.toMatchObject({ code: 'DICTIONARY_MISSING' })
     expect(api.sent).toHaveLength(1)
   })

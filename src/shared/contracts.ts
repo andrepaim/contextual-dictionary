@@ -169,15 +169,17 @@ export interface DefineAnswer {
 
 // ------------------------------------------------------------------ messages
 
+// `host` on a request answered with a Status names the asking page, so the
+// answer's `siteEnabled` is for that page; without it the answer says enabled.
 export type Request =
   | { type: 'define'; requestId: string; selection: Selection }
   | { type: 'cancel-define'; requestId: string }
   | { type: 'status'; host?: string }
-  | { type: 'set-settings'; patch: Partial<Omit<Settings, 'disabledSites'>> }
+  | { type: 'set-settings'; patch: Partial<Omit<Settings, 'disabledSites'>>; host?: string }
   | { type: 'set-site'; host: string; enabled: boolean }
-  | { type: 'download'; bundle: BundleName; acceptBytes: number }
-  | { type: 'cancel-download'; bundle: BundleName }
-  | { type: 'remove-assets'; bundle: BundleName }
+  | { type: 'download'; bundle: BundleName; acceptBytes: number; host?: string }
+  | { type: 'cancel-download'; bundle: BundleName; host?: string }
+  | { type: 'remove-assets'; bundle: BundleName; host?: string }
 
 export type RequestType = Request['type']
 export const REQUEST_TYPES: readonly RequestType[] = ['define', 'cancel-define', 'status', 'set-settings', 'set-site', 'download', 'cancel-download', 'remove-assets']
@@ -213,6 +215,7 @@ const isText = (value: unknown, max: number): value is string => typeof value ==
 /** Whether `value` is a well-formed request; messages from pages are untrusted. */
 export function isRequest(value: unknown): value is Request {
   if (!isRecord(value) || typeof value.type !== 'string') return false
+  if (value.type !== 'set-site' && value.host !== undefined && !isText(value.host, 255)) return false
   switch (value.type) {
     case 'define': {
       const selection = value.selection
@@ -221,7 +224,7 @@ export function isRequest(value: unknown): value is Request {
         && isText(selection.before, SELECTION_LIMITS.contextChars * 2) && isText(selection.after, SELECTION_LIMITS.contextChars * 2)
     }
     case 'cancel-define': return isText(value.requestId, 64) && value.requestId.length > 0
-    case 'status': return value.host === undefined || isText(value.host, 255)
+    case 'status': return true
     case 'set-settings': {
       const patch = value.patch
       if (!isRecord(patch)) return false
