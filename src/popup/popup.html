@@ -1,5 +1,64 @@
 <!doctype html>
 <html lang="en">
-  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Contextual Dictionary</title></head>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Contextual Dictionary</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff; --panel: #f6f8fa; --text: #1f2328; --muted: #59636e; --border: #d0d7de;
+        --accent: #0969da; --accent-text: #ffffff; --danger: #cf222e; --track: #d0d7de;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #22272e; --panel: #2d333b; --text: #e6edf3; --muted: #9aa5b1; --border: #444c56;
+          --accent: #6cb6ff; --accent-text: #0d1117; --danger: #ff7b72; --track: #545d68;
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--bg); color: var(--text); }
+      body { width: 340px; font: 13px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+      main { padding: 12px 14px 10px; }
+      p { margin: 0; }
+      .title { font-size: 15px; font-weight: 600; margin: 0 0 8px; }
+      .switches { display: grid; gap: 2px; margin: 0 0 10px; }
+      .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 0; cursor: pointer; }
+      .switch-row:has(input:disabled) { cursor: default; color: var(--muted); }
+      .switch-label { overflow-wrap: anywhere; }
+      .switch {
+        appearance: none; flex: none; position: relative; width: 34px; height: 20px; margin: 0; border-radius: 10px;
+        background: var(--track); cursor: inherit; transition: background 0.15s;
+      }
+      .switch::after {
+        content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+        background: #ffffff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); transition: transform 0.15s;
+      }
+      .switch:checked { background: var(--accent); }
+      .switch:checked::after { transform: translateX(14px); }
+      .switch:disabled { opacity: 0.5; }
+      .switch:focus-visible, .button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .consent { background: var(--panel); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 10px; margin: 0 0 10px; }
+      .bundle { border-top: 1px solid var(--border); padding: 9px 0; }
+      .bundle h2 { font-size: 13px; font-weight: 600; margin: 0; }
+      .description, .hint, .note { color: var(--muted); font-size: 12px; }
+      .state { margin-top: 4px; }
+      .hint, .note { margin-top: 6px; }
+      .error, .problem { color: var(--danger); margin-top: 6px; }
+      .actions { display: flex; gap: 8px; margin-top: 8px; }
+      .button {
+        font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+        padding: 3px 12px; cursor: pointer;
+      }
+      .button:hover:not(:disabled) { border-color: var(--muted); }
+      .button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+      .button:disabled { opacity: 0.55; cursor: default; }
+      .progress { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin-top: 6px; }
+      .progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+      .credits { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 2px; color: var(--muted); font-size: 11px; }
+      .credits a { color: inherit; }
+      @media (prefers-reduced-motion: reduce) { .switch, .switch::after, .progress-fill { transition: none; } }
+    </style>
+  </head>
   <body><main id="app"></main><script type="module" src="popup.js"></script></body>
 </html>
