@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { SenseRanker, type SenseRankerOptions } from '../../../src/sense/ranker'
-import { CodedError, type DictionaryResult, type Selection, type WorkerLike } from '../../../src/shared/contracts'
+import { RANKER_DEFAULTS, SenseRanker, type SenseRankerOptions } from '../../../src/sense/ranker'
+import { CodedError, DEFAULT_SETTINGS, type DictionaryResult, type Selection, type WorkerLike } from '../../../src/shared/contracts'
 import { FakeWorker, fakeFormat, type FakeOptions } from './fake-worker'
 
 const source = { name: 'Wiktionary', license: 'CC BY-SA 4.0', url: 'https://en.wiktionary.org/wiki/bank' }
@@ -387,7 +387,29 @@ describe('SenseRanker, candidates and settings', () => {
     const { ranker, last } = setup()
     await ready(ranker)
     await after(1, ranker.order(many(100), passage()))
-    expect(choiceCount(last().prompts[0]!)).toBe(48)
+    expect(choiceCount(last().prompts[0]!)).toBe(DEFAULT_SETTINGS.maxCandidates)
+    await ranker.close()
+  })
+
+  test('prompts are kept within the default length limit, so their time stays near the budget (docs/validation.md)', async () => {
+    const { ranker, last } = setup()
+    await ready(ranker)
+    const long: DictionaryResult = { ...many(30), entries: [{ ...many(30).entries[0]!, senses: many(30).entries[0]!.senses.map(sense => ({ ...sense, definition: `${sense.definition} ${'y'.repeat(120)}` })) }] }
+    await after(1, ranker.order(long, passage()))
+    const prompt = last().prompts[0]!
+    expect(prompt.length).toBeLessThanOrEqual(RANKER_DEFAULTS.maxPromptChars)
+    expect(choiceCount(prompt)).toBeGreaterThan(2)
+    expect(choiceCount(prompt)).toBeLessThan(30)
+    expect(ranker.stats.capped).toBe(1)
+    await ranker.close()
+  })
+
+  test('the length limit can be changed', async () => {
+    const { ranker, last } = setup({}, { maxPromptChars: 100_000 })
+    await ready(ranker)
+    const long: DictionaryResult = { ...many(30), entries: [{ ...many(30).entries[0]!, senses: many(30).entries[0]!.senses.map(sense => ({ ...sense, definition: `${sense.definition} ${'y'.repeat(120)}` })) }] }
+    await after(1, ranker.order(long, passage()))
+    expect(choiceCount(last().prompts[0]!)).toBe(Math.min(30, DEFAULT_SETTINGS.maxCandidates))
     await ranker.close()
   })
 

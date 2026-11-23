@@ -8,7 +8,8 @@ const READY: BundleStatus = { phase: 'ready', error: null, requiredBytes: 0, rec
 
 function makeStatus(overrides: { settings?: Partial<Settings>; siteEnabled?: boolean; dictionary?: Partial<BundleStatus>; model?: Partial<BundleStatus>; ranker?: Status['ranker'] } = {}): Status {
   return {
-    settings: { ...DEFAULT_SETTINGS, ...overrides.settings },
+    // The popup tests start from ordering off unless they say otherwise.
+    settings: { ...DEFAULT_SETTINGS, orderByContext: false, ...overrides.settings },
     siteEnabled: overrides.siteEnabled ?? true,
     bundles: { dictionary: { ...READY, ...overrides.dictionary }, model: { ...MISSING, ...overrides.model } },
     ranker: overrides.ranker ?? { state: 'idle' },

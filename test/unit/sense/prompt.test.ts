@@ -195,6 +195,29 @@ describe('the candidate cap', () => {
     expect(request(result, deposit, built.candidates.length + 1).candidates).toHaveLength(built.candidates.length)
   })
 
+  test('a limit on the prompt length offers the first meanings of the round-robin order that fit, and never more than the cap', () => {
+    const entry = (name: string, count: number): DictionaryEntry =>
+      ({ lemma: 'set', partOfSpeech: name, senses: Array.from({ length: count }, (_, i) => ({ definition: `${name} meaning number ${i} ${'x'.repeat(40)}`, examples: [] })) })
+    const result: DictionaryResult = { query: 'set', source, entries: [entry('noun', 20), entry('verb', 20)] }
+    const limited = senseRequest(result, deposit, format, 48, 900)
+    if (!('prompt' in limited)) throw new Error('expected a prompt')
+    expect(limited.prompt.length).toBeLessThanOrEqual(900)
+    expect(limited.candidates.length).toBeGreaterThanOrEqual(2)
+    expect(limited.candidates.length).toBeLessThan(20)
+    const [noun, verb] = perEntry(limited, 2)
+    expect(Math.abs(noun! - verb!)).toBeLessThanOrEqual(1)
+    // One more meaning would not have fitted.
+    const more = senseRequest(result, deposit, format, limited.candidates.length + 1, 100_000)
+    if (!('prompt' in more)) throw new Error('expected a prompt')
+    expect(more.prompt.length).toBeGreaterThan(900)
+    // The cap still applies under a generous limit, and no limit is the model's own bound.
+    expect(request(result, deposit, 6).candidates).toHaveLength(6)
+    const capped = senseRequest(result, deposit, format, 6, 100_000)
+    expect('prompt' in capped && capped.candidates).toHaveLength(6)
+    expect(senseRequest(result, deposit, format, 48, Number.NaN)).toEqual(senseRequest(result, deposit, format, 48))
+    expect(senseRequest(result, deposit, format, 48, 50)).toEqual({ skip: 'TOO_LONG' })
+  })
+
   test('a passage or definitions too long for even two meanings are skipped', () => {
     const huge: DictionaryResult = { ...bank, entries: [{ ...bank.entries[0]!, senses: [{ definition: 'x'.repeat(9000), examples: [] }, { definition: 'y'.repeat(9000), examples: [] }] }] }
     expect(senseRequest(huge, deposit, format)).toEqual({ skip: 'TOO_LONG' })
@@ -293,5 +316,23 @@ describe('looksEnglish', () => {
     expect(looksEnglish('模型在数据上训练并且效果很好。')).toBe(false)
     expect(looksEnglish('123 456 789')).toBe(false)
     expect(looksEnglish('der bank')).toBe(false)
+  })
+
+  test('short plain English sentences are scored too (stage 3: 5% of Wiktionary examples were refused)', () => {
+    expect(looksEnglish('The expense far exceeds what I expected.')).toBe(true)
+    expect(looksEnglish('Can you refill my cup please? I have finished my coffee.')).toBe(true)
+    expect(looksEnglish('The sidewalk needed sweeping every morning.')).toBe(true)
+    expect(looksEnglish('How much do you usually tip at a restaurant?')).toBe(true)
+    expect(looksEnglish('Jerk chicken is a local favorite.')).toBe(true)
+  })
+
+  test('other languages stay unscored with the longer English word list', () => {
+    expect(looksEnglish('I ragazzi giocano a calcio nel parco ogni pomeriggio dopo la scuola.')).toBe(false)
+    expect(looksEnglish('Ho comprato i biglietti per il concerto di domani sera con mia sorella.')).toBe(false)
+    expect(looksEnglish('Wij hebben gisteren een nieuwe auto gekocht voor de familie.')).toBe(false)
+    expect(looksEnglish('Saya membeli mobil baru untuk keluarga kemarin malam.')).toBe(false)
+    expect(looksEnglish('Jag har köpt en ny bil till familjen i går kväll.')).toBe(false)
+    expect(looksEnglish('Hemos comprado un coche nuevo para toda la familia ayer.')).toBe(false)
+    expect(looksEnglish('Eu fui ao mercado comprar pão e leite para o café da manhã.')).toBe(false)
   })
 })

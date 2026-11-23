@@ -77,14 +77,20 @@ describe('normalizeSettings', () => {
     expect(normalizeSettings({ budgetMs: 5, maxCandidates: 1000 })).toMatchObject({ budgetMs: 50, maxCandidates: 127 })
     expect(normalizeSettings({ budgetMs: 99_999, maxCandidates: 0 })).toMatchObject({ budgetMs: 2000, maxCandidates: 2 })
     expect(normalizeSettings({ budgetMs: 400.6 })).toMatchObject({ budgetMs: 401 })
-    expect(normalizeSettings({ budgetMs: Number.NaN, maxCandidates: 'many' as unknown as number })).toMatchObject({ budgetMs: 350, maxCandidates: 48 })
+    expect(normalizeSettings({ budgetMs: Number.NaN, maxCandidates: 'many' as unknown as number })).toMatchObject({ budgetMs: DEFAULT_SETTINGS.budgetMs, maxCandidates: DEFAULT_SETTINGS.maxCandidates })
+  })
+
+  test('the defaults are the ones chosen from the stage 3 measurements (docs/validation.md)', () => {
+    // Model order put the labelled meaning first 55% of the time against 28% for dictionary order, so ordering is on;
+    // a 750 ms budget answers every lookup of the evaluation set on 8 and 4 threads within the prompt length limit.
+    expect(DEFAULT_SETTINGS).toEqual({ definitions: true, orderByContext: true, disabledSites: [], budgetMs: 750, maxCandidates: 24 })
   })
 
   test('sites are lower-cased, de-duplicated and sorted; other values are dropped', () => {
     const settings = normalizeSettings({ disabledSites: ['B.org', 'a.org', 'b.org', '', 7 as unknown as string], definitions: false, orderByContext: 'yes' as unknown as boolean })
     expect(settings.disabledSites).toEqual(['a.org', 'b.org'])
     expect(settings.definitions).toBe(false)
-    expect(settings.orderByContext).toBe(false)
+    expect(settings.orderByContext).toBe(DEFAULT_SETTINGS.orderByContext)
     expect(normalizeSettings({ disabledSites: 'a.org' as unknown as string[] }).disabledSites).toEqual([])
   })
 })
