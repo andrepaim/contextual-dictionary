@@ -85,5 +85,9 @@ export const RECORDS: PackRecord[] = [
   { k: 'café', e: [{ w: 'café', p: 'noun', s: ['A coffee shop.'] }] },
   { k: 'a', e: [{ w: 'a', p: 'article', s: ['One; any indefinite example of.'] }] },
   { k: 'the', e: [{ w: 'the', p: 'article', s: ['The definite article.'] }] },
+  { k: 'at the bank', e: [{ w: 'at the bank', p: 'prep_phrase', s: ['In the bank of a river (in angling).'] }] },
+  { k: 'in the running', e: [{ w: 'in the running', p: 'prep_phrase', s: ['Having a chance of winning.'] }] },
+  { k: 'go home', e: [{ w: 'go home', p: 'verb', s: ['To return to one\'s home.'] }] },
+  { k: 'went home', e: [{ w: 'went home', p: 'verb', f: [{ l: 'go home', n: 'simple past of go home' }] }] },
   { k: 'drag', e: [{ w: 'drag', p: 'verb', s: ['To pull along.'] }] },
 ]

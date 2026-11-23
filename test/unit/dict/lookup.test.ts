@@ -143,6 +143,14 @@ describe('define: compounds around the selection', () => {
     expect(heads(await define('network', 'neural (', ' here)'))).toEqual(['network/noun'])
   })
 
+  test('a compound that reaches into function words of the context comes after the word', async () => {
+    expect(heads(await define('bank', 'She paid at the ', ' today.'))).toEqual(['bank/noun', 'bank/noun', 'bank/verb', 'at the bank/prep_phrase'])
+    expect(heads(await define('running', 'still in the ', ' for the prize'))).toEqual(['running/adj', 'run/verb', 'in the running/prep_phrase'])
+    // Content words at the edges keep the compound first.
+    expect(heads(await define('went', 'She ', ' home.'))).toEqual(['go home/verb', 'go/verb'])
+    expect(heads(await define('network', 'the neural ', ' of'))).toEqual(['neural network/noun', 'network/noun'])
+  })
+
   test('compounds with apostrophes', async () => {
     expect(heads(await define('roll', "some rock 'n' ", ' music'))).toEqual(["rock 'n' roll/noun", 'roll/verb'])
     expect(heads(await define("rock ’n’ roll"))).toEqual(["rock 'n' roll/noun"])
