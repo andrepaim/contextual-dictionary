@@ -307,7 +307,30 @@ describe('open and verification', () => {
     expect(calls).toHaveLength(2)
   })
 
-  test('a tampered file of the same size is found on first use in a session, removed and downloaded again', async () => {
+  test('open gives an installed file at once and checks its content in the background, once per session', async () => {
+    const first = setup()
+    await install(first.service, 'dictionary')
+    const held = gate()
+    let reads = 0
+    const store: FileStore = {
+      open: async name => { const source = await first.store.open(name); return source && { size: source.size, read: async (a, b) => { reads++; await held.promise; return source.read(a, b) } } },
+      create: name => first.store.create(name), remove: name => first.store.remove(name), list: () => first.store.list(),
+    }
+    const service = new LocalAssetService({ store, manifest: first.manifest, fetch: first.fetch, hashChunkBytes: 1024 })
+    // The full hash is held up, yet the file is handed out: a lookup never waits for it.
+    const source = await service.open('wiktionary-test.pack')
+    expect(source?.size).toBe(first.pack.file.storedSize)
+    expect(await service.open('wiktionary-test.pack')).toBeDefined()
+    held.open()
+    await service.checked()
+    const afterFirst = reads
+    expect(afterFirst).toBe(Math.ceil(first.pack.file.storedSize / 1024))
+    await service.open('wiktionary-test.pack')
+    await service.checked()
+    expect(reads).toBe(afterFirst)
+  })
+
+  test('a tampered file of the same size is found by the background check, removed, reported and downloaded again', async () => {
     const first = setup()
     await install(first.service, 'dictionary')
     const tampered = first.pack.transfer.slice()
@@ -317,27 +340,36 @@ describe('open and verification', () => {
     expect(await read(first.service, 'wiktionary-test.pack')).toEqual(tampered)
 
     const next = setup({ store: first.store })
+    const invalid: string[] = []
+    next.service.onInvalid(bundle => invalid.push(bundle))
     expect((await next.service.status()).dictionary.phase).toBe('ready')
+    expect(await next.service.open('wiktionary-test.pack')).toBeDefined()
+    await next.service.checked()
+    expect(invalid).toEqual(['dictionary'])
     expect(await next.service.open('wiktionary-test.pack')).toBeUndefined()
     expect((await next.service.status()).dictionary).toEqual(idle(next.dictionaryBytes))
     await install(next.service, 'dictionary')
     expect(await read(next.service, 'wiktionary-test.pack')).toEqual(first.pack.transfer)
+    await next.service.checked()
+    expect(invalid).toEqual(['dictionary'])
   })
 
-  test('a file is hashed at most once per session', async () => {
+  test('an intact file is not reported, and a listener can stop listening', async () => {
     const first = setup()
-    await install(first.service, 'dictionary')
-    let reads = 0
-    const store: FileStore = {
-      open: async name => { const source = await first.store.open(name); return source && { size: source.size, read: (a, b) => { reads++; return source.read(a, b) } } },
-      create: name => first.store.create(name), remove: name => first.store.remove(name), list: () => first.store.list(),
-    }
-    const service = new LocalAssetService({ store, manifest: first.manifest, fetch: first.fetch, hashChunkBytes: 1024 })
-    await Promise.all([service.open('wiktionary-test.pack'), service.open('wiktionary-test.pack')])
-    const afterFirst = reads
-    expect(afterFirst).toBe(Math.ceil(first.pack.file.storedSize / 1024))
-    await service.open('wiktionary-test.pack')
-    expect(reads).toBe(afterFirst)
+    await install(first.service, 'model')
+    const next = setup({ store: first.store })
+    const invalid: string[] = []
+    const stop = next.service.onInvalid(bundle => invalid.push(bundle))
+    await next.service.open('model.onnx')
+    await next.service.checked()
+    expect(invalid).toEqual([])
+    stop()
+    const tokenizer = first.store.files.get('tokenizer.json')!
+    tokenizer[0] = tokenizer[0]! ^ 1
+    await next.service.open('tokenizer.json')
+    await next.service.checked()
+    expect(invalid).toEqual([])
+    expect((await next.service.status()).model.phase).toBe('missing')
   })
 
   test('verify re-hashes a bundle on request, as after a failed model load, and removes what no longer matches', async () => {
@@ -362,6 +394,11 @@ describe('open and verification', () => {
       create: name => first.store.create(name), remove: name => first.store.remove(name), list: () => first.store.list(),
     }
     const service = new LocalAssetService({ store, manifest: first.manifest, fetch: first.fetch })
+    const invalid: string[] = []
+    service.onInvalid(bundle => invalid.push(bundle))
+    await service.open('wiktionary-test.pack')
+    await service.checked()
+    expect(invalid).toEqual(['dictionary'])
     expect(await service.open('wiktionary-test.pack')).toBeUndefined()
     expect((await service.status()).dictionary.phase).toBe('missing')
   })
