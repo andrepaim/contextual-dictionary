@@ -182,6 +182,27 @@ describe('Controller', () => {
     expect(cardState()).toBe('hidden')
   })
 
+  test('a word selected inside an open shadow root is looked up with its context', async () => {
+    await controller.start()
+    const host = document.createElement('div')
+    document.body.append(host)
+    const shadow = host.attachShadow({ mode: 'open' })
+    shadow.innerHTML = '<p>Inside a shadow tree the <b>cursor</b> blinks.</p>'
+    const word = shadow.querySelector('b')!
+    const range = document.createRange()
+    range.selectNodeContents(word)
+    // Chromium exposes such a selection on the shadow root, not on the document.
+    Object.assign(shadow, { getSelection: () => ({ rangeCount: 1, isCollapsed: false, getRangeAt: () => range }) })
+    window.getSelection()!.removeAllRanges()
+    mouse('mousedown', word)
+    const up = new MouseEvent('mouseup', { bubbles: true, composed: true })
+    word.dispatchEvent(up)
+    // As in browsers, an event's path is empty once its dispatch is over.
+    Object.assign(up, { composedPath: () => [] })
+    await vi.advanceTimersByTimeAsync(20)
+    expect(backend.defines().map(request => request.selection)).toEqual([{ text: 'cursor', before: 'Inside a shadow tree the ', after: ' blinks.' }])
+  })
+
   test('selections in editable regions are ignored', async () => {
     await controller.start()
     await doubleClick('editable', 'mouse')
