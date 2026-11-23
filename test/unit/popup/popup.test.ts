@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { ERROR_MESSAGES, PopupView, formatMegabytes, hostOf } from '../../../src/popup/popup'
+import { ERROR_MESSAGES, PopupView, formatMegabytes, hostOf, withHost } from '../../../src/popup/popup'
 import { CodedError, DEFAULT_SETTINGS, type Answers, type Backend, type BundleName, type BundleStatus, type Request, type Settings, type Status } from '../../../src/shared/contracts'
 
 const MISSING: BundleStatus = { phase: 'missing', error: null, requiredBytes: 123_456_789, receivedBytes: 0, totalBytes: 123_456_789, storedBytes: 0 }
@@ -222,7 +222,36 @@ describe.each(['dictionary', 'model'] as const)('PopupView %s bundle', bundle =>
     expect(action(scope, 'remove')!.getAttribute('aria-label')).toMatch(/^Remove the downloaded (dictionary|model)$/)
     action(scope, 'remove')!.click()
     await flush()
+    // Removal asks first; nothing is removed until the reader confirms.
+    expect(backend.ofType('remove-assets')).toEqual([])
+    const confirm = section(bundle).querySelector<HTMLElement>('[data-part="confirm-remove"]')!
+    expect(confirm.textContent).toContain('98.7 MB')
+    expect(confirm.getAttribute('role')).toBe('group')
+    expect(root.ownerDocument.activeElement).toBe(action(section(bundle), 'keep'))
+    action(section(bundle), 'confirm-remove')!.click()
+    await flush()
     expect(backend.ofType('remove-assets')).toEqual([{ type: 'remove-assets', bundle }])
+  })
+
+  test('ready: "Keep" closes the removal question without removing anything', async () => {
+    await open(makeStatus({ [bundle]: READY }))
+    action(section(bundle), 'remove')!.click()
+    await flush()
+    action(section(bundle), 'keep')!.click()
+    await flush()
+    expect(section(bundle).querySelector('[data-part="confirm-remove"]')).toBeNull()
+    expect(action(section(bundle), 'remove')).not.toBeNull()
+    expect(backend.ofType('remove-assets')).toEqual([])
+  })
+
+  test('ready: the removal question goes away when the bundle stops being installed', async () => {
+    await open(makeStatus({ [bundle]: READY }))
+    action(section(bundle), 'remove')!.click()
+    await flush()
+    backend.current = statusWith({})
+    control('definitions').click()
+    await flush()
+    expect(section(bundle).querySelector('[data-part="confirm-remove"]')).toBeNull()
   })
 
   test.each(['DOWNLOAD_FAILED', 'DOWNLOAD_STALLED', 'DOWNLOAD_CANCELLED', 'DOWNLOAD_SIZE_CHANGED', 'DOWNLOAD_UNAVAILABLE', 'ASSET_CORRUPT', 'ASSET_MISMATCH', 'DISK_FULL', 'INSTALL_FAILED'])('failed with %s: a readable message and Retry', async code => {
@@ -381,6 +410,24 @@ describe('PopupView accessibility and credits', () => {
       expect(link.getAttribute('target')).toBe('_blank')
       expect(link.getAttribute('rel')).toBe('noopener noreferrer')
     }
+  })
+})
+
+describe('withHost', () => {
+  test('adds the active tab host to every request answered with a status', () => {
+    expect(withHost({ type: 'status' }, 'a.org')).toEqual({ type: 'status', host: 'a.org' })
+    expect(withHost({ type: 'set-settings', patch: { definitions: false } }, 'a.org')).toEqual({ type: 'set-settings', patch: { definitions: false }, host: 'a.org' })
+    expect(withHost({ type: 'download', bundle: 'model', acceptBytes: 5 }, 'a.org')).toEqual({ type: 'download', bundle: 'model', acceptBytes: 5, host: 'a.org' })
+    expect(withHost({ type: 'cancel-download', bundle: 'model' }, 'a.org')).toEqual({ type: 'cancel-download', bundle: 'model', host: 'a.org' })
+    expect(withHost({ type: 'remove-assets', bundle: 'model' }, 'a.org')).toEqual({ type: 'remove-assets', bundle: 'model', host: 'a.org' })
+  })
+  test('keeps a host the request already names, and leaves other requests alone', () => {
+    expect(withHost({ type: 'set-site', host: 'b.org', enabled: false }, 'a.org')).toEqual({ type: 'set-site', host: 'b.org', enabled: false })
+    expect(withHost({ type: 'status', host: 'b.org' }, 'a.org')).toEqual({ type: 'status', host: 'b.org' })
+    expect(withHost({ type: 'cancel-define', requestId: 'x' }, 'a.org')).toEqual({ type: 'cancel-define', requestId: 'x' })
+  })
+  test('without a host nothing is added', () => {
+    expect(withHost({ type: 'download', bundle: 'model', acceptBytes: 5 }, null)).toEqual({ type: 'download', bundle: 'model', acceptBytes: 5 })
   })
 })
 

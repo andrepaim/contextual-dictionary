@@ -42,6 +42,19 @@ describe('isRequest', () => {
     expect(isRequest({ type: 'set-settings', patch: {} })).toBe(true)
   })
 
+  test('requests answered with a status may name the asking page host', () => {
+    for (const request of [
+      { type: 'set-settings', patch: { definitions: false }, host: 'example.org' },
+      { type: 'download', bundle: 'model', acceptBytes: 5, host: 'example.org' },
+      { type: 'cancel-download', bundle: 'model', host: 'example.org' },
+      { type: 'remove-assets', bundle: 'dictionary', host: 'example.org' },
+    ]) {
+      expect(isRequest(request), request.type).toBe(true)
+      expect(isRequest({ ...request, host: 7 }), request.type).toBe(false)
+      expect(isRequest({ ...request, host: 'x'.repeat(256) }), request.type).toBe(false)
+    }
+  })
+
   test('refuses malformed site, download and asset requests', () => {
     expect(isRequest({ type: 'status', host: 7 })).toBe(false)
     expect(isRequest({ type: 'set-site', host: '', enabled: true })).toBe(false)
