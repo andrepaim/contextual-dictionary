@@ -33,6 +33,17 @@ const MAX_CONTEXT_WORDS = 3
 const ENDS_CLAUSE = /[.,;:!?)\]]$/u
 const STARTS_CLAUSE = /^[([]/u
 const MIN_STRIP_LENGTH = 4
+/**
+ * Words that make a poor edge for a compound borrowed from the context:
+ * selecting "bank" in "paid at the bank" should not open with the idiom
+ * "at the bank". Such a compound is listed after the word instead.
+ */
+const FUNCTION_WORDS = new Set([
+  'a', 'an', 'the', 'this', 'that', 'these', 'those', 'my', 'your', 'his', 'her', 'its', 'our', 'their',
+  'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'us', 'them',
+  'at', 'in', 'on', 'of', 'to', 'for', 'with', 'by', 'from', 'into', 'onto', 'as', 'about', 'than',
+  'and', 'or', 'but', 'nor', 'so', 'if', 'is', 'are', 'was', 'were', 'be', 'been', 'am', 'do', 'does', 'did', 'has', 'have', 'had',
+])
 const CONSONANT_PAIR = /([b-df-hj-np-tv-z])\1$/u
 
 /** A word as selected without the punctuation around it; apostrophes stay ("'tis", "dogs'"). */
@@ -126,14 +137,24 @@ export class WiktionaryDictionary implements Dictionary {
         if (ENDS_CLAUSE.test(chunk)) break
       }
     }
+    // Every run of words around the selection, longest first. The first that
+    // is an entry and has content words at its borrowed edges comes first;
+    // failing that, the first one found at all comes after the word.
+    let compound: Found[] = [], demoted: Found[] = []
     compounds: for (let size = Math.min(this.maxCompoundWords, left.length + words.length + right.length); size > words.length; size--) {
       for (let fromLeft = Math.min(left.length, size - words.length); fromLeft >= 0; fromLeft--) {
         const fromRight = size - words.length - fromLeft
         if (fromRight > right.length) continue
-        const compound = await this.lookup([...left.slice(left.length - fromLeft), ...words, ...right.slice(0, fromRight)].join(' '))
-        if (compound.length) { add(compound); break compounds }
+        const window = [...left.slice(left.length - fromLeft), ...words, ...right.slice(0, fromRight)]
+        const weakEdge = (fromLeft > 0 && FUNCTION_WORDS.has(normalizeKey(window[0]!))) || (fromRight > 0 && FUNCTION_WORDS.has(normalizeKey(window.at(-1)!)))
+        if (weakEdge && demoted.length) continue
+        const entries = await this.lookup(window.join(' '))
+        if (!entries.length) continue
+        if (!weakEdge) { compound = entries; break compounds }
+        demoted = entries
       }
     }
+    add(compound)
 
     let query = words.join(' ')
     let direct = await this.word(query, words.length === 1)
@@ -151,6 +172,7 @@ export class WiktionaryDictionary implements Dictionary {
       // A hyphenated word without an entry falls back to its parts, the last first.
       else if (!direct.length && parts.length > 1) for (const part of parts.reverse()) add(await this.word(part, true))
     }
+    add(demoted.length && !compound.length ? demoted : [])
     return result(query, found)
   }
 
