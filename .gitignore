@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+package/
+test-results/
+playwright-report/
+.data/
+*.pack
+*.onnx
+*.onnx.gz
+*.jsonl
+*.jsonl.gz
+.env
+.env.*
+.DS_Store

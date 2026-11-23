@@ -1,0 +1,254 @@
+// Types and message shapes shared by every module. Modules depend on these
+// interfaces, never on each other's internals, so they can be built and
+// tested apart. Change this file only by a small, separate pull request.
+
+// ---------------------------------------------------------------- dictionary
+
+export interface DictionarySense { definition: string; examples: string[] }
+
+export interface DictionaryEntry {
+  /** The headword as the dictionary spells it. */
+  lemma: string
+  /** The dictionary's own label: "noun", "verb", "adj", "adv", "intj", … */
+  partOfSpeech: string
+  senses: DictionarySense[]
+  /** Shown above the meanings, for example "plural of mouse". */
+  note?: string
+}
+
+export interface DictionarySource { name: string; license: string; url: string }
+
+export interface DictionaryResult { query: string; entries: DictionaryEntry[]; source: DictionarySource }
+
+/** The selected text and the page text on either side of it. */
+export interface Selection { text: string; before: string; after: string }
+
+export interface Dictionary { define(selection: Selection): Promise<DictionaryResult> }
+
+export const SELECTION_LIMITS = { contextChars: 120, definableChars: 80, definableWords: 4 } as const
+
+// --------------------------------------------------------------------- bytes
+
+/** Random access to a stored file. `end` is exclusive. */
+export interface ByteSource {
+  readonly size: number
+  read(start: number, end: number): Promise<Uint8Array>
+}
+
+export interface FileWriter {
+  write(chunk: Uint8Array): Promise<void>
+  /** Puts the finished file in place under its final name. */
+  commit(): Promise<void>
+  /** Discards everything written. */
+  abort(): Promise<void>
+}
+
+/** Files of the extension's private storage. A file exists only once committed. */
+export interface FileStore {
+  open(name: string): Promise<ByteSource | undefined>
+  create(name: string): Promise<FileWriter>
+  remove(name: string): Promise<void>
+  list(): Promise<Array<{ name: string; size: number }>>
+}
+
+// --------------------------------------------------------------------- model
+
+/**
+ * The checkpoint's compact-v1 prompt format, read from its verified
+ * model_metadata.json. Field names follow that file.
+ */
+export interface SenseFormat {
+  letters: string[]
+  nota_index: number
+  none_text: string
+  separator: string
+  mask_token: string
+  max_length: number
+  temperature: number
+}
+
+/** What the model worker needs to load. Buffers are transferred, not copied. */
+export interface ModelLoad {
+  type: 'load'
+  model: ArrayBuffer
+  tokenizer: string
+  tokenizerConfig: string
+  metadata: string
+  calibration: string
+  threads: number
+  /** The extension URL of the directory holding the ONNX Runtime WebAssembly files. */
+  wasmBase: string
+}
+
+export type WorkerRequest = ModelLoad | { type: 'score'; id: number; prompt: string } | { type: 'close' }
+
+export type WorkerResponse =
+  | { type: 'ready'; format: SenseFormat }
+  | { type: 'failed'; code: string }
+  | { type: 'scored'; id: number; logits: Float32Array }
+  | { type: 'rejected'; id: number; code: string }
+
+/** The part of a Web Worker the ranker uses; tests substitute a fake. */
+export interface WorkerLike {
+  postMessage(message: WorkerRequest, transfer?: Transferable[]): void
+  addEventListener(type: 'message', listener: (event: { data: WorkerResponse }) => void): void
+  addEventListener(type: 'error', listener: (event: unknown) => void): void
+  terminate(): void
+}
+
+export type RankerState = 'idle' | 'loading' | 'ready' | 'failed' | 'closed'
+export type RankerStatus = { state: Exclude<RankerState, 'failed'> } | { state: 'failed'; code: string }
+
+export interface Ranker {
+  status(): RankerStatus
+  /** Starts loading the model in the background, unless it is loaded, loading, closed or recently failed. */
+  warm(): void
+  /** `result` with each entry's meanings in contextual order, or `result` itself on any problem. */
+  order(result: DictionaryResult, selection: Selection, signal?: AbortSignal): Promise<DictionaryResult>
+  close(): Promise<void>
+}
+
+// -------------------------------------------------------------------- assets
+
+export type BundleName = 'dictionary' | 'model'
+export type BundlePhase = 'missing' | 'downloading' | 'installing' | 'ready' | 'failed'
+
+export interface BundleStatus {
+  phase: BundlePhase
+  /** A code such as DOWNLOAD_FAILED; null when there is no problem. */
+  error: string | null
+  /** Bytes a download would transfer now; 0 when everything is installed. */
+  requiredBytes: number
+  receivedBytes: number
+  totalBytes: number
+  /** Bytes this bundle occupies in the extension's storage. */
+  storedBytes: number
+}
+
+export interface AssetService {
+  status(): Promise<Record<BundleName, BundleStatus>>
+  /** Starts the download the reader confirmed. `acceptBytes` must equal the size shown. */
+  startDownload(bundle: BundleName, acceptBytes: number): Promise<void>
+  cancel(bundle: BundleName): Promise<void>
+  remove(bundle: BundleName): Promise<void>
+  /** A verified installed file by its stored name, or undefined. */
+  open(storedName: string): Promise<ByteSource | undefined>
+}
+
+// ------------------------------------------------------- settings and status
+
+export interface Settings {
+  /** Show definition cards. */
+  definitions: boolean
+  /** List each entry's meanings by contextual fit. */
+  orderByContext: boolean
+  /** Host names where the extension stays silent. */
+  disabledSites: string[]
+  /** How long a lookup waits for a ready model, in milliseconds. */
+  budgetMs: number
+  /** The most meanings offered to the model in one lookup. */
+  maxCandidates: number
+}
+
+export const DEFAULT_SETTINGS: Settings = { definitions: true, orderByContext: false, disabledSites: [], budgetMs: 350, maxCandidates: 48 }
+export const SETTING_LIMITS = { budgetMs: { min: 50, max: 2000 }, maxCandidates: { min: 2, max: 127 } } as const
+
+export interface Status {
+  settings: Settings
+  /** Whether the extension is active on the asking page's host. */
+  siteEnabled: boolean
+  bundles: Record<BundleName, BundleStatus>
+  ranker: RankerStatus
+}
+
+export interface DefineAnswer {
+  result: DictionaryResult
+  /** Whether the model's order was applied. */
+  ordered: boolean
+}
+
+// ------------------------------------------------------------------ messages
+
+export type Request =
+  | { type: 'define'; requestId: string; selection: Selection }
+  | { type: 'cancel-define'; requestId: string }
+  | { type: 'status'; host?: string }
+  | { type: 'set-settings'; patch: Partial<Omit<Settings, 'disabledSites'>> }
+  | { type: 'set-site'; host: string; enabled: boolean }
+  | { type: 'download'; bundle: BundleName; acceptBytes: number }
+  | { type: 'cancel-download'; bundle: BundleName }
+  | { type: 'remove-assets'; bundle: BundleName }
+
+export type RequestType = Request['type']
+export const REQUEST_TYPES: readonly RequestType[] = ['define', 'cancel-define', 'status', 'set-settings', 'set-site', 'download', 'cancel-download', 'remove-assets']
+
+/** What each request answers with. */
+export interface Answers {
+  define: DefineAnswer
+  'cancel-define': null
+  status: Status
+  'set-settings': Status
+  'set-site': Status
+  download: Status
+  'cancel-download': Status
+  'remove-assets': Status
+}
+
+export type Reply<T> = { ok: true; value: T } | { ok: false; code: string; message: string; details?: Record<string, unknown> }
+
+/** An error with a stable code the interface can translate. */
+export class CodedError extends Error {
+  constructor(readonly code: string, message = code, readonly details?: Record<string, unknown>) { super(message) }
+}
+
+/** How pages reach the extension's back end; rejects with a CodedError. */
+export interface Backend {
+  send<T extends Request>(request: T, signal?: AbortSignal): Promise<Answers[T['type']]>
+}
+
+const BUNDLES: readonly string[] = ['dictionary', 'model']
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+const isText = (value: unknown, max: number): value is string => typeof value === 'string' && value.length <= max
+
+/** Whether `value` is a well-formed request; messages from pages are untrusted. */
+export function isRequest(value: unknown): value is Request {
+  if (!isRecord(value) || typeof value.type !== 'string') return false
+  switch (value.type) {
+    case 'define': {
+      const selection = value.selection
+      return isText(value.requestId, 64) && value.requestId.length > 0 && isRecord(selection)
+        && isText(selection.text, SELECTION_LIMITS.definableChars * 2) && selection.text.trim().length > 0
+        && isText(selection.before, SELECTION_LIMITS.contextChars * 2) && isText(selection.after, SELECTION_LIMITS.contextChars * 2)
+    }
+    case 'cancel-define': return isText(value.requestId, 64) && value.requestId.length > 0
+    case 'status': return value.host === undefined || isText(value.host, 255)
+    case 'set-settings': {
+      const patch = value.patch
+      if (!isRecord(patch)) return false
+      const allowed = ['definitions', 'orderByContext', 'budgetMs', 'maxCandidates']
+      if (Object.keys(patch).some(key => !allowed.includes(key))) return false
+      for (const key of ['definitions', 'orderByContext']) if (patch[key] !== undefined && typeof patch[key] !== 'boolean') return false
+      for (const key of ['budgetMs', 'maxCandidates']) if (patch[key] !== undefined && !Number.isFinite(patch[key])) return false
+      return true
+    }
+    case 'set-site': return isText(value.host, 255) && value.host.length > 0 && typeof value.enabled === 'boolean'
+    case 'download': return BUNDLES.includes(value.bundle as string) && Number.isSafeInteger(value.acceptBytes) && (value.acceptBytes as number) >= 0
+    case 'cancel-download':
+    case 'remove-assets': return BUNDLES.includes(value.bundle as string)
+    default: return false
+  }
+}
+
+/** `settings` with numbers kept inside their limits and unknown keys dropped. */
+export function normalizeSettings(settings: Partial<Settings> | undefined): Settings {
+  const clamp = (value: unknown, fallback: number, { min, max }: { min: number; max: number }) =>
+    typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, Math.round(value))) : fallback
+  const sites = Array.isArray(settings?.disabledSites) ? settings.disabledSites.filter((site): site is string => typeof site === 'string' && site.length > 0 && site.length <= 255) : []
+  return {
+    definitions: typeof settings?.definitions === 'boolean' ? settings.definitions : DEFAULT_SETTINGS.definitions,
+    orderByContext: typeof settings?.orderByContext === 'boolean' ? settings.orderByContext : DEFAULT_SETTINGS.orderByContext,
+    disabledSites: [...new Set(sites.map(site => site.toLowerCase()))].sort(),
+    budgetMs: clamp(settings?.budgetMs, DEFAULT_SETTINGS.budgetMs, SETTING_LIMITS.budgetMs),
+    maxCandidates: clamp(settings?.maxCandidates, DEFAULT_SETTINGS.maxCandidates, SETTING_LIMITS.maxCandidates),
+  }
+}

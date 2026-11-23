@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Contextual Dictionary",
+  "description": "Select a word on any page to see its dictionary meanings, with the one that fits the passage first. Runs on your computer.",
+  "version": "0.0.0",
+  "minimum_chrome_version": "124",
+  "permissions": ["storage", "offscreen", "unlimitedStorage"],
+  "host_permissions": [],
+  "background": { "service_worker": "service-worker.js", "type": "module" },
+  "action": { "default_title": "Contextual Dictionary", "default_popup": "popup.html" },
+  "content_scripts": [
+    { "matches": ["<all_urls>"], "js": ["content.js"], "run_at": "document_idle", "all_frames": true, "match_about_blank": true }
+  ],
+  "cross_origin_embedder_policy": { "value": "require-corp" },
+  "cross_origin_opener_policy": { "value": "same-origin" },
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'"
+  }
+}
