@@ -1,0 +1,63 @@
+{"lang":"English","lang_code":"en","word":"mouse","pos":"noun","senses":[{"glosses":["Any small rodent of the genus Mus."],"raw_glosses":["Any small rodent of the genus Mus."],"examples":[{"text":"The cat caught a mouse in the barn, and the farmer was glad of it.","ref":"2001, Some Author, Some Book","type":"quotation"},{"text":"a field mouse","type":"example"},{"text":"There is a mouse under the stove.","type":"example"},{"text":"This example is far too long to be kept. This example is far too long to be kept. This example is far too long to be kept. This example is far too long to be kept. This example is far too long to be kept. This example is far too long to be kept. This example is far too long to be kept. This example is far too long to be kept. ","type":"example"}]},{"glosses":["A computer input device that is moved over a pad or other flat surface to produce a corresponding movement of a pointer on a graphical display."],"raw_glosses":["(computing) A computer input device that is moved over a pad or other flat surface to produce a corresponding movement of a pointer on a graphical display."],"examples":[{"text":"Drag the mouse to move the cursor.","type":"example"},{"text":"He clicked the   mouse\nand waited.","ref":"1990, A Writer"}]},{"glosses":[],"tags":["no-gloss"]}]}
+{"lang":"English","lang_code":"en","word":"mouse","pos":"verb","senses":[{"glosses":["To hunt or catch mice, usually of cats."],"raw_glosses":["(intransitive) To hunt or catch mice, usually of cats. [from 12th c.]"]},{"glosses":["To move cautiously or furtively."]}]}
+{"lang":"English","lang_code":"en","word":"Mouse","pos":"name","senses":[{"glosses":["A surname."]}]}
+{"lang":"English","lang_code":"en","word":"MOUSE","pos":"noun","senses":[{"glosses":["Acronym of minimal orbital unmanned satellite of the Earth."],"alt_of":[{"word":"minimal orbital unmanned satellite of the Earth"}],"tags":["acronym","alt-of"]}]}
+{"lang":"English","lang_code":"en","word":"mice","pos":"noun","senses":[{"glosses":["plural of mouse"],"form_of":[{"word":"mouse"}],"tags":["form-of"]}]}
+{"lang":"English","lang_code":"en","word":"mice","pos":"verb","senses":[{"glosses":["To be distracted or inattentive."],"raw_glosses":["(Bermuda) To be distracted or inattentive."]}]}
+{"lang":"English","lang_code":"en","word":"bank","pos":"noun","etymology_number":1,"senses":[{"glosses":["An institution where one can place and borrow money."],"examples":[{"text":"She works at a bank.","type":"example"}]},{"glosses":["The sloping side of a river."]}]}
+{"lang":"English","lang_code":"en","word":"bank","pos":"verb","senses":[{"glosses":["To deposit in a bank."]}]}
+{"lang":"English","lang_code":"en","word":"bank","pos":"noun","etymology_number":2,"senses":[{"glosses":["A row or panel of items, such as keys or switches."]}]}
+{"lang":"English","lang_code":"en","word":"run","pos":"verb","senses":[{"glosses":["To move swiftly."]},{"glosses":["To move swiftly.","To move forward quickly upon two feet by alternately making a short jump off either foot."]},{"glosses":["To move swiftly.","To move swiftly. Specifically, of a vehicle: to travel."]},{"glosses":["To compete in a race."],"raw_glosses":["(intransitive) To compete in a race."]}]}
+
+{"lang":"English","lang_code":"en","word":"run","pos":"noun","senses":[{"glosses":["Act or instance of running."]}]}
+{"lang":"English","lang_code":"en","word":"ran","pos":"verb","senses":[{"glosses":["simple past of run"],"form_of":[{"word":"run"}],"tags":["form-of"]},{"glosses":["simple past of rin"],"form_of":[{"word":"rin"}],"tags":["form-of"]}]}
+{"lang":"English","lang_code":"en","word":"rin","pos":"verb","senses":[{"glosses":["To run."],"raw_glosses":["(Scotland) To run."]}]}
+{"lang":"English","lang_code":"en","word":"running","pos":"verb","senses":[{"glosses":["present participle and gerund of run"],"form_of":[{"word":"run"}],"tags":["form-of"]}]}
+{"lang":"English","lang_code":"en","word":"running","pos":"adj","senses":[{"glosses":["Moving or advancing at a run."]},{"glosses":["Moving or advancing at a run.","Of a horse, having a running gait; not a trotter or pacer."]}]}
+{"lang":"English","lang_code":"en","word":"went","pos":"verb","senses":[{"glosses":["simple past of go"],"form_of":[{"word":"go"}],"tags":["form-of"]},{"glosses":["past participle of go"],"form_of":[{"word":"go"}],"tags":["form-of"],"raw_glosses":["(nonstandard) past participle of go"]}]}
+{"lang":"English","lang_code":"en","word":"go","pos":"verb","senses":[{"glosses":["To move from one place to another."]}]}
+{"lang":"English","lang_code":"en","word":"go","pos":"noun","senses":[{"glosses":["A board game for two players."]}]}
+{"lang":"English","lang_code":"en","word":"better","pos":"adv","senses":[{"glosses":["comparative form of well: more well"],"form_of":[{"word":"well"}],"tags":["form-of"]},{"glosses":["Used to suggest that something should be done."]}]}
+{"lang":"English","lang_code":"en","word":"well","pos":"adv","senses":[{"glosses":["Accurately; competently."]}]}
+{"lang":"English","lang_code":"en","word":"well","pos":"noun","senses":[{"glosses":["A hole sunk into the ground to reach water."]}]}
+{"lang":"English","lang_code":"en","word":"neural network","pos":"noun","senses":[{"glosses":["A computer system loosely modelled on the brain."],"raw_glosses":["(machine learning) A computer system loosely modelled on the brain."]}]}
+{"lang":"English","lang_code":"en","word":"neural networks","pos":"noun","senses":[{"glosses":["plural of neural network"],"form_of":[{"word":"neural network"}],"tags":["form-of"]}]}
+{"lang":"English","lang_code":"en","word":"network","pos":"noun","senses":[{"glosses":["A fabric or structure of cords or wires that cross at regular intervals."]}]}
+{"lang":"English","lang_code":"en","word":"neural","pos":"adj","senses":[{"glosses":["Of or relating to the nerves."]}]}
+{"lang":"English","lang_code":"en","word":"rock 'n' roll","pos":"noun","senses":[{"glosses":["A style of music."]}]}
+{"lang":"English","lang_code":"en","word":"don't","pos":"verb","senses":[{"glosses":["Do not."],"examples":[{"text":"Don't be such a nuisance!","type":"example"}]}]}
+{"lang":"English","lang_code":"en","word":"don't","pos":"contraction","senses":[{"glosses":["Contraction of done + it."],"raw_glosses":["(archaic) Contraction of done + it."],"alt_of":[{"word":"done","extra":"+ it"}],"tags":["alt-of"]}]}
+{"lang":"English","lang_code":"en","word":"o'clock","pos":"adv","senses":[{"glosses":["Of the clock; used to indicate the hour."]}]}
+{"lang":"English","lang_code":"en","word":"'tis","pos":"contraction","senses":[{"glosses":["It is."]}]}
+{"lang":"English","lang_code":"en","word":"dog","pos":"noun","senses":[{"glosses":["A domesticated mammal."]}]}
+{"lang":"English","lang_code":"en","word":"e-mail","pos":"noun","senses":[{"glosses":["Electronic mail."]}]}
+{"lang":"English","lang_code":"en","word":"well-known","pos":"adj","senses":[{"glosses":["Widely known."]}]}
+{"lang":"English","lang_code":"en","word":"known","pos":"adj","senses":[{"glosses":["Having been discovered."]}]}
+{"lang":"English","lang_code":"en","word":"self","pos":"noun","senses":[{"glosses":["The individual person."]}]}
+{"lang":"English","lang_code":"en","word":"attention","pos":"noun","senses":[{"glosses":["Mental focus."]}]}
+{"lang":"English","lang_code":"en","word":"unfriend","pos":"verb","senses":[{"glosses":["To remove from a list of friends."]}]}
+{"lang":"English","lang_code":"en","word":"google","pos":"verb","senses":[{"glosses":["To search for on the Internet."]}]}
+{"lang":"English","lang_code":"en","word":"stop","pos":"verb","senses":[{"glosses":["To cease moving."]}]}
+{"lang":"English","lang_code":"en","word":"fly","pos":"verb","senses":[{"glosses":["To travel through the air."]}]}
+{"lang":"English","lang_code":"en","word":"Polish","pos":"adj","senses":[{"glosses":["Of Poland."]}]}
+{"lang":"English","lang_code":"en","word":"polish","pos":"verb","senses":[{"glosses":["To make smooth and shiny."]}]}
+{"lang":"English","lang_code":"en","word":"polish","pos":"noun","senses":[{"glosses":["A substance used to polish."]}]}
+{"lang":"English","lang_code":"en","word":"A","pos":"character","senses":[{"glosses":["The first letter of the English alphabet."]}]}
+{"lang":"English","lang_code":"en","word":"A","pos":"symbol","senses":[{"glosses":["The highest grade."]}]}
+{"lang":"English","lang_code":"en","word":"&","pos":"conj","senses":[{"glosses":["Abbreviation of and."]}]}
+{"lang":"English","lang_code":"en","word":"!","pos":"punct","senses":[{"glosses":["Marks an exclamation."]}]}
+{"lang":"English","lang_code":"en","word":"42","pos":"num","senses":[{"glosses":["The number forty-two."]}]}
+{"lang":"English","lang_code":"en","word":"a","pos":"article","senses":[{"glosses":["One; any indefinite example of."]}]}
+{"lang":"English","lang_code":"en","word":"markup","pos":"noun","senses":[{"glosses":["God; {{n-g|the name used for God in scripture"]},{"glosses":["A [[link|linked]] word and a [[plain]] one, a [[passive#Adjective|]] form."]},{"glosses":["Area in m<sup>2</sup>&nbsp;or ft<sub>2</sub>, a {{lb|en|rare}} value."]},{"glosses":["The '''bold''' and ''italic'' parts; the prime in NR''₂ stays."]},{"glosses":["The operator <=> compares; Procter & Gamble; &trade; stays."]},{"glosses":["   "]},{"glosses":[""]},{"glosses":["{{rfdef|en}}"]}]}
+{"lang":"English","lang_code":"en","word":"the","pos":"article","senses":[{"glosses":["The definite article, used before a noun phrase that is definitely identifiable...","...because it is known in context."]}]}
+{"lang":"English","lang_code":"en","word":"emptyword","pos":"noun","senses":[{"glosses":[]},{"tags":["no-gloss"]}]}
+{"lang":"English","lang_code":"en","word":"chaina","pos":"noun","senses":[{"glosses":["plural of chainb"],"form_of":[{"word":"chainb"}],"tags":["form-of"]}]}
+{"lang":"English","lang_code":"en","word":"chainb","pos":"noun","senses":[{"glosses":["alternative plural of chainc"],"form_of":[{"word":"chainc"}],"tags":["form-of"]}]}
+{"lang":"English","lang_code":"en","word":"chainc","pos":"noun","senses":[{"glosses":["The end of the chain."]}]}
+{"lang":"English","lang_code":"en","word":"loopa","pos":"noun","senses":[{"glosses":["plural of loopb"],"form_of":[{"word":"loopb"}],"tags":["form-of"]}]}
+{"lang":"English","lang_code":"en","word":"loopb","pos":"noun","senses":[{"glosses":["plural of loopa"],"form_of":[{"word":"loopa"}],"tags":["form-of"]}]}
+{"lang":"English","lang_code":"en","word":"Smiths","pos":"noun","senses":[{"glosses":["plural of Smith"],"form_of":[{"word":"Smith"}],"tags":["form-of"]}]}
+{"lang":"English","lang_code":"en","word":"Smith","pos":"name","senses":[{"glosses":["A surname."]}]}
+{"lang":"German","lang_code":"de","word":"Haus","pos":"noun","senses":[{"glosses":["house"]}]}
+{"lang":"English","lang_code":"en","pos":"noun","senses":[{"glosses":["No word."]}]}
+{"lang":"English","lang_code":"en","word":"oddity","pos":"noun","senses":[{"glosses":["A strange thing.",42],"examples":[{"text":7},null,{"text":"an oddity","type":"example"}]},"not a sense"]}
