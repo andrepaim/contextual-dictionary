@@ -1,0 +1,135 @@
+{
+  "input": {
+    "file": "english-2026-10-30.jsonl.gz",
+    "sha256": "4d03b6cba283744756c57ff661c2c6cbfe34fcf8ff513a966576cf7d97e91a99",
+    "lines": 1499161,
+    "records": 1499161
+  },
+  "snapshot": "2026-10-30",
+  "options": {
+    "maxExamples": 2,
+    "maxExampleChars": 240,
+    "labels": true,
+    "excludedPos": [
+      "name",
+      "character",
+      "symbol",
+      "punct"
+    ]
+  },
+  "keys": 1188915,
+  "entries": 1294213,
+  "meanings": 1011441,
+  "examples": 457511,
+  "pointers": 501767,
+  "skipped": {
+    "excluded-pos": 203150,
+    "no-senses": 1298,
+    "no-letter": 499,
+    "no-word": 1
+  },
+  "excludedByPos": {
+    "name": 202381,
+    "character": 241,
+    "symbol": 468,
+    "punct": 60
+  },
+  "droppedSenses": 2,
+  "cleanedGlosses": 75,
+  "meaningsPerKey": {
+    "keysWithMeanings": 724204,
+    "p50": 1,
+    "p90": 2,
+    "p99": 7,
+    "p999": 23,
+    "max": 156
+  },
+  "largestKeys": [
+    {
+      "key": "draw",
+      "meanings": 156
+    },
+    {
+      "key": "a.",
+      "meanings": 128
+    },
+    {
+      "key": "run",
+      "meanings": 117
+    },
+    {
+      "key": "break",
+      "meanings": 105
+    },
+    {
+      "key": "take",
+      "meanings": 102
+    },
+    {
+      "key": "set",
+      "meanings": 99
+    },
+    {
+      "key": "aa",
+      "meanings": 98
+    },
+    {
+      "key": "drop",
+      "meanings": 93
+    },
+    {
+      "key": "go",
+      "meanings": 88
+    },
+    {
+      "key": "stick",
+      "meanings": 88
+    },
+    {
+      "key": "cut",
+      "meanings": 83
+    },
+    {
+      "key": "flat",
+      "meanings": 83
+    },
+    {
+      "key": "point",
+      "meanings": 80
+    },
+    {
+      "key": "head",
+      "meanings": 79
+    },
+    {
+      "key": "line",
+      "meanings": 77
+    },
+    {
+      "key": "down",
+      "meanings": 76
+    },
+    {
+      "key": "on",
+      "meanings": 71
+    },
+    {
+      "key": "snap",
+      "meanings": 71
+    },
+    {
+      "key": "open",
+      "meanings": 70
+    },
+    {
+      "key": "strike",
+      "meanings": 69
+    }
+  ],
+  "pack": {
+    "bytes": 66467698,
+    "sha256": "e698a7117d4a684d554c1c5850674ed9035c2daab7dbd8125c6c63758b6e6c32",
+    "blocks": 3545,
+    "indexBytes": 53875
+  }
+}

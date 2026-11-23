@@ -3,7 +3,7 @@
 //   npx tsx scripts/build-dictionary.ts --input <english.jsonl.gz> --output <pack> [--stats <stats.json>]
 //     [--snapshot YYYY-MM-DD] [--examples 2] [--example-chars 240] [--no-labels]
 //     [--include-pos <pos>]... [--exclude-pos <pos>]... [--block-size 65536]
-//     [--sort-chunk-mb 64] [--temp-dir <dir>] [--level 9]
+//     [--sort-chunk-mb 16] [--temp-dir <dir>] [--level 9]
 //
 // The extract is read as a stream (gzip or plain JSONL). Each record goes
 // through transformEntry (src/dict/kaikki.ts); the entries are sorted by key
@@ -63,7 +63,7 @@ export interface BuildStats {
 /** An entry on its way through the sort; `seq` is its line in the extract. */
 export interface SortItem { key: string; w: string; seq: number; entry: PackEntry }
 
-const DEFAULT_SORT_CHUNK_BYTES = 64 * 1024 * 1024
+const DEFAULT_SORT_CHUNK_BYTES = 16 * 1024 * 1024
 const LARGEST_KEYS = 20
 
 const compareItems = (a: SortItem, b: SortItem) => compareKeys(a.key, b.key) || compareKeys(a.w, b.w) || a.seq - b.seq
