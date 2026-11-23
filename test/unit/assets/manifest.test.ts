@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { CodedError } from '../../../src/shared/contracts'
-import { ASSET_MANIFEST, STORED_NAMES, assertManifest, fileUrl, manifestProblems, publishedFiles, type AssetManifest } from '../../../src/assets/manifest'
+import { ASSET_MANIFEST, STORED_NAMES, assertManifest, fileUrl, isPinned, manifestProblems, publishedFiles, type AssetManifest } from '../../../src/assets/manifest'
 import { fixture } from './helpers'
 
 const clone = (manifest: AssetManifest): AssetManifest => structuredClone(manifest)
@@ -28,9 +28,23 @@ describe('the pinned manifest', () => {
     expect(Object.values(STORED_NAMES).sort()).toEqual([...ASSET_MANIFEST.bundles.dictionary, ...ASSET_MANIFEST.bundles.model].map(file => file.storedName).sort())
   })
 
-  test('has no transfer pins until the assets are published, so neither bundle is downloadable yet', () => {
-    expect(publishedFiles(ASSET_MANIFEST, 'dictionary')).toBeUndefined()
-    expect(publishedFiles(ASSET_MANIFEST, 'model')).toBeUndefined()
+  test('is fully pinned with the published release, so both bundles can be downloaded', () => {
+    const files = [...ASSET_MANIFEST.bundles.dictionary, ...ASSET_MANIFEST.bundles.model]
+    for (const file of files) expect(isPinned(file), file.name).toBe(true)
+    expect(assertManifest(ASSET_MANIFEST)).toBe(ASSET_MANIFEST)
+    expect(publishedFiles(ASSET_MANIFEST, 'dictionary')).toHaveLength(1)
+    expect(publishedFiles(ASSET_MANIFEST, 'model')).toHaveLength(5)
+    // The pack built from the Kaikki extract of 2026-10-30 (docs/dictionary-build.md), sent as is.
+    expect(ASSET_MANIFEST.bundles.dictionary[0]).toEqual({
+      name: 'wiktionary-en-v1.pack', storedName: 'wiktionary-en-v1.pack', encoding: 'identity',
+      size: 66467698, sha256: 'e698a7117d4a684d554c1c5850674ed9035c2daab7dbd8125c6c63758b6e6c32',
+      storedSize: 66467698, storedSha256: 'e698a7117d4a684d554c1c5850674ed9035c2daab7dbd8125c6c63758b6e6c32',
+    })
+    // Files sent as is have equal transfer and stored pins; the gzipped model is smaller than the graph.
+    for (const file of files.filter(entry => entry.encoding === 'identity')) expect([file.size, file.sha256], file.name).toEqual([file.storedSize, file.storedSha256])
+    const onnx = ASSET_MANIFEST.bundles.model[0]!
+    expect(onnx.size!).toBeLessThan(onnx.storedSize!)
+    expect(onnx.sha256).not.toBe(onnx.storedSha256)
   })
 })
 
