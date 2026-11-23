@@ -40,7 +40,7 @@ export async function startAssetServer(fixture: AssetFixture, options: { port?: 
     if (!stored || !body) { response.writeHead(404).end(); return }
     const behaviour = behaviours.get(stored[1]!) ?? 'ok'
     let data = body
-    if (behaviour === 'wrong') { data = body.slice(); data[data.length >> 1] ^= 0xff }
+    if (behaviour === 'wrong') { data = body.slice(); data[data.length >> 1] = data[data.length >> 1]! ^ 0xff }
     response.writeHead(200, { 'content-type': 'application/octet-stream', 'content-length': String(data.length), 'cache-control': 'no-store' })
     let closed = false
     response.on('close', () => { closed = true })

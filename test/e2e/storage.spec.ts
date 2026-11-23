@@ -27,7 +27,7 @@ test('a stored file altered at the same size is detected and offered for downloa
     const directory = await (await navigator.storage.getDirectory()).getDirectoryHandle('assets')
     const handle = await directory.getFileHandle(name)
     const bytes = new Uint8Array(await (await handle.getFile()).arrayBuffer())
-    bytes[bytes.length - 40] ^= 0xff
+    bytes[bytes.length - 40] = bytes[bytes.length - 40]! ^ 0xff
     const writable = await handle.createWritable()
     await writable.write(bytes)
     await writable.close()
