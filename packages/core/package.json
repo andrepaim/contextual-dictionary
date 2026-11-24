@@ -1,6 +1,6 @@
 {
   "name": "@andrepaim/contextual-dictionary-core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Portable Wiktionary pack lookup and contextual sense ordering",
   "license": "MIT",
   "type": "module",

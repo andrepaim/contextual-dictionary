@@ -64,7 +64,7 @@ Load `dist/` as an unpacked extension from `chrome://extensions` (Developer mode
 The extension installs `@andrepaim/contextual-dictionary-core` from the checked-in npm tarball. To use the same package from another project, replace `COMMIT_SHA` with a full commit SHA that contains the artifact. The package includes dictionary lookup, contextual ordering and shared definition card assets. [Core API](packages/core/README.md)
 
 ```sh
-npm install --ignore-scripts 'https://raw.githubusercontent.com/andrepaim/contextual-dictionary/COMMIT_SHA/artifacts/contextual-dictionary-core-0.2.0.tgz'
+npm install --ignore-scripts 'https://raw.githubusercontent.com/andrepaim/contextual-dictionary/COMMIT_SHA/artifacts/contextual-dictionary-core-0.2.1.tgz'
 ```
 
 After changing core source, bump the core version in `packages/core/package.json` and run `npm run core:pack`. Update the extension's file dependency to the new tarball and refresh the lockfile with `npm install --ignore-scripts`. Commit the source, tarball and lockfile together. `npm run core:check` rebuilds the tarball, installs it in an isolated Node project, exercises the engine and card exports, and bundles the card stylesheet as text.

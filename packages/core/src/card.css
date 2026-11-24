@@ -1,4 +1,6 @@
 .dc-card {
+  color-scheme: light dark;
+  --dc-scrollbar-thumb: #7b8794;
   --dc-default-bg: #fff;
   --dc-default-text: #1f2328;
   --dc-default-muted: #59636e;
@@ -26,6 +28,7 @@
 
 @media (prefers-color-scheme: dark) {
   .dc-card {
+    --dc-scrollbar-thumb: #768390;
     --dc-default-bg: #22272e;
     --dc-default-text: #e6edf3;
     --dc-default-muted: #9aa5b1;
@@ -43,6 +46,8 @@
 .dc-card .dc-body {
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dc-scrollbar-thumb) transparent;
   overscroll-behavior: contain;
   padding: 10px 14px 4px;
 }
