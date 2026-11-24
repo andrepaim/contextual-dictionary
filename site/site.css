@@ -1,175 +1,208 @@
+/* Contextual Dictionary: the project site. One style sheet for every page. */
 @font-face {
-  font-family: "Instrument Serif"; src: url("fonts/instrument-serif.ttf") format("truetype");
-  font-style: normal; font-weight: 400; font-display: swap;
+  font-family: "Newsreader"; src: url("fonts/newsreader.woff2") format("woff2");
+  font-style: normal; font-weight: 200 800; font-display: swap;
 }
 @font-face {
-  font-family: "Instrument Serif"; src: url("fonts/instrument-serif-italic.ttf") format("truetype");
-  font-style: italic; font-weight: 400; font-display: swap;
+  font-family: "Newsreader"; src: url("fonts/newsreader-italic.woff2") format("woff2");
+  font-style: italic; font-weight: 200 800; font-display: swap;
 }
+@font-face {
+  font-family: "Inter"; src: url("fonts/inter.woff2") format("woff2");
+  font-style: normal; font-weight: 100 900; font-display: swap;
+}
+
 :root {
   color-scheme: light dark;
-  --bg: #fcfcfa; --surface: #f2f3ef; --text: #18282f; --muted: #4f6067; --line: #c7d0cf;
-  --blue: #174d9e; --btn: #194e99; --btn-text: white; --tint: #eaf1f8; --base: #6e7f83;
-  --paper: #fcfaf4; --paper-ink: #293139; --paper-rule: #d3cfc4; --cover: #214e85; --cover-edge: #143861;
-  --mark: #f4d987; --mark-ink: #322c1d; --serif: "Instrument Serif", Georgia, serif;
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-  font-size: 100%; font-variant-numeric: tabular-nums;
+  --paper: #fbfaf7; --panel: #f3f1ea; --ink: #1a1d21; --soft: #555d68; --rule: #dcd9cf;
+  --accent: #0b5cc4; --on-accent: #ffffff; --select: #1b66d2; --on-select: #ffffff;
+  --base: #8a919b; --shadow: 0 1px 2px rgb(26 29 33 / 6%), 0 12px 32px rgb(26 29 33 / 10%);
+  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --gutter: clamp(1.25rem, 5vw, 3.5rem);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #131b1e; --surface: #1a2428; --text: #edf0e9; --muted: #b1bfbd; --line: #3f5156;
-    --blue: #9bbff5; --btn: #a3c5ff; --btn-text: #112440; --tint: #1c2f40; --base: #92a5a6;
-    --paper: #232c30; --paper-ink: #f2eee1; --paper-rule: #56625f; --cover: #2b4e72; --cover-edge: #203c5f;
-    --mark: #d4b666; --mark-ink: #1c211e;
+    --paper: #121416; --panel: #1a1d20; --ink: #ecebe6; --soft: #a4abb4; --rule: #30353a;
+    --accent: #8ab8ff; --on-accent: #0b1b33; --select: #2c6bd0; --on-select: #ffffff;
+    --base: #727a84; --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 12px 32px rgb(0 0 0 / 45%);
   }
 }
-* { box-sizing: border-box }
-html { scroll-padding-top: 1rem }
-body { margin: 0; background: var(--bg); color: var(--text); font-size: 1rem; line-height: 1.58 }
-a { color: var(--blue); text-underline-offset: .19em; text-decoration-thickness: 1px }
+
+*, *::before, *::after { box-sizing: border-box }
+html { scroll-padding-top: 1.5rem; -webkit-text-size-adjust: 100% }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth } }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1.0625rem/1.6 var(--sans) }
+h1, h2, h3, p, ol, ul, dl, dd, figure, blockquote { margin: 0 }
+ol, ul { padding: 0 }
+img { display: block; max-width: 100%; height: auto }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: .2em }
 a:hover { text-decoration-thickness: 2px }
-:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px }
-img { max-width: 100%; height: auto }
-h1, h2, h3, p, blockquote, figure { margin: 0 }
-h1, main h2, .fact { font: 400 clamp(2.85rem, 5.3vw, 4.75rem)/1.02 var(--serif); letter-spacing: -.035em }
-h1 em { color: var(--blue); font-weight: 400 }
-.wrap, .top, .document { width: min(76rem, calc(100% - 2 * clamp(1.25rem, 5vw, 5rem))); margin-inline: auto }
-.top { min-height: 5.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--line) }
-.brand { color: var(--text); text-decoration: none; display: inline-flex; gap: .56rem; align-items: center; font-weight: 680; font-size: 1.07rem; letter-spacing: -.035em; line-height: 1.15 }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px }
+code { font: .9em ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; overflow-wrap: anywhere }
+strong, b { font-weight: 600 }
+.wrap { width: min(70rem, 100% - 2 * var(--gutter)); margin-inline: auto }
+.hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap }
+.skip { position: absolute; left: 1rem; top: -6rem; z-index: 5; padding: .6rem .9rem; background: var(--paper); border: 1px solid var(--rule) }
+.skip:focus { top: .75rem }
+
+/* A word as it looks when a reader has double-clicked it. */
+mark { background: var(--select); color: var(--on-select); padding: 0 .08em; margin: 0 -.02em; -webkit-box-decoration-break: clone; box-decoration-break: clone }
+
+h1, h2, .passage { font-family: var(--serif); font-weight: 480; font-optical-sizing: auto }
+h1 { font-size: clamp(2.6rem, 5.4vw, 4.35rem); line-height: 1.04; letter-spacing: -.022em; text-wrap: balance }
+h1 em { font-style: italic; font-weight: 420 }
+h2 { font-size: clamp(1.75rem, 2.7vw, 2.3rem); line-height: 1.14; letter-spacing: -.015em; text-wrap: balance }
+h3 { font-size: 1.0625rem; line-height: 1.4; font-weight: 600; letter-spacing: -.005em }
+
+/* Header and footer, the same on every page. */
+.site-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem 1.5rem; flex-wrap: wrap; padding-block: 1.1rem }
+.brand { display: inline-flex; align-items: center; gap: .6rem; color: var(--ink); text-decoration: none; font-weight: 600; letter-spacing: -.012em }
 .brand img { flex: none }
-nav { display: flex; align-items: center; gap: clamp(.8rem, 2.6vw, 2.25rem) }
-nav a { font-size: .92rem; font-weight: 560; color: var(--text); text-decoration: none }
-nav a:hover, .capture-link:hover { text-decoration: underline }
-.nav-install { border: 1px solid var(--line); border-radius: .4rem; padding: .4rem 1rem }
-.skip { position: absolute; left: 1rem; top: -8rem; background: var(--bg); padding: .7rem 1rem; z-index: 4 }
-.skip:focus { top: .6rem }
-.hero { display: grid; grid-template-columns: minmax(0, .96fr) minmax(0, 1.04fr); gap: clamp(2rem, 5vw, 5rem); align-items: center; padding-block: clamp(3rem, 6vw, 6rem) }
-.kicker { color: var(--blue); font-size: .88rem; font-weight: 650; letter-spacing: .055em; margin-block-end: 1.1rem }
-.hero .kicker { display: flex; align-items: center; gap: .65rem }
-.hero .kicker::before { content: ""; width: 1.65rem; height: 2px; background: currentColor }
-h1 { max-width: 9.2em; font-size: clamp(4.6rem, 7.3vw, 7.15rem); line-height: .98; text-wrap: balance }
-.lead { max-width: 36ch; margin-top: 1.45rem; font-size: clamp(1.09rem, 1.5vw, 1.28rem); color: var(--muted); line-height: 1.55 }
-.assurance { margin: 1rem 0 1.65rem; font-size: 1rem; font-weight: 550 }
-.button { display: inline-flex; align-items: center; background: var(--btn); color: var(--btn-text); border-radius: .42rem; padding: .82rem 1.28rem; font-weight: 650; font-size: .97rem; text-decoration: none; box-shadow: 0 2px 3px #11223416 }
-.button:hover { background: color-mix(in srgb, var(--btn) 90%, var(--text)) }
-.store-status, .fine, .capture-link { color: var(--muted); font-size: .875rem }
-.store-status { margin-top: .75rem }
-.demo { min-width: 0 }
-.folio {
-  background: linear-gradient(110deg, var(--cover-edge), var(--cover) 38%, var(--cover-edge));
-  border-radius: .8rem; padding: clamp(1.5rem, 3.2vw, 3.1rem) clamp(1.35rem, 3.7vw, 3.6rem);
-  box-shadow: inset 0 0 0 1px #ffffff12;
-}
-.paper {
-  position: relative; color: var(--paper-ink); background: var(--paper); border-radius: 2px 5px 5px 2px;
-  padding: clamp(1.15rem, 2.25vw, 2.05rem);
-  box-shadow: 2px 2px var(--paper-rule), 4px 4px var(--paper), 5px 5px var(--paper-rule), 8px 14px 22px #06152a50;
-}
-.paper::before { content: ""; position: absolute; top: 0; right: 1.75rem; width: .7rem; height: 1.17rem; background: #b48142; clip-path: polygon(0 0,100% 0,100% 100%,50% 77%,0 100%) }
-.running-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--paper-rule); padding-bottom: .55rem; font: 1rem Georgia, serif }
-.running-head span { font-size: .875rem }
-blockquote { font: 400 clamp(2.2rem, 3.2vw, 3.15rem)/1.04 var(--serif); letter-spacing: -.02em; margin: 1.1rem 0 1.3rem; text-wrap: balance }
-mark { color: var(--mark-ink); background: var(--mark); padding: 0 .07em; box-decoration-break: clone }
-.order { min-width: 0; margin: 0; padding: 0; border: none }
-.visually-hidden, .order legend, .switch input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap }
-.switch { display: inline-flex; max-width: 100%; padding: 2px; border: 1px solid var(--paper-rule); border-radius: .4rem; background: var(--surface); margin-bottom: .7rem }
-.switch label { display: flex; cursor: pointer; position: relative }
-.switch span { padding: .31rem .57rem; border-radius: .26rem; font-size: .875rem; color: var(--muted); font-weight: 570 }
-.switch input:checked + span { color: var(--btn-text); background: var(--btn) }
-.switch input:focus-visible + span { outline: 2px solid var(--blue); outline-offset: 2px }
-.demo .dc-card { margin-inline: auto; width: 100% }
-.demo .dc-body { height: 8.5rem; padding-bottom: .6rem }
-.demo .dc-footer { padding-block: .4rem }
-.dictionary-result, .order:has(input[value="dictionary"]:checked) .context-result { display: none }
-.order:has(input[value="dictionary"]:checked) .dictionary-result { display: block }
-.capture-link { display: table; margin: .55rem 0 0 auto }
-.benefits { border-block: 1px solid var(--line); background: var(--surface) }
-.benefit-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); padding-block: clamp(2rem, 4vw, 3.4rem) }
-.benefit-grid article { padding-inline: clamp(1.1rem, 3vw, 2.8rem); border-left: 1px solid var(--line) }
-.benefit-grid article:first-child { border: 0; padding-left: 0 }
-.benefit-grid article:last-child { padding-right: 0 }
-.fact { font-size: clamp(2.8rem, 4.5vw, 4rem); color: var(--blue); margin-bottom: .75rem }
-.fact small { font-size: .58em }
-.benefit-grid h2, .measure h3 { font: 650 1.06rem/1.35 "Segoe UI",system-ui,sans-serif; letter-spacing: -.015em; margin-bottom: .35rem }
-.benefit-grid article > p:last-child, .evidence > div > p:not(.kicker), .install p:not(.kicker) { color: var(--muted) }
-.evidence, .install { display: grid; grid-template-columns: minmax(0,.85fr) minmax(0,1fr); align-items: center; gap: clamp(2rem, 9vw, 9rem); padding-block: clamp(3.8rem, 7vw, 6.7rem) }
-.evidence h2, .install h2 { margin-bottom: 1.2rem }
-.text-link { display: inline-block; font-weight: 600; margin-top: 1rem }
-.chart { border-block: 1px solid var(--line); padding-block: 1.4rem }
-.chart figcaption { display: flex; flex-wrap: wrap; gap: .5rem 1.4rem; font-size: .88rem; color: var(--muted) }
-.key { display: inline-block; width: .68rem; height: .68rem; margin-right: .4rem; background: var(--blue); border-radius: 2px }
-.base-key, .baseline .rail i { background: var(--base) }
-.measure { margin-top: 1.5rem }
-.bar-row { display: grid; grid-template-columns: minmax(0,1fr) 3.2rem; gap: .6rem; align-items: center; color: var(--blue); font-size: .9rem }
-.bar-row > span { text-align: right }
-.rail { height: .5rem; background: var(--surface); border-radius: 2px; overflow: hidden }
-.rail i { display: block; height: 100%; background: currentColor }
-.baseline { color: var(--base) }
-.baseline > span { color: var(--muted) }
-.comparison { padding-block: clamp(3.3rem, 6vw, 5.7rem); background: var(--surface); border-block: 1px solid var(--line) }
-.comparison h2 { margin-bottom: 2rem }
-table { width: 100%; border-collapse: collapse; text-align: left }
-.comparison table { font-size: .99rem; line-height: 1.55 }
-.comparison th, .comparison td { padding: 1.05rem 1.15rem; border-bottom: 1px solid var(--line); vertical-align: top }
-.comparison thead th { color: var(--muted); font-size: .875rem; padding-block: .65rem; font-weight: 600 }
-.comparison tbody th { width: 23% }
-.comparison td { width: 38.5% }
-.comparison .ours { background: var(--tint) }
-.ours img { vertical-align: -.3rem; margin-right: .4rem }
-.comparison .fine { margin-top: 1rem }
-.install { align-items: start }
-.install .button { margin-top: 1.1rem }
-.steps { list-style: decimal; padding-left: 1.55rem; margin: 0 0 1.5rem }
-.steps li { padding: 0 0 1.05rem .35rem }
-.steps li::marker { color: var(--blue); font-weight: 650 }
-.steps strong { display: block; color: var(--text) }
-code { font: .93em ui-monospace, Consolas, monospace; overflow-wrap: anywhere }
-details { border-top: 1px solid var(--line); padding: .8rem 0 }
-details:last-child { border-bottom: 1px solid var(--line) }
-summary { cursor: pointer; font-weight: 600 }
-details p { margin: .6rem 0 .2rem }
-footer { border-top: 1px solid var(--line); background: var(--surface); padding: 2.2rem max(calc((100% - 76rem)/2),clamp(1.25rem,5vw,5rem)); color: var(--muted); font-size: .875rem }
-.foot { width: 100%; display: flex; align-items: flex-start; justify-content: space-between; gap: 1.3rem }
-footer p { margin-top: .65rem }
-.document { max-width: 52rem; padding-block: 3.5rem }
-.document h1 { font-size: clamp(3.4rem, 6vw, 5.5rem); margin-bottom: 1.4rem }
-.document h2 { margin-block: 2.2rem .65rem; font-size: 2.5rem }
-.document p, .document li { margin-bottom: .65rem; overflow-wrap: anywhere }
-.document table { display: block; overflow: auto }
-.document th, .document td { border-bottom: 1px solid var(--line); padding: .6rem; vertical-align: top }
-@media (max-width: 53rem) {
-  .hero { grid-template-columns: 1fr; gap: 2rem }
-  h1 { max-width: 11em; font-size: clamp(4.3rem, 10vw, 6.2rem) }
-  .lead { max-width: 44ch }
-  .demo { width: min(100%,37rem); justify-self: center }
-  .evidence, .install { gap: 2rem }
+.site-header nav { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem clamp(.9rem, 2.2vw, 1.75rem) }
+.site-header nav a { color: var(--soft); font-size: .9375rem; font-weight: 500; text-decoration: none }
+.site-header nav a:hover, .site-header nav a[aria-current] { color: var(--ink) }
+.site-header nav a[aria-current] { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .45em }
+.site-header nav a.button, .site-header nav a.button:hover { color: var(--on-accent) }
+.button { display: inline-flex; align-items: center; gap: .5rem; padding: .78rem 1.25rem; border-radius: .5rem; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 1rem; line-height: 1.2; text-decoration: none }
+.button:hover { background: color-mix(in srgb, var(--accent) 86%, var(--ink)) }
+.button.compact { padding: .5rem .9rem; font-size: .9375rem }
+.site-footer { margin-top: clamp(3rem, 6vw, 5rem); border-top: 1px solid var(--rule); background: var(--panel); color: var(--soft); font-size: .875rem; line-height: 1.55 }
+main:has(.band:last-child) + .site-footer { margin-top: 0 }
+.site-footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1.5rem 3rem; padding-block: 2.25rem }
+.site-footer .credits { max-width: 34rem }
+.site-footer .credits p { margin-top: .7rem }
+.site-footer nav { display: flex; flex-wrap: wrap; align-content: start; gap: .4rem 1.5rem }
+.site-footer nav a { color: var(--ink); font-weight: 500; text-decoration: none }
+.site-footer nav a:hover { text-decoration: underline }
+
+/* The opening: the claim on the left, a capture of the extension on the right. */
+.hero { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); align-items: center; gap: clamp(2rem, 5vw, 4.5rem); padding-block: clamp(2.25rem, 5vw, 4.5rem) clamp(3.5rem, 7vw, 6rem) }
+.hero .lead { margin-top: 1.4rem; max-width: 33rem; font-size: clamp(1.125rem, 1.45vw, 1.25rem); line-height: 1.55; color: var(--soft) }
+.hero .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .9rem 1.4rem; margin-top: 1.9rem }
+.hero .actions a:not(.button) { font-weight: 600 }
+.hero .terms { margin-top: 1.1rem; color: var(--soft); font-size: .9375rem }
+.shot { min-width: 0 }
+.capture { border: 1px solid var(--rule); border-radius: .75rem; overflow: hidden; background: var(--panel); box-shadow: var(--shadow) }
+.capture img { width: 100% }
+.shot .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1rem; margin-bottom: .8rem }
+.shot .bar p { color: var(--soft); font-size: .875rem }
+.segmented { display: inline-flex; padding: 3px; border: 1px solid var(--rule); border-radius: .55rem; background: var(--panel) }
+.segmented label { position: relative; display: flex; cursor: pointer }
+.segmented input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer }
+.segmented span { padding: .34rem .8rem; border-radius: .38rem; color: var(--soft); font-size: .875rem; font-weight: 550; line-height: 1.3 }
+.segmented input:checked + span { background: var(--paper); color: var(--ink); box-shadow: 0 0 0 1px var(--rule), 0 1px 2px rgb(0 0 0 / 8%) }
+.segmented input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px }
+.shot .reading { margin-top: .9rem; font-size: .9375rem; line-height: 1.5; color: var(--soft) }
+.shot .reading b { color: var(--ink) }
+.shot:has(input[value="dictionary"]:checked) .in-context, .shot:not(:has(input[value="dictionary"]:checked)) .in-dictionary { display: none }
+
+/* The sections of the home page: a heading column and a content column. */
+.band { border-top: 1px solid var(--rule) }
+.band > .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.15fr); gap: 1.5rem clamp(2rem, 5vw, 4.5rem); padding-block: clamp(3.25rem, 6.5vw, 5.5rem) }
+.band.tinted { background: var(--panel) }
+.band.stacked > .wrap { grid-template-columns: minmax(0, 1fr); gap: 2.2rem }
+.band.stacked header { max-width: 40rem }
+.band header p { margin-top: .9rem; color: var(--soft) }
+.band header p + p { margin-top: .7rem }
+.band .more { display: inline-block; margin-top: 1rem; font-weight: 600 }
+
+.examples { list-style: none }
+.examples > li { padding-block: 1.7rem; border-top: 1px solid var(--rule) }
+.examples > li:first-child { padding-top: 0; border-top: 0 }
+.passage { font-size: clamp(1.3rem, 2vw, 1.55rem); line-height: 1.32; letter-spacing: -.008em; text-wrap: pretty }
+.examples cite { display: block; margin-top: .45rem; color: var(--soft); font-size: .875rem; font-style: normal }
+.orders { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .5rem 1.25rem; margin-top: 1.05rem; font-size: .9688rem; line-height: 1.5 }
+.orders dt { color: var(--soft); font-size: .875rem; padding-top: .06rem }
+.orders .dictionary { color: var(--soft) }
+.orders dd.context { font-weight: 550 }
+.orders .was { margin-left: .5rem; color: var(--soft); font-size: .8125rem; font-weight: 400; white-space: nowrap }
+.examples-note { padding-top: 1.2rem; border-top: 1px solid var(--rule); color: var(--soft); font-size: .875rem }
+
+.steps { list-style: none; display: grid; gap: 1.9rem; counter-reset: step }
+.steps > li { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); column-gap: 1rem; counter-increment: step }
+.steps > li::before { content: counter(step); font: 480 2.1rem/1 var(--serif); color: var(--accent); padding-top: .05rem }
+.steps p { margin-top: .3rem; color: var(--soft) }
+.local { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 19rem); gap: 2rem clamp(1.75rem, 4vw, 3.25rem); align-items: start }
+.local figure figcaption { margin-top: .7rem; color: var(--soft); font-size: .875rem; line-height: 1.5 }
+.plain { list-style: none; display: grid; gap: .7rem }
+.plain li { padding-left: 1.35rem; position: relative }
+.plain li::before { content: ""; position: absolute; left: .1rem; top: .74em; width: .5rem; height: 2px; background: var(--base) }
+.after { margin-top: 2.4rem; padding-top: 1.9rem; border-top: 1px solid var(--rule) }
+.after h3 { margin-bottom: .8rem }
+
+.chart { display: grid; gap: 1.6rem }
+.chart figcaption { display: flex; flex-wrap: wrap; gap: .4rem 1.5rem; color: var(--soft); font-size: .875rem }
+.key { display: inline-block; width: .7rem; height: .7rem; margin-right: .45rem; border-radius: 2px; background: var(--accent) }
+.key.base { background: var(--base) }
+.measure h3 { margin-bottom: .55rem }
+.bar-row { display: grid; grid-template-columns: minmax(0, 1fr) 3.6rem; align-items: center; gap: .75rem; font-size: .9375rem; font-variant-numeric: tabular-nums }
+.bar-row + .bar-row { margin-top: .4rem }
+.bar-row > span { text-align: right; font-weight: 600 }
+.bar-row.base > span { color: var(--soft); font-weight: 400 }
+.rail { height: .7rem; border-radius: 2px; background: color-mix(in srgb, var(--rule) 55%, transparent) }
+.rail i { display: block; height: 100%; border-radius: 2px; background: var(--accent) }
+.base .rail i { background: var(--base) }
+
+.choices { width: 100%; border-collapse: collapse; text-align: left; font-size: .9688rem; line-height: 1.5 }
+.choices th, .choices td { padding: .95rem 1rem; border-bottom: 1px solid var(--rule); vertical-align: top }
+.choices thead th { padding-top: 0; color: var(--soft); font-size: .875rem; font-weight: 500 }
+.choices tbody th { width: 24%; font-weight: 600 }
+.choices tbody th span { display: block; color: var(--soft); font-size: .875rem; font-weight: 400 }
+.choices .ours th, .choices .ours td { background: color-mix(in srgb, var(--accent) 8%, transparent) }
+.choices .ours th { box-shadow: inset 3px 0 var(--accent) }
+.choices-note { margin-top: 1.2rem; color: var(--soft); font-size: .875rem }
+
+.needs { display: flex; flex-wrap: wrap; gap: .5rem 1.75rem; margin-bottom: 2rem; padding: 0 0 1.5rem; border-bottom: 1px solid var(--rule); list-style: none; color: var(--soft); font-size: .9375rem }
+.needs b { color: var(--ink) }
+.steps .button { margin-top: .9rem }
+.questions { margin-top: 2.4rem }
+details { border-top: 1px solid var(--rule) }
+details:last-of-type { border-bottom: 1px solid var(--rule) }
+summary { padding: .95rem 0; cursor: pointer; font-weight: 600 }
+details p { padding: 0 0 1.1rem; color: var(--soft); max-width: 42rem }
+
+/* The pages made from the documents, and the practice page. */
+.document { width: min(46rem, 100% - 2 * var(--gutter)); margin-inline: auto; padding-block: clamp(2rem, 5vw, 3.5rem) 1rem }
+.document h1 { font-size: clamp(2.4rem, 5vw, 3.4rem); margin-bottom: 1.4rem }
+.document h2 { margin: 2.6rem 0 .8rem; font-size: clamp(1.5rem, 2.4vw, 1.9rem) }
+.document p, .document ul, .document ol, .document table { margin-bottom: 1rem }
+.document ul, .document ol { padding-left: 1.3rem }
+.document li { margin-bottom: .5rem; overflow-wrap: anywhere }
+.document table { display: block; overflow-x: auto; border-collapse: collapse; font-size: .9375rem; line-height: 1.5 }
+.document th, .document td { padding: .6rem 1rem .6rem 0; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top }
+.document th { color: var(--soft); font-size: .875rem; font-weight: 500 }
+.practice .intro { color: var(--soft); font-size: 1.125rem; margin-bottom: 0 }
+.practice article { margin-top: 2.4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule) }
+.practice article h2 { margin: 0 0 .8rem; font: 500 .875rem/1.4 var(--sans); letter-spacing: 0; color: var(--soft) }
+.practice article p { font: 430 1.3125rem/1.5 var(--serif); margin-bottom: 0; text-wrap: pretty }
+
+@media (max-width: 58rem) {
+  .hero { grid-template-columns: 1fr; gap: 2.5rem }
+  .shot { max-width: 40rem }
+  .band > .wrap { grid-template-columns: 1fr }
+  .band header { max-width: 38rem }
 }
 @media (max-width: 42rem) {
-  .top { min-height: 4.2rem; flex-wrap: wrap; padding-block: .7rem; gap: .65rem }
-  .brand { font-size: 1rem }
-  .top .brand img { width: 1.6rem }
-  .top nav { gap: .7rem }
-  .top nav a { font-size: .875rem }
-  .nav-install { padding: .28rem .6rem }
-  .hero { padding-block: 2.5rem }
-  h1 { font-size: clamp(3.65rem, 13vw, 5rem); max-width: 8.5em }
-  .benefit-grid, .evidence, .install { grid-template-columns: 1fr }
-  .benefit-grid { padding-block: .45rem }
-  .benefit-grid article, .benefit-grid article:first-child { border: 0; padding: 1.45rem 0; display: grid; grid-template-columns: minmax(5.5rem, .36fr) 1fr; column-gap: .95rem; align-items: baseline }
-  .benefit-grid article + article { border-top: 1px solid var(--line) }
-  .benefit-grid .fact { grid-row: span 2; margin: 0; font-size: 2.55rem }
-  .benefit-grid .fact small { display: block; font-size: .54em }
-  .benefit-grid article > p:last-child { grid-column: 2 }
-  .comparison table, .comparison tbody, .comparison tr, .comparison td, .comparison tbody th { display: block; width: 100% }
-  .comparison thead { position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden }
-  .comparison tr { border-bottom: 1px solid var(--line); padding: .9rem .7rem }
-  .comparison tbody th, .comparison td { padding: .2rem .3rem; border: 0 }
-  .comparison td:last-child { color: var(--muted) }
-  .foot { flex-direction: column }
+  .site-header nav { gap: .3rem 1.1rem }
+  .site-header nav .optional { display: none }
+  .local { grid-template-columns: 1fr }
+  .local figure { max-width: 21rem }
+  .orders { grid-template-columns: 1fr; gap: .1rem }
+  .orders dd { margin-bottom: .6rem }
+  .choices, .choices tbody, .choices tr, .choices th, .choices td { display: block; width: auto }
+  .choices thead { display: none }
+  .choices tr { padding: .9rem 0; border-bottom: 1px solid var(--rule) }
+  .choices tbody th, .choices td { width: auto; padding: .15rem 0; border: 0 }
+  .choices .ours { padding-inline: .9rem; box-shadow: inset 3px 0 var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent) }
+  .choices .ours th, .choices .ours td { background: none; box-shadow: none }
+  .choices td::before { content: attr(data-label) ": "; color: var(--soft); font-size: .875rem }
+  .practice article p { font-size: 1.125rem }
 }
 @media (forced-colors: active) {
-  .button, .switch, .switch input:checked + span { border: 1px solid ButtonText }
-  .switch input:checked + span { text-decoration: underline }
+  .button, .segmented, .segmented input:checked + span { border: 1px solid ButtonText }
+  mark { background: Highlight; color: HighlightText }
   .rail i, .key { background: Highlight; forced-color-adjust: none }
-  .baseline .rail i, .base-key { background: GrayText; forced-color-adjust: none }
+  .base .rail i, .key.base { background: GrayText; forced-color-adjust: none }
 }
+@media print { .site-header nav, .segmented { display: none } }

@@ -71,7 +71,7 @@ After changing core source, bump the core version in `packages/core/package.json
 
 ## Site
 
-`site/` and `docs/privacy.md` are published at https://andrepaim.github.io/contextual-dictionary/ by `.github/workflows/pages.yml` on every push to `main` that changes them. `npm run build:site` builds it into `_site/`.
+`site/`, `docs/user-guide.md` and `docs/privacy.md` are published at https://andrepaim.github.io/contextual-dictionary/ by `.github/workflows/pages.yml` on every push to `main` that changes them. `npm run build:site` builds it into `_site/`. The pictures in `site/images/` and the answers under `result` in `site/_examples.json` are captures of the running extension; `npx tsx validation/site-assets.ts` (after `npm run build`) makes them again.
 
 ## Release
 
