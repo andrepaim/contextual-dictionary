@@ -6,7 +6,7 @@ import { STORED_NAMES } from '../assets/manifest'
 import { readModelLoad } from '../model/load'
 import {
   CodedError, DEFAULT_SETTINGS,
-  type AssetService, type BundleName, type ByteSource, type DefineAnswer, type Dictionary, type Ranker, type RankerStatus, type Selection, type Settings, type WorkerLike,
+  type AssetService, type BundleName, type ByteSource, type DefineAnswer, type Dictionary, type DictionaryResult, type OrderDetails, type Ranker, type RankerStatus, type Selection, type Settings, type WorkerLike,
 } from '../shared/contracts'
 import type { OffscreenRequest, RuntimeStatus } from '../shared/offscreen-protocol'
 
@@ -103,21 +103,27 @@ export class OffscreenHost {
 
   // ------------------------------------------------------------------ lookups
 
+  /** Every answer says what the model did to its order (docs/order-details-plan.md); the card shows it only when asked. */
   async #define(requestId: string, selection: Selection): Promise<DefineAnswer> {
     const controller = new AbortController()
     this.#lookups.get(requestId)?.abort()
     this.#lookups.set(requestId, controller)
+    const answer = (result: DictionaryResult, order: OrderDetails): DefineAnswer => ({ result, ordered: order.status === 'ordered', order })
     try {
       const result = await (await this.#openDictionary()).define(selection)
-      if (!result.entries.length || !this.#settings?.orderByContext || controller.signal.aborted) return { result, ordered: false }
+      if (!this.#settings?.orderByContext) return answer(result, { status: 'off' })
+      if (!result.entries.length) return answer(result, { status: 'nothing-to-order' })
+      if (controller.signal.aborted) return answer(result, { status: 'unavailable' })
       try {
         const ranker = this.#ranker
-        if (ranker.status().state !== 'ready' && !(await this.#modelInstalled())) return { result, ordered: false }
-        const ordered = await ranker.order(result, selection, controller.signal)
+        if (ranker.status().state !== 'ready' && !(await this.#modelInstalled())) {
+          return answer(result, { status: result.entries.some(entry => entry.senses.length > 1) ? 'no-model' : 'nothing-to-order' })
+        }
+        const ranked = await ranker.rank(result, selection, controller.signal)
         this.#watch(ranker)
-        return { result: ordered, ordered: ordered !== result }
+        return answer(ranked.result, ranked.details)
       } catch {
-        return { result, ordered: false }
+        return answer(result, { status: 'unavailable' })
       }
     } finally {
       if (this.#lookups.get(requestId) === controller) this.#lookups.delete(requestId)
