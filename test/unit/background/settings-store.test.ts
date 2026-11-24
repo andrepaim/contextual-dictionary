@@ -23,6 +23,16 @@ describe('SettingsStore', () => {
     expect(await store.patch({ definitions: false })).toEqual({ ...DEFAULT_SETTINGS, orderByContext: true, budgetMs: 50, definitions: false })
   })
 
+  test('"Show order details" is patched and kept, and settings stored by 0.1.0 read with it off', async () => {
+    const area = new FakeArea()
+    area.data.set(SETTINGS_KEY, { definitions: true, orderByContext: true, disabledSites: [], budgetMs: 750, maxCandidates: 24 })
+    const store = new SettingsStore(area)
+    expect((await store.get()).showOrderDetails).toBe(false)
+    expect(await store.patch({ showOrderDetails: true })).toEqual({ ...DEFAULT_SETTINGS, showOrderDetails: true })
+    expect(area.data.get(SETTINGS_KEY)).toMatchObject({ showOrderDetails: true })
+    expect((await store.patch({ orderByContext: false })).showOrderDetails).toBe(true)
+  })
+
   test('only known settings are taken from a patch', async () => {
     const store = new SettingsStore(new FakeArea())
     const patched = await store.patch({ definitions: false, disabledSites: ['x.org'] } as never)
