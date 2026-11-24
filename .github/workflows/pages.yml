@@ -9,6 +9,8 @@ on:
     paths:
       - site/**
       - docs/privacy.md
+      - docs/images/hamlet-moment-context.png
+      - packages/core/src/card.css
       - store/*.png
       - src/icons/**
       - scripts/build-site.mjs

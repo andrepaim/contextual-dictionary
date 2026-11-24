@@ -39,7 +39,15 @@ describe('buildSite', () => {
   afterAll(() => fs.rmSync(out, { recursive: true, force: true }))
 
   test('writes the two pages, the style sheet and the images', () => {
-    for (const name of ['index.html', 'privacy.html', 'site.css', 'images/icon-128.png', 'images/screenshot-2-compare.png']) expect(fs.existsSync(path.join(out, name)), name).toBe(true)
+    for (const name of ['index.html', 'privacy.html', 'site.css', 'card.css', 'images/icon-128.png', 'images/hamlet-moment-context.png']) expect(fs.existsSync(path.join(out, name)), name).toBe(true)
+  })
+
+  test('the example ships the production card stylesheet and both ordering choices', () => {
+    expect(read('card.css')).toBe(fs.readFileSync(new URL('../../../packages/core/src/card.css', import.meta.url), 'utf8'))
+    const page = read('index.html')
+    expect(page).toContain('href="card.css"')
+    expect(page.match(/type="radio" name="order"/g)).toHaveLength(2)
+    expect(page).toContain('Weight or importance.')
   })
 
   test('the privacy page is docs/privacy.md', () => {
