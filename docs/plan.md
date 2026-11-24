@@ -57,6 +57,7 @@ This is a port of pdfpal's "Order by context" feature (`~/src/pdfpal-ettin-defin
 | Assets | Published as a GitHub release `assets-v1` of this repository: `ettin-150m-wsd-int8.onnx.gz`, the small model files, `wiktionary-en-v1.pack`, and notices. Every file is pinned by size and SHA-256 in `src/assets/manifest.ts`. Published assets are never changed; a new payload gets a new tag. |
 | Licenses | Code MIT. Dictionary pack CC BY-SA 4.0 (Wiktionary). Model Apache-2.0 (base MIT). ONNX Runtime MIT. Notices ship in the extension and next to the assets. |
 | Privacy | No telemetry. Lookups, selections and context never leave the extension. The answer cache holds prompt hashes and numbers only. |
+| Order details (0.2.0) | A fourth switch, "Show order details", off by default: the card shows each moved meaning's dictionary position and why it shows dictionary order, never a score. See `docs/order-details-plan.md`. |
 
 ## 4. Architecture
 

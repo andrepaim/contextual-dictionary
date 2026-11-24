@@ -5,11 +5,11 @@ Contextual Dictionary shows dictionary meanings for a word you select on a web p
 ## What it reads
 
 - **On the pages you visit:** when you double-click a word or select a short phrase (at most four words and 80 characters), the extension reads the selected text and up to 120 characters of the page text on each side of it, from the same paragraph or block. It reads nothing else on the page, and nothing at all when you have not selected anything, when the selection is in a text field or an editable area, when definitions are switched off, or on a site you switched off.
-- That text goes from the page to the extension's own background page on your computer, where it is looked up in the dictionary and, if "Order by context" is on, given to the word-sense model, which also runs on your computer. Nothing is written to disk and nothing is logged.
+- That text goes from the page to the extension's own background page on your computer, where it is looked up in the dictionary and, if "Order by context" is on, given to the word-sense model, which also runs on your computer. Nothing is written to disk and nothing is logged. The order details the card can show ("was 3rd", "Ordered by context") are numbers and one status word computed with each answer, never text; nothing new is stored, and nothing leaves your computer.
 
 ## What it keeps on your computer
 
-- **Its settings**, in the browser's extension storage: whether definitions and "Order by context" are on, the sites you switched off (their host names), and two numbers that tune the ordering (a time budget and a limit on meanings).
+- **Its settings**, in the browser's extension storage: whether definitions, "Order by context" and "Show order details" are on, the sites you switched off (their host names), and two numbers that tune the ordering (a time budget and a limit on meanings).
 - **The two downloads** in the extension's private file storage: the dictionary (an English Wiktionary file, 66.5 MB) and the word-sense model (267 MB once unpacked, plus four small files). "Remove" in the extension's window deletes them.
 - **A short-lived answer cache**, in memory only and gone when the browser closes: up to 64 entries, each a SHA-256 hash of a prompt and the model's numbers for it. It holds no words and no page text.
 - **The last status of the downloads and the model** (phases such as "ready", sizes, error codes), in the browser's session storage, so the extension window can show it at once. It holds no words and no page text.
