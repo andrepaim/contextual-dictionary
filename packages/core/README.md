@@ -25,4 +25,19 @@ async function define(source: ByteSource, selection: Selection, format: SenseFor
 
 `@andrepaim/contextual-dictionary-core/pack` exports `writePack`, `PackWriter` and the v1 pack record types. Supply records in `compareKeys` order when writing a pack for tests or tools.
 
+## Definition card
+
+```ts
+import { cardPreview } from '@andrepaim/contextual-dictionary-core/card'
+import { cardFixture } from '@andrepaim/contextual-dictionary-core/card-fixture'
+
+const { entries, canExpand } = cardPreview(cardFixture.entries, false)
+```
+
+`cardPreview` accepts the result's entries in display order and the current expanded state. The collapsed view includes up to three entries, three meanings per entry and one example per meaning. Pass `true` for the complete view. `canExpand` is true if collapsing hides any entry, meaning or example, so the toggle can remain visible in both states. Each view entry and sense holds the original dictionary object. Iterate the separate `examples` array on each view sense for the visible examples. `cardFixture` is a synthetic `DictionaryResult` that exercises all three limits.
+
+Load `@andrepaim/contextual-dictionary-core/card.css` as a stylesheet or through your bundler's CSS text loader for a shadow root. The root `.dc-card` contains a scrollable `.dc-body` and a `.dc-footer` that stays visible. Use `.dc-entry` for each entry, `.dc-head` with `.dc-lemma` and `.dc-pos` for its heading, `.dc-note` for an optional note, and `.dc-senses` on its ordered list. Use `.dc-definition` and `.dc-example` in each list item. The footer styles `.dc-toggle`, `.dc-attribution` and an optional `.dc-status`. `.dc-was` and `.dc-unranked` style optional ordering details.
+
+The stylesheet gives the card a 340px width and light and dark defaults. Override `--dc-bg`, `--dc-text`, `--dc-muted`, `--dc-border`, `--dc-accent` and `--dc-shadow` on the card or an ancestor to match the host theme. The host provides markup, placement, maximum height and interactions. The main package import remains the dictionary and ordering engine.
+
 The npm tarball contains built JavaScript and types and installs with lifecycle scripts disabled. It has zero npm dependencies. The caller supplies the dictionary pack separately. See the repository's `docs/assets.md` for the Wiktionary pack and attribution.

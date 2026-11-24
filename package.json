@@ -25,7 +25,7 @@
     "build:site": "node scripts/build-site.mjs"
   },
   "dependencies": {
-    "@andrepaim/contextual-dictionary-core": "file:artifacts/contextual-dictionary-core-0.1.0.tgz",
+    "@andrepaim/contextual-dictionary-core": "file:artifacts/contextual-dictionary-core-0.2.0.tgz",
     "@huggingface/tokenizers": "0.2.0",
     "@noble/hashes": "2.4.0",
     "onnxruntime-web": "1.30.0"

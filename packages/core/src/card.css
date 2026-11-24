@@ -1,0 +1,160 @@
+.dc-card {
+  --dc-default-bg: #fff;
+  --dc-default-text: #1f2328;
+  --dc-default-muted: #59636e;
+  --dc-default-border: #d0d7de;
+  --dc-default-accent: #0969da;
+  --dc-default-shadow: 0 8px 24px rgb(31 35 40 / 18%);
+
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  max-width: 100%;
+  border: 1px solid var(--dc-border, var(--dc-default-border));
+  border-radius: 10px;
+  background: var(--dc-bg, var(--dc-default-bg));
+  color: var(--dc-text, var(--dc-default-text));
+  box-shadow: var(--dc-shadow, var(--dc-default-shadow));
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  text-align: left;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  direction: ltr;
+}
+
+@media (prefers-color-scheme: dark) {
+  .dc-card {
+    --dc-default-bg: #22272e;
+    --dc-default-text: #e6edf3;
+    --dc-default-muted: #9aa5b1;
+    --dc-default-border: #444c56;
+    --dc-default-accent: #6cb6ff;
+    --dc-default-shadow: 0 8px 24px rgb(0 0 0 / 50%);
+  }
+}
+
+.dc-card,
+.dc-card * {
+  box-sizing: border-box;
+}
+
+.dc-card .dc-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 14px 4px;
+}
+
+.dc-card .dc-entry {
+  margin: 0 0 10px;
+}
+
+.dc-card .dc-head {
+  margin: 0;
+}
+
+.dc-card .dc-lemma {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dc-card .dc-pos {
+  margin-left: 6px;
+  color: var(--dc-muted, var(--dc-default-muted));
+  font-size: 13px;
+  font-style: italic;
+}
+
+.dc-card .dc-note {
+  margin: 2px 0 0;
+  color: var(--dc-muted, var(--dc-default-muted));
+  font-size: 13px;
+}
+
+.dc-card .dc-senses {
+  margin: 4px 0 0;
+  padding: 0 0 0 22px;
+  list-style: decimal;
+}
+
+.dc-card .dc-senses > li {
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+.dc-card .dc-senses > li::marker {
+  color: var(--dc-muted, var(--dc-default-muted));
+}
+
+.dc-card .dc-definition {
+  color: var(--dc-text, var(--dc-default-text));
+}
+
+.dc-card .dc-example {
+  display: block;
+  margin: 1px 0 0;
+  color: var(--dc-muted, var(--dc-default-muted));
+  font-size: 13px;
+}
+
+.dc-card .dc-footer {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 6px 14px 8px;
+  border-top: 1px solid var(--dc-border, var(--dc-default-border));
+  color: var(--dc-muted, var(--dc-default-muted));
+  font-size: 12px;
+}
+
+.dc-card .dc-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dc-accent, var(--dc-default-accent));
+  font: inherit;
+  cursor: pointer;
+}
+
+.dc-card .dc-attribution {
+  margin-left: auto;
+  color: inherit;
+  text-decoration: none;
+}
+
+.dc-card .dc-toggle:hover,
+.dc-card a.dc-attribution:hover {
+  text-decoration: underline;
+}
+
+.dc-card:focus-visible,
+.dc-card .dc-toggle:focus-visible,
+.dc-card a.dc-attribution:focus-visible {
+  outline: 2px solid var(--dc-accent, var(--dc-default-accent));
+  outline-offset: 2px;
+}
+
+.dc-card .dc-status {
+  flex: 1 0 100%;
+  margin: 0;
+}
+
+.dc-card .dc-was {
+  margin-left: 6px;
+  color: var(--dc-muted, var(--dc-default-muted));
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.dc-card .dc-senses > .dc-unranked {
+  display: block;
+  margin: 6px 0 4px -22px;
+  padding-top: 4px;
+  border-top: 1px solid var(--dc-border, var(--dc-default-border));
+  color: var(--dc-muted, var(--dc-default-muted));
+  font-size: 12px;
+}
