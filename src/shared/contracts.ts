@@ -99,6 +99,28 @@ export interface WorkerLike {
 export type RankerState = 'idle' | 'loading' | 'ready' | 'failed' | 'closed'
 export type RankerStatus = { state: Exclude<RankerState, 'failed'> } | { state: 'failed'; code: string }
 
+/**
+ * What the context model did to the order of a lookup's meanings. Numbers and
+ * one status word only: no text, no score.
+ */
+export type OrderStatus = 'ordered' | 'off' | 'no-model' | 'loading' | 'timed-out' | 'nothing-to-order' | 'not-english' | 'none-fits' | 'unavailable'
+export const ORDER_STATUSES: readonly OrderStatus[] = ['ordered', 'off', 'no-model', 'loading', 'timed-out', 'nothing-to-order', 'not-english', 'none-fits', 'unavailable']
+
+export interface OrderDetails {
+  status: OrderStatus
+  /**
+   * Only with status 'ordered'. positions[e][i] is the 0-based dictionary
+   * position of result.entries[e].senses[i], the meaning now at place i.
+   */
+  positions?: number[][]
+  /**
+   * Only with status 'ordered'. offered[e] is how many meanings of entry e
+   * the model was offered; they are the first offered[e] of the answer's
+   * senses. The rest follow in dictionary order.
+   */
+  offered?: number[]
+}
+
 export interface Ranker {
   status(): RankerStatus
   /** Starts loading the model in the background, unless it is loaded, loading, closed or recently failed. */
@@ -142,6 +164,8 @@ export interface Settings {
   definitions: boolean
   /** List each entry's meanings by contextual fit. */
   orderByContext: boolean
+  /** Show in the card what the context model did to the order (docs/order-details-plan.md). */
+  showOrderDetails: boolean
   /** Host names where the extension stays silent. */
   disabledSites: string[]
   /** How long a lookup waits for a ready model, in milliseconds. */
@@ -154,7 +178,8 @@ export interface Settings {
 // dictionary order clearly, so ordering is on (the model is still downloaded
 // only after the reader confirms it); with the ranker's prompt length limit a
 // 750 ms budget answers every lookup of the evaluation set on 8 and 4 threads.
-export const DEFAULT_SETTINGS: Settings = { definitions: true, orderByContext: true, disabledSites: [], budgetMs: 750, maxCandidates: 24 }
+// Order details are off, so the card looks as it did in 0.1.0.
+export const DEFAULT_SETTINGS: Settings = { definitions: true, orderByContext: true, showOrderDetails: false, disabledSites: [], budgetMs: 750, maxCandidates: 24 }
 export const SETTING_LIMITS = { budgetMs: { min: 50, max: 2000 }, maxCandidates: { min: 2, max: 127 } } as const
 
 export interface Status {
@@ -167,8 +192,10 @@ export interface Status {
 
 export interface DefineAnswer {
   result: DictionaryResult
-  /** Whether the model's order was applied. */
+  /** Whether the model's order was applied (`order.status === 'ordered'`). */
   ordered: boolean
+  /** What the model did to the order; sent whatever the settings, shown only with "Show order details". */
+  order?: OrderDetails
 }
 
 // ------------------------------------------------------------------ messages
@@ -232,9 +259,9 @@ export function isRequest(value: unknown): value is Request {
     case 'set-settings': {
       const patch = value.patch
       if (!isRecord(patch)) return false
-      const allowed = ['definitions', 'orderByContext', 'budgetMs', 'maxCandidates']
+      const allowed = ['definitions', 'orderByContext', 'showOrderDetails', 'budgetMs', 'maxCandidates']
       if (Object.keys(patch).some(key => !allowed.includes(key))) return false
-      for (const key of ['definitions', 'orderByContext']) if (patch[key] !== undefined && typeof patch[key] !== 'boolean') return false
+      for (const key of ['definitions', 'orderByContext', 'showOrderDetails']) if (patch[key] !== undefined && typeof patch[key] !== 'boolean') return false
       for (const key of ['budgetMs', 'maxCandidates']) if (patch[key] !== undefined && !Number.isFinite(patch[key])) return false
       return true
     }
@@ -254,6 +281,7 @@ export function normalizeSettings(settings: Partial<Settings> | undefined): Sett
   return {
     definitions: typeof settings?.definitions === 'boolean' ? settings.definitions : DEFAULT_SETTINGS.definitions,
     orderByContext: typeof settings?.orderByContext === 'boolean' ? settings.orderByContext : DEFAULT_SETTINGS.orderByContext,
+    showOrderDetails: typeof settings?.showOrderDetails === 'boolean' ? settings.showOrderDetails : DEFAULT_SETTINGS.showOrderDetails,
     disabledSites: [...new Set(sites.map(site => site.toLowerCase()))].sort(),
     budgetMs: clamp(settings?.budgetMs, DEFAULT_SETTINGS.budgetMs, SETTING_LIMITS.budgetMs),
     maxCandidates: clamp(settings?.maxCandidates, DEFAULT_SETTINGS.maxCandidates, SETTING_LIMITS.maxCandidates),
