@@ -388,3 +388,54 @@ describe('Controller', () => {
     expect(controller.active).toBe(false)
   })
 })
+
+describe('Controller: order details', () => {
+  /** "mouse" with its two meanings swapped by the model, and the details saying so. */
+  const reordered = (): DefineAnswer => {
+    const shown = answer('mouse', ['second meaning', 'first meaning'])
+    return { ...shown, ordered: true, order: { status: 'ordered', positions: [[1, 0]], offered: [2] } }
+  }
+  const parts = (part: string) => [...cardRoot()!.querySelectorAll(`[data-part="${part}"]`)].map(node => node.textContent)
+  async function lookUp(id: string, word: string, reply: DefineAnswer) {
+    await doubleClick(id, word)
+    backend.pending.at(-1)!.resolve(reply)
+    await flush()
+    expect(cardState()).toBe('card')
+  }
+
+  test('with the setting off (the default), details in the answer are not shown', async () => {
+    await controller.start()
+    await lookUp('mouse', 'mouse', reordered())
+    expect(definitions()).toEqual(['second meaning', 'first meaning'])
+    expect(parts('was')).toEqual([])
+    expect(parts('order-status')).toEqual([])
+  })
+
+  test('with the setting on, the card shows the details of the answer', async () => {
+    backend.status = status({ showOrderDetails: true })
+    await controller.start()
+    await lookUp('mouse', 'mouse', reordered())
+    expect(parts('was')).toEqual(['was 2nd', 'was 1st'])
+    expect(parts('order-status')).toEqual(['Ordered by context'])
+  })
+
+  test('with the setting on, an answer without details shows none', async () => {
+    backend.status = status({ showOrderDetails: true })
+    await controller.start()
+    await lookUp('mouse', 'mouse', answer('mouse'))
+    expect(parts('order-status')).toEqual([])
+  })
+
+  test('turning the setting on or off applies to the next lookup', async () => {
+    await controller.start()
+    await lookUp('mouse', 'mouse', reordered())
+    expect(parts('order-status')).toEqual([])
+    controller.apply(status({ showOrderDetails: true }))
+    await lookUp('bank', 'bank', { ...answer('bank'), order: { status: 'off' } })
+    expect(parts('order-status')).toEqual(['Dictionary order · ordering is off'])
+    controller.apply(status({ showOrderDetails: false }))
+    await lookUp('mouse', 'mouse', reordered())
+    expect(parts('order-status')).toEqual([])
+    expect(parts('was')).toEqual([])
+  })
+})
