@@ -108,7 +108,7 @@ describe('buildSite', () => {
     expect(footer(read('index.html'))).toContain('Wiktionary')
     for (const name of PAGES) {
       expect(footer(read(name)), name).toBe(footer(read('index.html')))
-      expect(links(read(name)), name).toEqual(['Contextual Dictionary', 'Examples', 'How it works', 'Accuracy', 'Guide', 'Privacy', 'Install'])
+      expect(links(read(name)), name).toEqual(['Contextual Dictionary', 'Examples', 'How it works', 'Guide', 'Privacy', 'Install'])
     }
   })
 
