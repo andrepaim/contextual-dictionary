@@ -125,7 +125,9 @@ export interface Ranker {
   status(): RankerStatus
   /** Starts loading the model in the background, unless it is loaded, loading, closed or recently failed. */
   warm(): void
-  /** `result` with each entry's meanings in contextual order, or `result` itself on any problem. */
+  /** `result` with each entry's meanings in contextual order, or `result` itself on any problem, with what was done. Never rejects. */
+  rank(result: DictionaryResult, selection: Selection, signal?: AbortSignal): Promise<{ result: DictionaryResult; details: OrderDetails }>
+  /** `rank()`'s result alone. */
   order(result: DictionaryResult, selection: Selection, signal?: AbortSignal): Promise<DictionaryResult>
   close(): Promise<void>
 }

@@ -2,9 +2,9 @@ import { sha256 } from '@noble/hashes/sha2.js'
 import { bytesToHex } from '@noble/hashes/utils.js'
 import {
   CodedError, DEFAULT_SETTINGS,
-  type DictionaryResult, type Ranker, type RankerState, type RankerStatus, type Selection, type SenseFormat, type WorkerLike,
+  type DictionaryResult, type OrderDetails, type OrderStatus, type Ranker, type RankerState, type RankerStatus, type Selection, type SenseFormat, type WorkerLike,
 } from '../shared/contracts'
-import { contextualOrder, isSenseFormat, senseRequest } from './prompt'
+import { contextualOrder, isSenseFormat, senseRequest, type SkipReason } from './prompt'
 
 // Contextual meaning order for the definition card. One reusable worker holds
 // the model. A lookup made before it is ready, or that the model cannot
@@ -54,13 +54,18 @@ export const RANKER_DEFAULTS = {
 } as const
 
 type Logits = ArrayLike<number>
-type Job = { id: number; key: string; prompt: string; done: boolean; settle(logits: Logits | null): void }
+/** A score's outcome: the model's logits, or why there are none. */
+type Scored = Logits | 'timed-out' | 'unavailable'
+type Job = { id: number; key: string; prompt: string; done: boolean; settle(outcome: Scored): void }
+export type Ranked = { result: DictionaryResult; details: OrderDetails }
 type Timer = ReturnType<typeof setTimeout>
 
 const encoder = new TextEncoder()
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
 const isLogits = (value: unknown): value is Logits => Array.isArray(value) || (ArrayBuffer.isView(value) && !(value instanceof DataView))
 const codeOf = (error: unknown) => error instanceof CodedError ? error.code : 'WORKER_START_FAILED'
+const SKIP_STATUS: Partial<Record<SkipReason, OrderStatus>> = { NO_ENTRIES: 'nothing-to-order', SINGLE_SENSES: 'nothing-to-order', NOT_ENGLISH: 'not-english' }
+const unchanged = (result: DictionaryResult, status: OrderStatus): Ranked => ({ result, details: { status } })
 
 export class SenseRanker implements Ranker {
   readonly stats = { scored: 0, cached: 0, superseded: 0, timedOut: 0, skipped: 0, applied: 0, capped: 0, unloaded: 0 }
@@ -132,16 +137,21 @@ export class SenseRanker implements Ranker {
    * `result` with the meanings of each entry in contextual order, or `result`
    * itself whenever the model is not ready, the input is unsupported, the
    * model rejects every meaning, the budget runs out, `signal` aborts or
-   * anything goes wrong.
+   * anything goes wrong; with details saying which (docs/order-details-plan.md).
    */
-  async order(result: DictionaryResult, selection: Selection, signal?: AbortSignal): Promise<DictionaryResult> {
+  async rank(result: DictionaryResult, selection: Selection, signal?: AbortSignal): Promise<Ranked> {
     try {
-      if (signal?.aborted || this.state === 'closed') return result
+      if (signal?.aborted || this.state === 'closed') return unchanged(result, 'unavailable')
       this.armIdle()
       const format = this.format
-      if (this.state !== 'ready' || !format) { this.warm(); return result }
+      if (this.state !== 'ready' || !format) {
+        this.warm()
+        if (result.entries.every(entry => entry.senses.length < 2)) return unchanged(result, 'nothing-to-order')
+        // A failed model that is not retried yet stays failed.
+        return unchanged(result, this.state === 'loading' ? 'loading' : 'unavailable')
+      }
       const request = senseRequest(result, selection, format, this.maxCandidates, this.maxPromptChars)
-      if ('skip' in request) { this.stats.skipped++; return result }
+      if ('skip' in request) { this.stats.skipped++; return unchanged(result, SKIP_STATUS[request.skip] ?? 'unavailable') }
       if (request.candidates.length < request.total) this.stats.capped++
       const key = bytesToHex(sha256(encoder.encode(request.prompt)))
       let logits = this.cache.get(key)
@@ -149,15 +159,22 @@ export class SenseRanker implements Ranker {
         this.stats.cached++
         this.cache.delete(key); this.cache.set(key, logits)
       } else {
-        logits = await this.score(key, request.prompt, signal) ?? undefined
-        if (!logits) return result
+        const scored = await this.score(key, request.prompt, signal)
+        if (typeof scored === 'string') return unchanged(result, scored)
+        logits = scored
       }
       const outcome = contextualOrder(result, request, logits, format)
-      if (outcome.applied) this.stats.applied++
-      return outcome.result
+      if (!outcome.applied) return unchanged(result, outcome.reason === 'NONE_FITS' ? 'none-fits' : 'unavailable')
+      this.stats.applied++
+      return { result: outcome.result, details: { status: 'ordered', positions: outcome.positions, offered: outcome.offered } }
     } catch {
-      return result
+      return unchanged(result, 'unavailable')
     }
+  }
+
+  /** `rank()`'s result alone. */
+  async order(result: DictionaryResult, selection: Selection, signal?: AbortSignal): Promise<DictionaryResult> {
+    return (await this.rank(result, selection, signal)).result
   }
 
   async close(): Promise<void> {
@@ -177,23 +194,24 @@ export class SenseRanker implements Ranker {
     worker.addEventListener('error', () => this.fail(attempt, 'WORKER_ERROR'))
   }
 
-  private score(key: string, prompt: string, signal?: AbortSignal): Promise<Logits | null> {
+  private score(key: string, prompt: string, signal?: AbortSignal): Promise<Scored> {
     return new Promise(resolve => {
-      const abort = () => { job.settle(null); if (this.queued === job) this.queued = undefined }
-      const timer = setTimeout(() => { if (!job.done) this.stats.timedOut++; abort() }, this.budgetMs)
+      const stopWaiting = (outcome: Scored) => { job.settle(outcome); if (this.queued === job) this.queued = undefined }
+      const abort = () => stopWaiting('unavailable')
+      const timer = setTimeout(() => { if (!job.done) this.stats.timedOut++; stopWaiting('timed-out') }, this.budgetMs)
       const job: Job = {
         id: this.nextId++, key, prompt, done: false,
-        settle: logits => {
+        settle: outcome => {
           if (job.done) return
           job.done = true
           clearTimeout(timer)
           signal?.removeEventListener('abort', abort)
-          resolve(logits)
+          resolve(outcome)
         },
       }
       signal?.addEventListener('abort', abort, { once: true })
       // Only the newest lookup waits for the model; an older one still queued gets dictionary order now.
-      if (this.queued) { this.stats.superseded++; this.queued.settle(null) }
+      if (this.queued) { this.stats.superseded++; this.queued.settle('unavailable') }
       this.queued = job
       this.pump()
     })
@@ -231,7 +249,7 @@ export class SenseRanker implements Ranker {
         this.cache.set(job.key, message.logits)
         if (this.cache.size > this.cacheSize) this.cache.delete(this.cache.keys().next().value!)
         job.settle(message.logits)
-      } else job.settle(null)
+      } else job.settle('unavailable')
       this.pump()
     }
   }
@@ -271,7 +289,7 @@ export class SenseRanker implements Ranker {
     this.format = undefined
     const { inflight, queued } = this
     this.inflight = this.queued = undefined
-    inflight?.settle(null); queued?.settle(null)
+    inflight?.settle('unavailable'); queued?.settle('unavailable')
   }
 
   private notify(): void {
