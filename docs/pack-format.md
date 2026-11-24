@@ -1,6 +1,6 @@
 # Dictionary pack format, version 1
 
-A pack is one file holding the whole dictionary, read by byte range so a lookup inflates one small block, not the file. It is written by `src/dict/pack-writer.ts` (driven by `scripts/build-dictionary.ts`) and read by `src/dict/pack-reader.ts`, which runs in the browser and in Node 22 and uses only `DecompressionStream`, `TextDecoder` and a `ByteSource`.
+A pack holds the whole dictionary in one file. The reader opens the header and index, then inflates individual blocks by byte range. The builder in `scripts/build-dictionary.ts` uses `PackWriter` from `@andrepaim/contextual-dictionary-core/pack`. The core reader runs in Chromium and Node 22 and reads from a `ByteSource`.
 
 ## Layout
 
@@ -56,7 +56,7 @@ To find a key, a reader binary-searches the index for the last block whose `firs
 
 ## Keys and key order
 
-A key is `normalizeKey(text)` from `src/dict/keys.ts`, applied by the builder to each headword and by the lookup to each selection:
+A key is `normalizeKey(text)` from `@andrepaim/contextual-dictionary-core`, applied by the builder to each headword and by the lookup to each selection:
 
 1. Unicode NFC.
 2. `’ ‘ ʼ ＇` become `'`; `“ ”` become `"`.
@@ -66,7 +66,7 @@ A key is `normalizeKey(text)` from `src/dict/keys.ts`, applied by the builder to
 
 Compatibility characters (ligatures, superscripts) and diacritics are kept: `café` and `cafe` are different keys.
 
-Keys are ordered by UTF-16 code units, the order of JavaScript's `<` on strings (`compareKeys` in `src/dict/pack-format.ts`). The builder, writer and reader all use this order.
+Keys are ordered by UTF-16 code units, the order of JavaScript's `<` on strings (`compareKeys` in `@andrepaim/contextual-dictionary-core/pack`). The builder, writer and reader all use this order.
 
 ## Records
 

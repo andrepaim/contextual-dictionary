@@ -4,7 +4,7 @@
 import { describe, expect, test } from 'vitest'
 import fsp from 'node:fs/promises'
 import type { ByteSource, DictionaryResult } from '../../../src/shared/contracts'
-import { openWiktionaryDictionary, type WiktionaryDictionary } from '../../../src/dict/lookup'
+import { openWiktionaryDictionary, type WiktionaryDictionary } from '@andrepaim/contextual-dictionary-core'
 
 const PACK = process.env.CD_TEST_PACK
 

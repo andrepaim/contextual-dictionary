@@ -4,18 +4,18 @@
 // own entries ranked by spelling (as selected, then lower case, then other
 // spellings) with inflection pointers replaced by their base word's entries
 // and a note such as "plural of mouse". Only when the word has no record at
-// all, conservative English suffix stripping is tried. Runs in the browser.
-import { SELECTION_LIMITS, type ByteSource, type Dictionary, type DictionaryEntry, type DictionaryResult, type DictionarySense, type DictionarySource, type Selection } from '../shared/contracts'
-import { normalizeKey } from './keys'
-import type { PackEntry, PackPointer, PackRecord, PackSense } from './pack-format'
-import { PackReader, type PackReaderOptions } from './pack-reader'
+// all, conservative English suffix stripping is tried.
+import { SELECTION_LIMITS, type ByteSource, type Dictionary, type DictionaryEntry, type DictionaryResult, type DictionarySense, type DictionarySource, type Selection } from './contracts.js'
+import { normalizeKey } from './keys.js'
+import type { PackEntry, PackPointer, PackRecord, PackSense } from './pack-format.js'
+import { PackReader, type PackReaderOptions } from './pack-reader.js'
 
 export const WIKTIONARY_NAME = 'Wiktionary'
 export const WIKTIONARY_LICENSE = 'CC BY-SA 4.0'
 
 /** The Wiktionary page for a headword. */
 export function wiktionaryUrl(word: string): string {
-  return `https://en.wiktionary.org/wiki/${encodeURIComponent(word.replace(/ /g, '_'))}`
+  return `https://en.wiktionary.org/wiki/${encodeURIComponent(word.toWellFormed().replace(/ /g, '_'))}`
 }
 
 /** Where records come from; a PackReader, or a fake in tests. */
@@ -102,12 +102,13 @@ export class WiktionaryDictionary implements Dictionary {
     if (!selectedWords.length || selectedWords.length > SELECTION_LIMITS.definableWords || !selectedWords.some(word => /\p{L}/u.test(word)))
       return result(selectedWords.join(' ') || selection.text.trim(), [])
 
-    const before = chunks(selection.before), after = chunks(selection.after)
+    const beforeText = selection.before ?? '', afterText = selection.after ?? ''
+    const before = chunks(beforeText), after = chunks(afterText)
     // No space between the selection and its neighbour means the selection
     // stops inside a word: double-clicking "well-known" selects one half.
     const whole = [...selected]
-    if (before.length && !/\s$/u.test(selection.before) && !/^\s/u.test(selection.text)) whole[0] = before.pop()! + whole[0]!
-    if (after.length && !/\s$/u.test(selection.text) && !/^\s/u.test(selection.after)) whole[whole.length - 1] += after.shift()!
+    if (before.length && !/\s$/u.test(beforeText) && !/^\s/u.test(selection.text)) whole[0] = before.pop()! + whole[0]!
+    if (after.length && !/\s$/u.test(selection.text) && !/^\s/u.test(afterText)) whole[whole.length - 1] += after.shift()!
     const words = whole.map(cleanWord).filter(Boolean)
 
     const found: Found[] = []

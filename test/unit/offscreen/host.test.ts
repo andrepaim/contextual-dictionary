@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import type { Fetch } from '../../../src/assets/download'
 import { STORED_NAMES } from '../../../src/assets/manifest'
-import { openWiktionaryDictionary } from '../../../src/dict/lookup'
+import { openWiktionaryDictionary } from '@andrepaim/contextual-dictionary-core'
 import { SenseRanker } from '../../../src/sense/ranker'
 import { CodedError, type DefineAnswer, type DictionaryResult } from '../../../src/shared/contracts'
 import type { RuntimeStatus } from '../../../src/shared/offscreen-protocol'

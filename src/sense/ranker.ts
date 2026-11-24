@@ -4,7 +4,7 @@ import {
   CodedError, DEFAULT_SETTINGS,
   type DictionaryResult, type OrderDetails, type OrderStatus, type Ranker, type RankerState, type RankerStatus, type Selection, type SenseFormat, type WorkerLike,
 } from '../shared/contracts'
-import { contextualOrder, isSenseFormat, senseRequest, type SkipReason } from './prompt'
+import { contextualOrder, isSenseFormat, senseRequest, SENSE_PROMPT_DEFAULTS, type SkipReason } from '@andrepaim/contextual-dictionary-core'
 
 // Contextual meaning order for the definition card. One reusable worker holds
 // the model. A lookup made before it is ready, or that the model cannot
@@ -40,12 +40,11 @@ export interface SenseRankerOptions {
 
 export const RANKER_DEFAULTS = {
   budgetMs: DEFAULT_SETTINGS.budgetMs,
-  maxCandidates: DEFAULT_SETTINGS.maxCandidates,
   // About 420 tokens. The model's time grows with the prompt; on the stage 3
   // machine every prompt within this length was answered within 750 ms with 8
   // or 4 threads (docs/validation.md). Below 2,048 characters the worker can
   // never refuse a prompt as over its 2,048-token limit.
-  maxPromptChars: 1600,
+  ...SENSE_PROMPT_DEFAULTS,
   retryMs: 60_000,
   loadTimeoutMs: 120_000,
   runTimeoutMs: 10_000,

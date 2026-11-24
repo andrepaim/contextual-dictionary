@@ -13,9 +13,10 @@ A Chrome (Manifest V3) extension: select a word on any page and a card shows its
 
 ## Structure
 
-- `src/shared/contracts.ts`: types and the message protocol every module shares. Modules depend on these interfaces, not on each other.
-- `src/sense/`: prompt building, offsets, English check, reorder, and the ranker (budget, queue, cache).
-- `src/dict/`: dictionary pack format, writer, reader, lookup. `scripts/build-dictionary.ts` builds a pack from a Kaikki extract.
+- `packages/core/`: shared dictionary and selection contracts, pack reader and writer, lookup, prompt building and contextual reordering. The extension installs the checked-in npm tarball used by PDFPal.
+- `src/shared/contracts.ts`: extension contracts and message protocol, with re-exports of core contracts.
+- `src/sense/`: extension ranker (budget, queue, cache).
+- `src/dict/`: Kaikki extract transformation. `scripts/build-dictionary.ts` builds a pack using the core writer.
 - `src/model/`: inference session, the Web Worker, its client.
 - `src/assets/`: pinned files, the private file store, download and verification, the asset service.
 - `src/content/`, `src/popup/`: selection, card, controller, popup.

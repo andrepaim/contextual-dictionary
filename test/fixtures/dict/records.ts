@@ -1,7 +1,7 @@
 // Hand-written pack records for the reader and lookup tests, in the shape the
 // builder writes (docs/pack-format.md). Not in key order on purpose: the
 // helpers sort them.
-import type { PackRecord } from '../../../src/dict/pack-format'
+import type { PackRecord } from '@andrepaim/contextual-dictionary-core/pack'
 
 export const RECORDS: PackRecord[] = [
   { k: 'mouse', e: [

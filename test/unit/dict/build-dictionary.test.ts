@@ -6,8 +6,7 @@ import { createHash } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 import { buildDictionary, externalSort, main, parseArguments, percentile, type SortItem } from '../../../scripts/build-dictionary'
-import { memoryByteSource, PackReader } from '../../../src/dict/pack-reader'
-import { openWiktionaryDictionary } from '../../../src/dict/lookup'
+import { memoryByteSource, openWiktionaryDictionary, PackReader } from '@andrepaim/contextual-dictionary-core'
 
 const FIXTURE = fileURLToPath(new URL('../../fixtures/dict/kaikki-extract.ndjson', import.meta.url))
 

@@ -1,10 +1,9 @@
-import { SETTING_LIMITS, type DictionaryEntry, type DictionaryResult, type Selection, type SenseFormat } from '../shared/contracts'
+import type { DictionaryEntry, DictionaryResult, Selection, SenseFormat } from './contracts.js'
 
 // Contextual order for the definition card: one prompt that offers the
 // meanings of every entry to a word-sense model, and the reordering of its
-// answer. Pure functions; the model runs in src/model/, the scheduling in
-// ranker.ts. Ported from pdfpal's src/core/sense-order.ts, with a cap on the
-// number of meanings offered.
+// answer. The caller runs the model and schedules the work. Ported from
+// PDFPal's sense-order.ts, with a cap on the number of meanings offered.
 
 export type SenseTarget = { start: number; end: number; text: string }
 export type SenseCandidate = { entry: number; sense: number }
@@ -17,6 +16,11 @@ export type SenseRequest = {
   total: number
 }
 export type SkipReason = 'NO_ENTRIES' | 'SINGLE_SENSES' | 'INVALID_FORMAT' | 'TOO_MANY_SENSES' | 'INVALID_SPAN' | 'UNSAFE_TEXT' | 'NOT_ENGLISH' | 'TOO_LONG'
+
+export const MIN_SENSE_CANDIDATES = 2
+
+/** Caps chosen from Wiktionary model benchmarks (docs/validation.md in the repository). */
+export const SENSE_PROMPT_DEFAULTS = { maxCandidates: 24, maxPromptChars: 1600 } as const
 
 const isHigh = (unit: string | undefined) => unit !== undefined && /[\uD800-\uDBFF]/.test(unit)
 const isLow = (unit: string | undefined) => unit !== undefined && /[\uDC00-\uDFFF]/.test(unit)
@@ -75,7 +79,7 @@ export function isSenseFormat(value: unknown): value is SenseFormat {
   const format = value as Record<string, unknown>
   const text = (key: string) => typeof format[key] === 'string' && (format[key] as string).length > 0
   return Array.isArray(format.letters) && format.letters.every(letter => typeof letter === 'string' && letter.length > 0)
-    && Number.isInteger(format.nota_index) && (format.nota_index as number) >= 2 && format.letters.length > (format.nota_index as number)
+    && Number.isInteger(format.nota_index) && (format.nota_index as number) >= MIN_SENSE_CANDIDATES && format.letters.length > (format.nota_index as number)
     && text('none_text') && text('separator') && text('mask_token')
     && typeof format.max_length === 'number' && format.max_length > 0 && typeof format.temperature === 'number' && Number.isFinite(format.temperature)
 }
@@ -88,7 +92,7 @@ export function isSenseFormat(value: unknown): value is SenseFormat {
 function candidateLimit(format: SenseFormat, maxCandidates: number | undefined): number {
   const model = format.nota_index
   if (maxCandidates === undefined || !Number.isFinite(maxCandidates)) return model
-  return Math.min(model, Math.max(SETTING_LIMITS.maxCandidates.min, Math.floor(maxCandidates)))
+  return Math.min(model, Math.max(MIN_SENSE_CANDIDATES, Math.floor(maxCandidates)))
 }
 
 /**
@@ -171,7 +175,7 @@ export function senseRequest(result: DictionaryResult, selection: Selection, for
   const limit = maxPromptChars !== undefined && maxPromptChars > 0 ? maxPromptChars : Number.POSITIVE_INFINITY
   const bound = Math.min(format.max_length * 8, limit)
   // Too long: drop the last meaning of the round-robin order and try again, while some entry keeps two.
-  for (let count = picks.length; count >= 2; count--) {
+  for (let count = picks.length; count >= MIN_SENSE_CANDIDATES; count--) {
     const candidates = picks.slice(0, count).sort(dictionaryOrder)
     if (!canReorder(candidates)) break
     const choices = candidates.map((candidate, i) => `${format.letters[i]}. ${definition(candidate)}`)

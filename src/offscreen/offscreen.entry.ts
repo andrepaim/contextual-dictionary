@@ -4,7 +4,7 @@
 // else, so the service worker's first message is never missed.
 import { OpfsFileStore } from '../assets/file-store'
 import { LocalAssetService } from '../assets/service'
-import { openWiktionaryDictionary } from '../dict/lookup'
+import { openWiktionaryDictionary } from '@andrepaim/contextual-dictionary-core'
 import { defaultThreads } from '../model/load'
 import { SenseRanker } from '../sense/ranker'
 import { CodedError, type WorkerLike } from '../shared/contracts'

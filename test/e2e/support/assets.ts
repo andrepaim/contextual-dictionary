@@ -4,8 +4,7 @@
 import { createHash } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import { STORED_NAMES, type AssetManifest, type PinnedFile } from '../../../src/assets/manifest'
-import { compareKeys, type PackRecord } from '../../../src/dict/pack-format'
-import { writePack } from '../../../src/dict/pack-writer'
+import { compareKeys, writePack, type PackRecord } from '@andrepaim/contextual-dictionary-core/pack'
 
 export const TAG = 'assets-e2e'
 

@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import { gzipSync, gunzipSync } from 'node:zlib'
 import { CodedError, type ByteSource } from '../../../src/shared/contracts'
-import { compareKeys, gunzipBytes, gzipBytes, PACK_MAGIC, PACK_VERSION, PREAMBLE_BYTES, type PackHeader, type PackIndexItem, type PackMeta, type PackRecord } from '../../../src/dict/pack-format'
-import { PackWriter, writePack } from '../../../src/dict/pack-writer'
-import { memoryByteSource, PackReader } from '../../../src/dict/pack-reader'
+import { compareKeys, gunzipBytes, gzipBytes, PACK_MAGIC, PACK_VERSION, PackWriter, PREAMBLE_BYTES, writePack, type PackHeader, type PackIndexItem, type PackMeta, type PackRecord } from '@andrepaim/contextual-dictionary-core/pack'
+import { memoryByteSource, PackReader } from '@andrepaim/contextual-dictionary-core'
 import { RECORDS } from '../../fixtures/dict/records'
 
 const META: PackMeta = { language: 'en', source: 'Wiktionary', license: 'CC BY-SA 4.0', createdFrom: 'fixture', snapshot: '2026-10-30' }

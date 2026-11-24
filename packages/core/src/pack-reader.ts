@@ -2,8 +2,8 @@
 // browser and in Node 22: no Node built-ins. The header and index are read
 // once; each lookup reads and inflates at most one block, and a small LRU
 // keeps recently inflated blocks.
-import { CodedError, type ByteSource } from '../shared/contracts'
-import { compareKeys, gunzipBytes, PACK_MAGIC, PACK_VERSION, PREAMBLE_BYTES, type PackHeader, type PackIndexItem, type PackRecord } from './pack-format'
+import { CodedError, type ByteSource } from './contracts.js'
+import { compareKeys, gunzipBytes, PACK_MAGIC, PACK_VERSION, PREAMBLE_BYTES, type PackHeader, type PackIndexItem, type PackRecord } from './pack-format.js'
 
 export interface PackReaderOptions {
   /** How many inflated blocks to keep. Default 16 (about 1 MB of text). */

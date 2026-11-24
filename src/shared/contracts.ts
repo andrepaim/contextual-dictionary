@@ -2,38 +2,12 @@
 // interfaces, never on each other's internals, so they can be built and
 // tested apart. Change this file only by a small, separate pull request.
 
-// ---------------------------------------------------------------- dictionary
+import { MIN_SENSE_CANDIDATES, SELECTION_LIMITS, SENSE_PROMPT_DEFAULTS, type ByteSource, type DictionaryResult, type Selection, type SenseFormat } from '@andrepaim/contextual-dictionary-core'
 
-export interface DictionarySense { definition: string; examples: string[] }
-
-export interface DictionaryEntry {
-  /** The headword as the dictionary spells it. */
-  lemma: string
-  /** The dictionary's own label: "noun", "verb", "adj", "adv", "intj", … */
-  partOfSpeech: string
-  senses: DictionarySense[]
-  /** Shown above the meanings, for example "plural of mouse". */
-  note?: string
-}
-
-export interface DictionarySource { name: string; license: string; url: string }
-
-export interface DictionaryResult { query: string; entries: DictionaryEntry[]; source: DictionarySource }
-
-/** The selected text and the page text on either side of it. */
-export interface Selection { text: string; before: string; after: string }
-
-export interface Dictionary { define(selection: Selection): Promise<DictionaryResult> }
-
-export const SELECTION_LIMITS = { contextChars: 120, definableChars: 80, definableWords: 4 } as const
+export { CodedError, SELECTION_LIMITS } from '@andrepaim/contextual-dictionary-core'
+export type { ByteSource, Dictionary, DictionaryEntry, DictionaryResult, DictionarySense, DictionarySource, Selection, SenseFormat } from '@andrepaim/contextual-dictionary-core'
 
 // --------------------------------------------------------------------- bytes
-
-/** Random access to a stored file. `end` is exclusive. */
-export interface ByteSource {
-  readonly size: number
-  read(start: number, end: number): Promise<Uint8Array>
-}
 
 export interface FileWriter {
   write(chunk: Uint8Array): Promise<void>
@@ -52,20 +26,6 @@ export interface FileStore {
 }
 
 // --------------------------------------------------------------------- model
-
-/**
- * The checkpoint's compact-v1 prompt format, read from its verified
- * model_metadata.json. Field names follow that file.
- */
-export interface SenseFormat {
-  letters: string[]
-  nota_index: number
-  none_text: string
-  separator: string
-  mask_token: string
-  max_length: number
-  temperature: number
-}
 
 /** What the model worker needs to load. Buffers are transferred, not copied. */
 export interface ModelLoad {
@@ -181,8 +141,8 @@ export interface Settings {
 // only after the reader confirms it); with the ranker's prompt length limit a
 // 750 ms budget answers every lookup of the evaluation set on 8 and 4 threads.
 // Order details are off, so the card looks as it did in 0.1.0.
-export const DEFAULT_SETTINGS: Settings = { definitions: true, orderByContext: true, showOrderDetails: false, disabledSites: [], budgetMs: 750, maxCandidates: 24 }
-export const SETTING_LIMITS = { budgetMs: { min: 50, max: 2000 }, maxCandidates: { min: 2, max: 127 } } as const
+export const DEFAULT_SETTINGS: Settings = { definitions: true, orderByContext: true, showOrderDetails: false, disabledSites: [], budgetMs: 750, maxCandidates: SENSE_PROMPT_DEFAULTS.maxCandidates }
+export const SETTING_LIMITS = { budgetMs: { min: 50, max: 2000 }, maxCandidates: { min: MIN_SENSE_CANDIDATES, max: 127 } } as const
 
 export interface Status {
   settings: Settings
@@ -230,11 +190,6 @@ export interface Answers {
 }
 
 export type Reply<T> = { ok: true; value: T } | { ok: false; code: string; message: string; details?: Record<string, unknown> }
-
-/** An error with a stable code the interface can translate. */
-export class CodedError extends Error {
-  constructor(readonly code: string, message = code, readonly details?: Record<string, unknown>) { super(message) }
-}
 
 /** How pages reach the extension's back end; rejects with a CodedError. */
 export interface Backend {
