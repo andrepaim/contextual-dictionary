@@ -6,13 +6,13 @@
 //   npx tsx validation/analyze.ts [--set wiktionary|written] [--threads 8] [--seed 1]
 //
 // Model order is computed with the extension's own contextualOrder
-// (src/sense/prompt.ts) on the stored logits; a prompt that was skipped or
+// (packages/core/src/prompt.ts) on the stored logits; a prompt that was skipped or
 // rejected, a "none of the above" answer, or an answer later than the budget
 // leaves dictionary order, exactly as in the extension.
 import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
-import { contextualOrder, type SenseRequest } from '../src/sense/prompt'
+import { contextualOrder, type SenseRequest } from '@andrepaim/contextual-dictionary-core'
 import type { DictionaryResult } from '../src/shared/contracts'
 import { BUDGETS, ENTRY_BUCKETS, OFFERED_BUCKETS, VARIANTS, PATHS, bucketLabel, bucketOf, percentile, readFormat, readJsonl } from './common'
 

@@ -23,7 +23,7 @@ import path from 'node:path'
 import readline from 'node:readline'
 import { createGunzip } from 'node:zlib'
 import { parseArgs } from 'node:util'
-import { openWiktionaryDictionary } from '../src/dict/lookup'
+import { openWiktionaryDictionary } from '@andrepaim/contextual-dictionary-core'
 import { ENTRY_BUCKETS, VARIANTS, variantRequest, PATHS, bucketLabel, bucketOf, fileSource, readFormat, selectionAt, sha256Hex, tokenCounter } from './common'
 import { judgeExample, keptSenses } from './wiktionary-items'
 

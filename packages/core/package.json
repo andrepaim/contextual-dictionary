@@ -1,0 +1,22 @@
+{
+  "name": "@andrepaim/contextual-dictionary-core",
+  "version": "0.1.0",
+  "description": "Portable Wiktionary pack lookup and contextual sense ordering",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./pack": {
+      "types": "./dist/pack.d.ts",
+      "default": "./dist/pack.js"
+    },
+    "./package.json": "./package.json"
+  }
+}

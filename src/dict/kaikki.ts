@@ -5,8 +5,8 @@
 // at most two short examples per meaning, usage examples before quotations;
 // empty glosses dropped; leftover wiki and HTML markup removed. Pure functions,
 // used by scripts/build-dictionary.ts.
-import { normalizeKey } from './keys'
-import type { PackEntry, PackPointer, PackSense } from './pack-format'
+import { normalizeKey } from '@andrepaim/contextual-dictionary-core'
+import type { PackEntry, PackPointer, PackSense } from '@andrepaim/contextual-dictionary-core/pack'
 
 export interface ScopeOptions {
   /** Examples kept per meaning. */

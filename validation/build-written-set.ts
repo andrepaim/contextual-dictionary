@@ -10,7 +10,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
-import { openWiktionaryDictionary } from '../src/dict/lookup'
+import { openWiktionaryDictionary } from '@andrepaim/contextual-dictionary-core'
 import { VARIANTS, variantRequest, PATHS, fileSource, readFormat, readJsonl, selectionAt, sha256Hex, tokenCounter } from './common'
 
 const { values } = parseArgs({ options: { list: { type: 'boolean', default: false } } })

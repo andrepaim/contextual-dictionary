@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { normalizeKey } from '../../../src/dict/keys'
+import { normalizeKey } from '@andrepaim/contextual-dictionary-core'
 
 describe('normalizeKey', () => {
   test('lower-cases and composes to NFC', () => {

@@ -1,9 +1,7 @@
 import { beforeAll, describe, expect, test } from 'vitest'
 import { CodedError, type DictionaryEntry, type DictionaryResult } from '../../../src/shared/contracts'
-import { compareKeys, type PackRecord } from '../../../src/dict/pack-format'
-import { writePack } from '../../../src/dict/pack-writer'
-import { memoryByteSource } from '../../../src/dict/pack-reader'
-import { openWiktionaryDictionary, WiktionaryDictionary, wiktionaryUrl } from '../../../src/dict/lookup'
+import { memoryByteSource, openWiktionaryDictionary, WiktionaryDictionary, wiktionaryUrl } from '@andrepaim/contextual-dictionary-core'
+import { compareKeys, writePack, type PackRecord } from '@andrepaim/contextual-dictionary-core/pack'
 import { RECORDS } from '../../fixtures/dict/records'
 
 let dictionary: WiktionaryDictionary

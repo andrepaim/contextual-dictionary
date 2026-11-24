@@ -9,7 +9,7 @@ import fsp from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { Tokenizer } from '@huggingface/tokenizers'
-import { senseRequest } from '../src/sense/prompt'
+import { senseRequest } from '@andrepaim/contextual-dictionary-core'
 import { SELECTION_LIMITS, type ByteSource, type DictionaryResult, type Selection, type SenseFormat } from '../src/shared/contracts'
 
 const home = os.homedir()

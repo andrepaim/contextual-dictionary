@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { codePointSpan, contextualOrder, looksEnglish, senseRequest, type SenseRequest } from '../../../src/sense/prompt'
+import { codePointSpan, contextualOrder, looksEnglish, senseRequest, type SenseRequest } from '@andrepaim/contextual-dictionary-core'
 import type { DictionaryEntry, DictionaryResult, SenseFormat } from '../../../src/shared/contracts'
 
 // The checkpoint's prompt format, with letters that cannot be mistaken for prompt text.

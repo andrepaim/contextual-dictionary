@@ -6,7 +6,7 @@
 import {
   compareKeys, DEFAULT_BLOCK_SIZE, gzipBytes, normalizeGzipHeader, PACK_MAGIC, PACK_VERSION, PREAMBLE_BYTES,
   type PackHeader, type PackIndexItem, type PackMeta, type PackRecord,
-} from './pack-format'
+} from './pack-format.js'
 
 export type Compressor = (bytes: Uint8Array) => Uint8Array | Promise<Uint8Array>
 

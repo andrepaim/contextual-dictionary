@@ -13,6 +13,7 @@ export const expected = {
   offered: [2, 1],
   firstSense: { definition: 'The land next to a river.', examples: ['We sat on the bank.'] },
   inflection: { lemma: 'bank', note: 'plural of bank' },
+  malformedUrl: 'https://en.wiktionary.org/wiki/ba%EF%BF%BDnk',
   none: 'NONE_FITS',
   foreign: { skip: 'NOT_ENGLISH' },
 }
@@ -43,6 +44,7 @@ export async function exerciseCore() {
     positions: order.positions, offered: order.offered,
     firstSense: order.result.entries[0]?.senses[0],
     inflection: { lemma: inflection?.lemma, note: inflection?.note },
+    malformedUrl: (await dictionary.define({ text: 'ba\uD800nk' })).source.url,
     none: none.applied ? undefined : none.reason,
     foreign: senseRequest(result, { text: 'bank', before: 'Ils ont vu le ', after: ' près de la rivière.' }, format),
   }

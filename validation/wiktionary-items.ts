@@ -3,7 +3,7 @@
 // occurs in a usage example, and which examples are used. Tested in
 // test/unit/validation/wiktionary-items.test.ts.
 import { DEFAULT_SCOPE, senseText, type KaikkiSense } from '../src/dict/kaikki'
-import { suffixCandidates } from '../src/dict/lookup'
+import { suffixCandidates } from '@andrepaim/contextual-dictionary-core'
 
 export interface KaikkiExampleLike { text?: unknown; ref?: unknown; type?: unknown; bold_text_offsets?: unknown }
 

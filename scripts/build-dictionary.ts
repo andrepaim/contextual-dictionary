@@ -23,8 +23,7 @@ import { createGunzip, gzipSync } from 'node:zlib'
 import { parseArgs } from 'node:util'
 import { pathToFileURL } from 'node:url'
 import { DEFAULT_SCOPE, transformEntry, type ScopeOptions, type SkipReason } from '../src/dict/kaikki'
-import { compareKeys, DEFAULT_BLOCK_SIZE, type PackEntry, type PackMeta, type PackRecord } from '../src/dict/pack-format'
-import { PackWriter } from '../src/dict/pack-writer'
+import { compareKeys, DEFAULT_BLOCK_SIZE, PackWriter, type PackEntry, type PackMeta, type PackRecord } from '@andrepaim/contextual-dictionary-core/pack'
 
 export interface BuildOptions {
   input: string

@@ -59,6 +59,16 @@ npm run package      # package/contextual-dictionary-<version>.zip and SHA256SUM
 
 Load `dist/` as an unpacked extension from `chrome://extensions` (Developer mode). The plan and the architecture are in [docs/plan.md](docs/plan.md), the developer rules in [CLAUDE.md](CLAUDE.md), and the measurements behind the defaults, with how to run them again, in [docs/validation.md](docs/validation.md) and `validation/`.
 
+### Shared dictionary core
+
+The extension installs `@andrepaim/contextual-dictionary-core` from the checked-in npm tarball. To use the same package from another project, replace `COMMIT_SHA` with a full commit SHA that contains the artifact. The package includes JavaScript and TypeScript declarations for dictionary lookup and contextual ordering. [Core API](packages/core/README.md)
+
+```sh
+npm install --ignore-scripts 'https://raw.githubusercontent.com/andrepaim/contextual-dictionary/COMMIT_SHA/artifacts/contextual-dictionary-core-0.1.0.tgz'
+```
+
+After changing core source, run `npm run core:pack` and refresh the extension lockfile with `npm update @andrepaim/contextual-dictionary-core --ignore-scripts`. Commit the source, tarball and lockfile together. `npm run core:check` rebuilds the tarball, installs it in an isolated Node project and runs the fixture shared with Chromium.
+
 ## Site
 
 `site/` and `docs/privacy.md` are published at https://andrepaim.github.io/contextual-dictionary/ by `.github/workflows/pages.yml` on every push to `main` that changes them. `npm run build:site` builds it into `_site/`.
