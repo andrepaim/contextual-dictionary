@@ -17,7 +17,7 @@ Both come from this project's GitHub release and are checked against published f
 
 ## Look a word up
 
-Double-click a word, or select up to four words, on any ordinary web page. A small card opens next to it with the Wiktionary entries: part of speech, meanings, examples. It shows the first three meanings of each entry; **Show all meanings** lists the rest. Press **Escape** or click elsewhere to close it. The link at the bottom opens the word on Wiktionary.
+Double-click a word, or select up to four words, on any ordinary web page. A small card opens next to it with the Wiktionary entries: part of speech, meanings, examples. It shows up to three entries, three meanings per entry and one example per meaning. **Show all meanings** reveals the remaining entries, meanings and examples. Press **Escape** or click elsewhere to close it. The link at the bottom opens the word on Wiktionary.
 
 ## The switches
 

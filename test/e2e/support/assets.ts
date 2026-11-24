@@ -4,11 +4,17 @@
 import { createHash } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import { STORED_NAMES, type AssetManifest, type PinnedFile } from '../../../src/assets/manifest'
+import { cardFixture } from '@andrepaim/contextual-dictionary-core/card-fixture'
 import { compareKeys, writePack, type PackRecord } from '@andrepaim/contextual-dictionary-core/pack'
 
 export const TAG = 'assets-e2e'
 
 export const RECORDS: PackRecord[] = [
+  { k: cardFixture.query, e: cardFixture.entries.map(entry => ({
+    w: entry.lemma,
+    p: entry.partOfSpeech,
+    s: entry.senses.map(({ definition, examples }) => examples.length ? [definition, ...examples] : definition),
+  })) },
   { k: 'mouse', e: [
     { w: 'mouse', p: 'noun', s: [
       'Any small rodent of the genus Mus, with a long thin tail.',

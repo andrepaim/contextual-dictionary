@@ -5,7 +5,7 @@ How fast the extension is in practice, how well the model orders Wiktionary's me
 ## Answers in brief
 
 - **Speed.** On the test machine with 8 threads, a definition alone takes about 8 ms (p90 10–12 ms) once the dictionary is open, and the first one of a browser session about 0.1 s (was 1 s). With "Order by context" on, a lookup of a word with several meanings is ordered in about 0.27 s at the median and 0.6 s at worst (p99 0.59 s, maximum 0.69 s on 2,287 prompts), because prompts are now limited to 1,600 characters; the card waits at most 750 ms. Common words with many meanings ("mouse", "bank", "fire", "string") take about 0.4–0.6 s from the double-click to the card. With 2 threads (a stand-in for a small machine) 67% of lookups are answered within 750 ms; the rest show dictionary order first and the ordered list on a repeat. The model is ready 2.6–3.0 s after ordering is turned on in a new session (1.3–1.4 s when its files were already checked), and the extension's process uses about 1 GB more memory while it is loaded.
-- **Accuracy.** Yes, the model's order beats Wiktionary's order, clearly. On 2,300 items labelled by Wiktionary's own editors, with the shipped defaults, the labelled meaning is first in its entry 55.4% of the time with model order against 28.2% with dictionary order (paired 95% interval of the difference 24.8 to 29.7 points), and among the three meanings the card shows before "Show all meanings" 77.9% against 60.1%. On 104 hand-written web-style sentences: 64.4% against 26.9% first. It is better in every stratum and every part of speech. It is far from perfect: for entries with 17 or more meanings, the labelled meaning is first in under a third of cases.
+- **Accuracy.** Yes, the model's order beats Wiktionary's order, clearly. On 2,300 items labelled by Wiktionary's own editors, with the shipped defaults, the labelled meaning is first in its entry 55.4% of the time with model order against 28.2% with dictionary order (paired 95% interval of the difference 24.8 to 29.7 points), and among the first three meanings in its entry 77.9% against 60.1%. On 104 hand-written web-style sentences: 64.4% against 26.9% first. It is better in every stratum and every part of speech. It is far from perfect: for entries with 17 or more meanings, the labelled meaning is first in under a third of cases.
 - **Defaults.** "Order by context" is now on by default (the model still downloads only after the reader confirms it), `budgetMs` 750, `maxCandidates` 24, and a new prompt length limit of 1,600 characters.
 
 ## Method
@@ -59,7 +59,7 @@ At the shipped defaults (at most 24 meanings, 1,600 characters), with no budget 
 
 Paired bootstrap (2,000 resamples) 95% intervals of model minus dictionary: Wiktionary first +27.2 points (24.8 to 29.7), top three +17.8 (16.0 to 19.5); hand-written first +37.5 (27.9 to 47.1), top three +19.2 (11.5 to 27.9).
 
-"First" is the labelled meaning listed first within its entry; "top 3" within the first three, which is what the card shows before "Show all meanings"; rank is its position within the entry.
+"First" is the labelled meaning listed first within its entry; "top 3" within the first three meanings in its entry; rank is its position within the entry.
 
 By meanings in the labelled entry (Wiktionary set, defaults):
 

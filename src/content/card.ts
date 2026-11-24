@@ -2,14 +2,14 @@
 // It lives in a shadow root on one host element, so page styles do not reach
 // it and its styles do not reach the page. All dictionary and page text is set
 // with textContent. See docs/plan.md section 5.5.
-import type { DictionaryEntry, DictionaryResult, OrderDetails } from '../shared/contracts'
+import { cardPreview, type CardPreviewEntry } from '@andrepaim/contextual-dictionary-core/card'
+import cardCss from '@andrepaim/contextual-dictionary-core/card.css?inline'
+import type { DictionaryResult, OrderDetails } from '../shared/contracts'
 import { ordinal, orderStatusText, usableDetails } from './order-details'
 import type { Rect } from './selection'
 
 export type { Rect } from './selection'
 
-/** Meanings shown per entry before "Show all meanings". */
-export const MEANINGS_SHOWN = 3
 export const HOST_TAG = 'contextual-dictionary-card'
 const MARGIN = 8
 const GAP = 8
@@ -32,45 +32,32 @@ export function placeCard(anchor: Rect, size: { width: number; height: number },
   return { left, top: anchor.top - GAP - height, maxHeight: Math.max(0, above), placement: 'above' }
 }
 
-const STYLES = `
+const HOST_STYLES = `
 :host { all: initial; }
-* { box-sizing: border-box; }
-.surface {
-  --bg: #ffffff; --text: #1f2328; --muted: #59636e; --border: #d0d7de; --accent: #0969da; --shadow: 0 8px 24px rgba(31, 35, 40, 0.18);
-  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow);
-  text-align: left; letter-spacing: normal; text-transform: none; white-space: normal; direction: ltr;
+.dc-card {
+  /* The shared theme variables can otherwise inherit from the page. */
+  --dc-bg: initial; --dc-text: initial; --dc-muted: initial;
+  --dc-border: initial; --dc-accent: initial; --dc-shadow: initial;
+  max-width: calc(100vw - ${2 * MARGIN}px);
+  max-height: ${MAX_HEIGHT}px;
+}
+.placeholder {
+  --placeholder-bg: #ffffff; --placeholder-border: #d0d7de; --placeholder-dot: #59636e;
+  --placeholder-shadow: 0 8px 24px rgba(31, 35, 40, 0.18);
+  display: flex; gap: 4px; align-items: center; padding: 8px 10px; border-radius: 999px;
+  background: var(--placeholder-bg); border: 1px solid var(--placeholder-border); box-shadow: var(--placeholder-shadow);
 }
 @media (prefers-color-scheme: dark) {
-  .surface { --bg: #22272e; --text: #e6edf3; --muted: #9aa5b1; --border: #444c56; --accent: #6cb6ff; --shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+  .placeholder {
+    --placeholder-bg: #22272e; --placeholder-border: #444c56; --placeholder-dot: #9aa5b1;
+    --placeholder-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
 }
-.placeholder { display: flex; gap: 4px; align-items: center; padding: 8px 10px; border-radius: 999px; }
-.dot { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); opacity: 0.35; animation: pulse 1s infinite ease-in-out; }
+.dot { width: 5px; height: 5px; border-radius: 50%; background: var(--placeholder-dot); opacity: 0.35; animation: pulse 1s infinite ease-in-out; }
 .dot:nth-child(2) { animation-delay: 0.15s; }
 .dot:nth-child(3) { animation-delay: 0.3s; }
 @keyframes pulse { 50% { opacity: 0.9; } }
 @media (prefers-reduced-motion: reduce) { .dot { animation: none; opacity: 0.6; } }
-.card { display: flex; flex-direction: column; width: 340px; max-width: calc(100vw - ${2 * MARGIN}px); max-height: ${MAX_HEIGHT}px; outline: none; }
-.body { overflow-y: auto; overscroll-behavior: contain; padding: 10px 14px 4px; }
-.entry { margin: 0 0 10px; }
-.head { margin: 0; }
-.lemma { font-weight: 600; font-size: 15px; }
-.pos { color: var(--muted); font-style: italic; font-size: 13px; margin-left: 6px; }
-.note { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
-ol { margin: 4px 0 0; padding: 0 0 0 22px; list-style: decimal; }
-li { margin: 0 0 4px; padding: 0; }
-li::marker { color: var(--muted); }
-.example { display: block; color: var(--muted); font-size: 13px; margin-top: 1px; }
-.footer { display: flex; align-items: center; gap: 12px; padding: 6px 14px 8px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
-.toggle { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
-.toggle:hover { text-decoration: underline; }
-.attribution { margin-left: auto; color: var(--muted); text-decoration: none; }
-a.attribution:hover { text-decoration: underline; }
-.toggle:focus-visible, a.attribution:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
-.was { color: var(--muted); font-size: 12px; margin-left: 6px; white-space: nowrap; }
-.unranked { display: block; color: var(--muted); font-size: 12px; margin: 6px 0 4px -22px; padding-top: 4px; border-top: 1px solid var(--border); }
-.footer.with-status { flex-wrap: wrap; row-gap: 2px; }
-.order-status { flex: 1 0 100%; margin: 0; color: var(--muted); }
 `
 
 export type CardState = 'hidden' | 'placeholder' | 'card'
@@ -109,7 +96,7 @@ export class Card {
 
   /** A small, quiet sign that a lookup is under way. */
   showPlaceholder(anchor: Anchor, query: string): void {
-    const placeholder = this.#element('div', 'surface placeholder')
+    const placeholder = this.#element('div', 'placeholder')
     placeholder.dataset.part = 'placeholder'
     placeholder.setAttribute('role', 'status')
     placeholder.setAttribute('aria-label', `Looking up “${query}”`)
@@ -117,48 +104,53 @@ export class Card {
     this.#show(placeholder, anchor, 'placeholder')
   }
 
-  /**
-   * The meanings of `result`, in the order received; no card when it has no
-   * entries. With `details` that match `result`, also what the context model
-   * did to the order; without them the card is the card of 0.1.0.
-   */
+  /** Shows the result in order, with context ordering details when available. */
   showResult(result: DictionaryResult, anchor: Anchor, details?: OrderDetails): void {
     if (!result.entries.length) { this.hide(); return }
     const order = details === undefined ? undefined : usableDetails(result, details)
-    const card = this.#element('div', 'surface card')
+    const card = this.#element('div', 'dc-card')
     card.dataset.part = 'card'
     card.setAttribute('role', 'dialog')
     card.setAttribute('aria-label', `Definitions of “${result.query}”`)
     card.setAttribute('lang', 'en')
     card.tabIndex = -1
-    const body = this.#element('div', 'body')
-    const footer = this.#element('div', 'footer')
+    const body = this.#element('div', 'dc-body')
+    body.id = 'definition-card-body'
+    const footer = this.#element('div', 'dc-footer')
     card.append(body, footer)
-    const hidden = result.entries.some(entry => entry.senses.length > MEANINGS_SHOWN)
-    let showAll = false
-    const fill = () => body.replaceChildren(...result.entries.map((entry, e) => this.#entry(entry, showAll, order && { positions: order.positions?.[e], offered: order.offered?.[e] })))
-    fill()
+    let expanded = false
+    const fill = () => {
+      const preview = cardPreview(result.entries, expanded)
+      body.replaceChildren(...preview.entries.map((entry, index) => this.#entry(entry, order?.positions?.[index], order?.offered?.[index])))
+      return preview.canExpand
+    }
+    const canExpand = fill()
     if (order) {
-      footer.classList.add('with-status')
-      const line = this.#element('p', 'order-status')
+      const line = this.#element('p', 'dc-status')
       line.dataset.part = 'order-status'
       line.textContent = orderStatusText(order)
       footer.append(line)
     }
-    if (hidden) {
-      const toggle = this.#element('button', 'toggle')
+    if (canExpand) {
+      const toggle = this.#element('button', 'dc-toggle')
       toggle.dataset.part = 'toggle'
-      toggle.setAttribute('type', 'button')
+      toggle.type = 'button'
+      toggle.setAttribute('aria-controls', body.id)
       const label = () => {
-        toggle.textContent = showAll ? 'Show fewer' : 'Show all meanings'
-        toggle.setAttribute('aria-expanded', String(showAll))
+        toggle.textContent = expanded ? 'Show fewer' : 'Show all meanings'
+        toggle.setAttribute('aria-expanded', String(expanded))
       }
       label()
-      toggle.addEventListener('click', () => { showAll = !showAll; fill(); label(); this.#place() })
+      toggle.addEventListener('click', () => {
+        expanded = !expanded
+        fill()
+        label()
+        this.#place()
+      })
       footer.append(toggle)
     }
     const credit = `${result.source.name} · ${result.source.license}`
-    const attribution = isWebAddress(result.source.url) ? this.#element('a', 'attribution') : this.#element('span', 'attribution')
+    const attribution = isWebAddress(result.source.url) ? this.#element('a', 'dc-attribution') : this.#element('span', 'dc-attribution')
     attribution.dataset.part = 'attribution'
     attribution.textContent = credit
     if (attribution instanceof HTMLAnchorElement) {
@@ -197,49 +189,47 @@ export class Card {
     return element
   }
 
-  /** One entry; `order` gives its meanings' dictionary positions and how many were offered, with an applied order only. */
-  #entry(entry: DictionaryEntry, showAll: boolean, order?: { positions?: number[]; offered?: number }): HTMLElement {
-    const section = this.#element('section', 'entry')
-    const head = this.#element('div', 'head')
-    const lemma = this.#element('span', 'lemma')
+  /** Renders one entry, with dictionary positions when the context model reordered it. */
+  #entry({ entry, senses }: CardPreviewEntry, positions?: number[], offered?: number): HTMLElement {
+    const section = this.#element('section', 'dc-entry')
+    const head = this.#element('div', 'dc-head')
+    const lemma = this.#element('span', 'dc-lemma')
     lemma.dataset.part = 'lemma'
     lemma.textContent = entry.lemma
-    const pos = this.#element('span', 'pos')
+    const pos = this.#element('span', 'dc-pos')
     pos.dataset.part = 'pos'
     pos.textContent = entry.partOfSpeech
     head.append(lemma, pos)
     section.append(head)
     if (entry.note) {
-      const note = this.#element('p', 'note')
+      const note = this.#element('p', 'dc-note')
       note.dataset.part = 'note'
       note.textContent = entry.note
       section.append(note)
     }
-    const list = this.#element('ol')
-    const { positions, offered } = order ?? {}
-    const shown = showAll ? entry.senses : entry.senses.slice(0, MEANINGS_SHOWN)
-    shown.forEach((sense, place) => {
+    const list = this.#element('ol', 'dc-senses')
+    senses.forEach(({ sense, examples }, place) => {
       if (positions && place === offered) {
         // The meanings from here on were not offered to the model; they keep dictionary order.
-        const divider = this.#element('li', 'unranked')
+        const divider = this.#element('li', 'dc-unranked')
         divider.dataset.part = 'unranked'
         divider.textContent = 'Not seen by the model'
         list.append(divider)
       }
       const item = this.#element('li')
-      const definition = this.#element('span', 'definition')
+      const definition = this.#element('span', 'dc-definition')
       definition.dataset.part = 'definition'
       definition.textContent = sense.definition
       item.append(definition)
       const was = positions?.[place]
-      if (was !== undefined && place < offered! && was !== place) {
-        const tag = this.#element('span', 'was')
+      if (was !== undefined && offered !== undefined && place < offered && was !== place) {
+        const tag = this.#element('span', 'dc-was')
         tag.dataset.part = 'was'
         tag.textContent = `was ${ordinal(was + 1)}`
         item.append(tag)
       }
-      for (const text of sense.examples) {
-        const example = this.#element('span', 'example')
+      for (const text of examples) {
+        const example = this.#element('span', 'dc-example')
         example.dataset.part = 'example'
         example.textContent = `“${text}”`
         item.append(example)
@@ -261,7 +251,7 @@ export class Card {
     ] as const) style.setProperty(name, value, 'important')
     this.#root = host.attachShadow({ mode: 'open' })
     const sheet = this.#element('style')
-    sheet.textContent = STYLES
+    sheet.textContent = `${cardCss}\n${HOST_STYLES}`
     this.#content = this.#element('div')
     // A press inside the card keeps the page selection, so the word stays selected.
     this.#content.addEventListener('mousedown', event => event.preventDefault())

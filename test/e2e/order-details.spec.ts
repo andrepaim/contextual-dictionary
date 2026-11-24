@@ -30,7 +30,7 @@ async function setSwitch(session: Session, name: string, on: boolean): Promise<v
 
 /** Each meaning of the entry as [definition, "was" tag or null]. */
 async function tagged(page: Page, pos: string): Promise<Array<[string, string | null]>> {
-  return card(page).locator('section.entry').evaluateAll((sections, pos) => {
+  return card(page).locator('section.dc-entry').evaluateAll((sections, pos) => {
     const section = sections.find(node => node.querySelector('[data-part="pos"]')!.textContent === pos)!
     return [...section.querySelectorAll('li:not([data-part="unranked"])')]
       .map(item => [item.querySelector('[data-part="definition"]')!.textContent!, item.querySelector('[data-part="was"]')?.textContent ?? null] as [string, string | null])

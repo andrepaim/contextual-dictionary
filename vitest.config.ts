@@ -16,6 +16,7 @@ export default defineConfig({
   test: {
     include: ['test/unit/**/*.test.ts'],
     environment: 'node',
+    css: { include: [/\/contextual-dictionary-core\/dist\/card\.css(?:\?|$)/] },
     restoreMocks: true,
     coverage: {
       provider: 'v8',

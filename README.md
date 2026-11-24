@@ -32,7 +32,7 @@ Both come from this repository's release [`assets-v1`](https://github.com/andrep
 
 ## Use
 
-Double-click a word, or select up to four words, on an ordinary web page. A card opens beside it with the word's entries; it shows three meanings per entry, and **Show all meanings** shows the rest. Escape or a click elsewhere closes it; the link at the bottom opens the word on Wiktionary. The extension's window has four switches: **Show definitions**, **Order by context**, **Show order details** and **On <this site>**, and a **Remove** button for each download. With **Show order details** on (it is off by default), the card also says what the model did: "was 3rd" beside each meaning it moved, and a line such as "Ordered by context" or "Dictionary order · model still loading". More in [docs/user-guide.md](docs/user-guide.md).
+Double-click a word, or select up to four words, on an ordinary web page. A card opens beside it with up to three entries, three meanings per entry and one example per meaning. **Show all meanings** reveals the remaining entries, meanings and examples. Escape or a click elsewhere closes it; the link at the bottom opens the word on Wiktionary. The extension's window has four switches: **Show definitions**, **Order by context**, **Show order details** and **On <this site>**, and a **Remove** button for each download. With **Show order details** on (it is off by default), the card also says what the model did: "was 3rd" beside each meaning it moved, and a line such as "Ordered by context" or "Dictionary order · model still loading". More in [docs/user-guide.md](docs/user-guide.md).
 
 ## What to expect
 

@@ -134,7 +134,7 @@ The header holds `{ version, language, source, license, createdFrom, snapshot, e
 ### 5.5 Content script and popup (`src/content/`, `src/popup/`)
 
 - `selection.ts`: `isDefinable`, and `selectionContext(range)`: up to 120 characters before and after within the nearest block-level ancestor, with whitespace collapsed, ignoring hidden nodes, scripts and styles.
-- `card.ts`: renders the placeholder, the card and the error-free empty state (no card for unknown words). Accessible names, focus management, light and dark themes, no page CSS leaks in or out.
+- `card.ts`: renders the placeholder, the card and the error-free empty state (no card for unknown words). Uses the shared core stylesheet and preview policy inside a shadow root. The preview shows up to three entries, three meanings per entry and one example per meaning. The toggle and attribution stay visible while the body scrolls. Accessible names, focus management, light and dark themes, no page CSS leaks in or out.
 - `controller.ts`: listens for `mouseup`/`dblclick`/`selectionchange`, de-duplicates the two clicks of a double-click, cancels a superseded lookup, drops late answers, honours the per-site switch.
 - `popup.ts`: definitions on/off, order by context on/off, this-site on/off, download consent with the exact size, progress bar, cancel, retry, coded error messages, storage used, "Remove downloaded files".
 
@@ -159,7 +159,7 @@ Repository, this plan, `CLAUDE.md`, shared contracts, build, unit and end-to-end
 | B. Dictionary | Section 5.2 | Round-trip tests (write then read) on fixture records; reader tests for missing keys, block boundaries, corrupt header/index/block; lookup tests for case, inflections, compounds, unknown words; builder test on a fixture extract is deterministic; a real build from the cached Kaikki file completes and `stats.json` is committed under `docs/`. |
 | C. Model | Section 5.3 | Session tests with fake ONNX and tokenizer modules cover tensors, mask position, too-long and no-mask prompts, short outputs; worker protocol tests; an opt-in test (`CD_TEST_MODEL_DIR`) loads the real model with `onnxruntime-web` and orders "mouse" and "bank" by context. |
 | D. Assets | Section 5.4 | Tests with a mocked `fetch` and the in-memory store cover progress, truncation, oversize, digest mismatch, HTTP errors, stall, cancel, disk full, gunzip, atomic install, reuse without network, tampered stored file and repair, size-changed refusal. |
-| E. Card and popup | Section 5.5 | DOM tests cover definable selections, context extraction across inline elements and line breaks, editable fields ignored, card rendering and "Show all", Escape and outside click, double-click sends one lookup, superseded lookups cancelled, late answers dropped, popup states for every asset and setting state. |
+| E. Card and popup | Section 5.5 | DOM tests cover definable selections, context extraction across inline elements and line breaks, editable fields ignored, card rendering and "Show all meanings", Escape and outside click, double-click sends one lookup, superseded lookups cancelled, late answers dropped, popup states for every asset and setting state. |
 
 ### Stage 2: integration and assets (two agents in parallel)
 
