@@ -52,4 +52,4 @@ One line at the bottom of the card says how the meanings are ordered:
 - Words with many meanings (such as "run", "set" or "draw") are ordered only among their first meanings; the rest follow in dictionary order.
 - With **Order by context** on, the extension uses about 1 GB of memory more while the model is loaded.
 
-**Remove** under each download deletes it from your computer. See [privacy.md](privacy.md) for what the extension reads, keeps and sends.
+**Remove** under each download deletes it from your computer. See [Privacy](privacy.md) for what the extension reads, keeps and sends.

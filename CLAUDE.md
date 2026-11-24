@@ -23,7 +23,7 @@ A Chrome (Manifest V3) extension: select a word on any page and a card shows its
 - `src/background/`, `src/offscreen/`: service worker and offscreen document wiring.
 - `test/unit/` mirrors `src/`; `test/e2e/` holds Playwright tests; `test/fixtures/` holds small inputs.
 - `validation/`: the stage 3 measurement scripts (evaluation sets, scoring with the real model, the real extension benchmark, release acceptance) and `validation/data/` (item lists and the hand-written set). Run by hand with local inputs or the network, never in CI; results in `docs/validation.md`. Type-checked, not counted in coverage.
-- `site/`: the project site (home page, style sheet), published with GitHub Pages by `.github/workflows/pages.yml`; `scripts/build-site.mjs` adds the privacy page made from `docs/privacy.md` and the images. No scripts and nothing loaded from other sites. `store/`: the Chrome Web Store listing text and images (`validation/store-assets.ts` makes the images).
+- `site/`: the project site (home page, practice page, style sheet, fonts, pictures), published with GitHub Pages by `.github/workflows/pages.yml`; `scripts/build-site.mjs` puts in the shared header and footer and the examples of `site/_examples.json`, and adds the guide and the privacy page made from `docs/user-guide.md` and `docs/privacy.md`. The pictures in `site/images/` and the answers in `site/_examples.json` are captures of the real extension made by `validation/site-assets.ts`: never draw or type them by hand. No scripts and nothing loaded from other sites. `store/`: the Chrome Web Store listing text and images (`validation/store-assets.ts` makes the images).
 
 ## Commands
 
@@ -38,7 +38,7 @@ npm run package     # reproducible release ZIP and SHA256SUMS.txt in package/
 npm run icons       # redraws src/icons/ (scripts/make-icons.mjs)
 ```
 
-- Measurements (`docs/validation.md`, "How to rerun"): `npx tsx validation/build-wiktionary-set.ts`, `validation/score-prompts.ts --threads 8`, `validation/analyze.ts`, `validation/extension-bench.ts`, and `validation/acceptance.ts` (downloads the real release). They write under `~/.cache/contextual-dictionary/validation/`.
+- Measurements (`docs/validation.md`, "How to rerun"): `npx tsx validation/build-wiktionary-set.ts`, `validation/score-prompts.ts --threads 8`, `validation/analyze.ts`, `validation/extension-bench.ts`, and `validation/acceptance.ts` (downloads the real release). `validation/store-assets.ts` and `validation/site-assets.ts` remake the store's and the site's pictures from the built extension. They write under `~/.cache/contextual-dictionary/validation/`.
 - End-to-end tests use `dist-e2e/` (`node scripts/build.mjs --e2e`): a fake model worker, an asset manifest read from `e2e-config.json` and loopback access, all swapped in at build time from `test/e2e/variant/`. The production build must contain none of it; `npm run check:build` fails if it does.
 
 ## Rules

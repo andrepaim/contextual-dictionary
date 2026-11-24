@@ -1,0 +1,183 @@
+{
+  "about": "The passages of the practice page and, under \"result\", what the extension answered for each (written by validation/site-assets.ts; do not edit results by hand). show: hero = the opening picture of the home page, example and miss = listed on the home page, practice = on the practice page only.",
+  "extension": "0.3.1",
+  "examples": [
+    {
+      "id": "hamlet",
+      "show": "hero",
+      "source": "William Shakespeare, Hamlet, act 3, scene 1",
+      "word": "moment",
+      "quote": "And enterprises of great pith and moment\nWith this regard their currents turn awry,\nAnd lose the name of action.",
+      "passage": "Thus conscience does make cowards of us all;\nAnd thus the native hue of resolution\nIs sicklied o’er with the pale cast of thought,\nAnd enterprises of great pith and moment\nWith this regard their currents turn awry,\nAnd lose the name of action.",
+      "result": {
+        "dictionary": {
+          "first": "A particular point, or relatively small region: A particular point of space; a spot."
+        },
+        "context": {
+          "first": "(figurative) Weight or importance.",
+          "was": 4
+        },
+        "entries": [
+          "moment (noun)"
+        ],
+        "status": "Ordered by context"
+      }
+    },
+    {
+      "id": "austen",
+      "show": "example",
+      "source": "Jane Austen, Pride and Prejudice, chapter 1",
+      "word": "want",
+      "quote": "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
+      "passage": "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.",
+      "result": {
+        "dictionary": {
+          "first": "(transitive) To wish for or desire (something); to feel a need or desire for; to crave, hanker, or demand."
+        },
+        "context": {
+          "first": "(transitive, now colloquial) To lack and be in need of or require (something, such as a noun or verbal noun).",
+          "was": 6
+        },
+        "entries": [
+          "want (verb)",
+          "want (noun)",
+          "want (noun)"
+        ],
+        "status": "Ordered by context"
+      }
+    },
+    {
+      "id": "concert",
+      "show": "example",
+      "source": "A concert review, written for this page",
+      "word": "conductor",
+      "quote": "The orchestra tuned to the oboe before the conductor raised her baton.",
+      "passage": "The orchestra tuned to the oboe before the conductor raised her baton. For a few seconds the hall was completely silent, and then the first chord of the overture filled it.",
+      "result": {
+        "dictionary": {
+          "first": "One who conducts or leads; a guide; a director."
+        },
+        "context": {
+          "first": "(music) A person who conducts an orchestra, choir or other music ensemble; a professional whose occupation is conducting.",
+          "was": 2
+        },
+        "entries": [
+          "conductor (noun)"
+        ],
+        "status": "Ordered by context"
+      }
+    },
+    {
+      "id": "wiring",
+      "show": "example",
+      "source": "A physics lesson, written for this page",
+      "word": "conductor",
+      "quote": "Copper is a good conductor, which is why most household wiring is made of it.",
+      "passage": "Copper is a good conductor, which is why most household wiring is made of it. Glass and rubber are not, so they are used to keep the electricity where it belongs.",
+      "result": {
+        "dictionary": {
+          "first": "One who conducts or leads; a guide; a director."
+        },
+        "context": {
+          "first": "(physics) Something that can transmit electricity, heat, light, or sound.",
+          "was": 4
+        },
+        "entries": [
+          "conductor (noun)"
+        ],
+        "status": "Ordered by context"
+      }
+    },
+    {
+      "id": "release",
+      "show": "example",
+      "source": "A release note, written for this page",
+      "word": "bug",
+      "quote": "The release slipped a week because of a bug in the payment code that nobody could reproduce.",
+      "passage": "The release slipped a week because of a bug in the payment code that nobody could reproduce. It turned out to depend on the time zone of the machine that ran the tests.",
+      "result": {
+        "dictionary": {
+          "first": "(entomology) An insect of the order Hemiptera (the “true bugs”)."
+        },
+        "context": {
+          "first": "(chiefly computing, engineering jargon) A problem that needs fixing.",
+          "was": 9
+        },
+        "entries": [
+          "bug (noun)",
+          "bug (verb)",
+          "BUG (adj)"
+        ],
+        "status": "Ordered by context"
+      }
+    },
+    {
+      "id": "alice",
+      "show": "miss",
+      "source": "Lewis Carroll, Alice’s Adventures in Wonderland, chapter 1",
+      "word": "bank",
+      "quote": "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do.",
+      "passage": "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, “and what is the use of a book,” thought Alice, “without pictures or conversations?”",
+      "note": "The bank of a river is a separate entry in Wiktionary. The extension orders the meanings inside an entry, not the entries, so the right one stays lower on the card.",
+      "result": {
+        "dictionary": {
+          "first": "(countable) An institution where one can place and borrow money and take care of financial affairs."
+        },
+        "context": {
+          "first": "(countable) A branch office of such an institution.",
+          "was": 2
+        },
+        "entries": [
+          "bank (noun)",
+          "bank (verb)",
+          "bank (noun)"
+        ],
+        "status": "Ordered by context"
+      }
+    },
+    {
+      "id": "lincoln",
+      "show": "practice",
+      "source": "Abraham Lincoln, Gettysburg Address",
+      "word": "proposition",
+      "quote": "A new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.",
+      "passage": "Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.",
+      "result": {
+        "dictionary": {
+          "first": "(uncountable) The act of offering (an idea) for consideration."
+        },
+        "context": {
+          "first": "(countable, mathematics, philosophy) An assertion so formulated that it can be considered true or false.",
+          "was": 8
+        },
+        "entries": [
+          "proposition (noun)",
+          "proposition (verb)"
+        ],
+        "status": "Ordered by context"
+      }
+    },
+    {
+      "id": "laboratory",
+      "show": "practice",
+      "source": "A laboratory report, written for this page",
+      "word": "culture",
+      "quote": "Researchers grew the culture in a dish for two weeks before adding the antibiotic.",
+      "passage": "Researchers grew the culture in a dish for two weeks before adding the antibiotic. By the third day most of the cells had stopped dividing.",
+      "result": {
+        "dictionary": {
+          "first": "The arts, customs, lifestyles, background, and habits that characterize humankind, or a particular society or nation."
+        },
+        "context": {
+          "first": "(microbiology) The process of growing a bacterial or other biological entity in an artificial medium.",
+          "was": 6
+        },
+        "entries": [
+          "culture (noun)",
+          "culture (verb)"
+        ],
+        "status": "Ordered by context"
+      }
+    }
+  ]
+}

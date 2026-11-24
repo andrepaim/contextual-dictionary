@@ -1,5 +1,5 @@
-# Publishes the project site (site/, the privacy page made from
-# docs/privacy.md, images from store/) with GitHub Pages:
+# Publishes the project site (site/, the guide and the privacy page made from
+# docs/user-guide.md and docs/privacy.md, the extension's icons) with GitHub Pages:
 # https://andrepaim.github.io/contextual-dictionary/
 name: Site
 
@@ -9,9 +9,7 @@ on:
     paths:
       - site/**
       - docs/privacy.md
-      - docs/images/hamlet-moment-context.png
-      - packages/core/src/card.css
-      - store/*.png
+      - docs/user-guide.md
       - src/icons/**
       - scripts/build-site.mjs
       - .github/workflows/pages.yml
