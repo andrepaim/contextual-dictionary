@@ -64,12 +64,12 @@ Definitions from Wiktionary (CC BY-SA 4.0), via Kaikki.org. Model: Ettin-150m-WS
 | Screenshot 1 | `screenshot-1-context.png` | 1280 × 800 |
 | Screenshot 2 | `screenshot-2-compare.png` | 1280 × 800 |
 | Screenshot 3 | `screenshot-3-any-page.png` | 1280 × 800 |
-| Screenshot 4 | `screenshot-4-private.png` | 1280 × 800 |
-| Screenshot 5 | `screenshot-5-dark.png` | 1280 × 800 |
+| Screenshot 4 | `screenshot-4-details.png` | 1280 × 800 |
+| Screenshot 5 | `screenshot-5-private.png` | 1280 × 800 |
 | Small promo tile | `promo-small-440x280.png` | 440 × 280 |
 | Marquee promo tile (optional) | `promo-marquee-1400x560.png` | 1400 × 560 |
 
-Screenshots 1 and 2 show `shakespeare.mit.edu/hamlet/hamlet.3.1.html`; 3 and 5 show a demonstration page written for this purpose; 4 shows the extension's window. The cards and the window are captures of the running extension, set in a frame with a headline. The screenshots are 24-bit PNG without transparency, as the store asks.
+Screenshots 1, 2 and 4 show `shakespeare.mit.edu/hamlet/hamlet.3.1.html` (4 with "Show order details" on); 3 shows a demonstration page written for this purpose; 5 shows the extension's window. They were taken with version 0.2.0. The cards and the window are captures of the running extension, set in a frame with a headline. The screenshots are 24-bit PNG without transparency, as the store asks.
 
 ## Privacy tab
 

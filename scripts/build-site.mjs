@@ -17,7 +17,7 @@ const REPOSITORY = 'https://github.com/andrepaim/contextual-dictionary'
 const IMAGES = [
   ['src/icons/icon-128.png', 'icon-128.png'],
   ['src/icons/icon-32.png', 'icon-32.png'],
-  ...['screenshot-1-context.png', 'screenshot-2-compare.png', 'screenshot-3-any-page.png', 'screenshot-4-private.png', 'screenshot-5-dark.png'].map(name => [`store/${name}`, name]),
+  ...['screenshot-1-context.png', 'screenshot-2-compare.png', 'screenshot-3-any-page.png', 'screenshot-4-details.png', 'screenshot-5-private.png'].map(name => [`store/${name}`, name]),
 ]
 
 const escapeText = text => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

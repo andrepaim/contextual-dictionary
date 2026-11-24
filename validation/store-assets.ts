@@ -61,6 +61,12 @@ async function waitFor(popup: Page, test: (status: Status) => boolean, what: str
     await sleep(300)
   }
 }
+const setDetails = (popup: Page, on: boolean) => popup.evaluate(on => chrome.runtime.sendMessage({ type: 'set-settings', patch: { showOrderDetails: on } }), on).then(() => sleep(300))
+/** What the card says about the order: the "was" tags and the status line (with "Show order details" on). */
+const orderParts = (page: Page) => page.evaluate(() => {
+  const root = document.querySelector('contextual-dictionary-card')?.shadowRoot
+  return { was: [...(root?.querySelectorAll('[data-part="was"]') ?? [])].map(node => node.textContent), status: root?.querySelector('[data-part="order-status"]')?.textContent ?? null }
+})
 async function setOrder(popup: Page, on: boolean) {
   await popup.evaluate(on => chrome.runtime.sendMessage({ type: 'set-settings', patch: { orderByContext: on } }), on)
   if (on) await waitFor(popup, status => status.ranker.state === 'ready' || status.ranker.state === 'idle', 'the model')
@@ -102,23 +108,28 @@ async function capture() {
     await waitFor(popup, status => status.bundles.model.phase === 'ready', 'the model')
   }
   await setOrder(popup, true)
+  await setDetails(popup, false)
   const hamlet = await context.newPage()
   await hamlet.goto(HAMLET, { waitUntil: 'load' })
   await sleep(800)
   const line = 'a[name]:has-text("great pith and moment")'
   console.log('hamlet, by context:', await ordered(hamlet, line, 'moment', 76))
   await hamlet.screenshot({ path: path.join(raw, 'hamlet-context.png') })
+  console.log('hamlet, details off:', JSON.stringify(await orderParts(hamlet)))
+  await setDetails(popup, true)
+  console.log('hamlet, details on:', await ordered(hamlet, line, 'moment', 76), JSON.stringify(await orderParts(hamlet)))
+  await hamlet.screenshot({ path: path.join(raw, 'hamlet-details.png') })
+  await setOrder(popup, false)
+  await lookUp(hamlet, line, 'moment', 76)
+  console.log('hamlet, details on, ordering off:', JSON.stringify(await orderParts(hamlet)))
+  await setOrder(popup, true)
+  await setDetails(popup, false)
   const demo = await context.newPage()
   await demo.goto(demoUrl)
   await sleep(500)
-  for (const word of ['mouse', 'crane', 'bug', 'cell', 'pitch']) {
+  for (const word of ['mouse', 'crane', 'bug']) {
     console.log(`demo ${word}, by context:`, await ordered(demo, `#${word}`, word, word === 'mouse' ? 118 : 60))
     await demo.screenshot({ path: path.join(raw, `demo-${word}.png`) })
-  }
-  await demo.emulateMedia({ colorScheme: 'dark' })
-  for (const word of ['crane', 'bug', 'pitch']) {
-    await lookUp(demo, `#${word}`, word, 60)
-    await demo.screenshot({ path: path.join(raw, `demo-${word}-dark.png`) })
   }
   await context.close()
 
@@ -127,6 +138,11 @@ async function capture() {
   const page = await context.newPage()
   await page.goto(HAMLET, { waitUntil: 'load' })
   await sleep(800)
+  // The first lookup after a browser start: the model is not loaded yet.
+  await setDetails(popup, true)
+  await lookUp(page, line, 'moment', 76)
+  console.log('first lookup after a start, details on:', JSON.stringify(await orderParts(page)))
+  await setDetails(popup, false)
   await setOrder(popup, true)
   console.log('card, by context:', await ordered(page, line, 'moment', 76))
   await page.locator(CARD).screenshot({ path: path.join(raw, 'card-context.png') })
@@ -197,8 +213,8 @@ function pieces(): Piece[] {
     framed('screenshot-1-context.png', 'The meaning that fits the sentence comes first', 'Hamlet’s “great pith and moment” means importance, not a point in time.', 'hamlet-context.png'),
     { file: 'screenshot-2-compare.png', width: 1280, height: 800, html: compare },
     framed('screenshot-3-any-page.png', 'Double-click any word on any page', 'Three meanings at a glance, with examples. One click shows the rest.', 'demo-mouse.png'),
-    { file: 'screenshot-4-private.png', width: 1280, height: 800, html: privacy },
-    framed('screenshot-5-dark.png', 'At home on dark pages too', 'The card follows the colour scheme of your browser.', 'demo-crane-dark.png'),
+    framed('screenshot-4-details.png', 'See what the model changed', 'With “Show order details” on, each meaning says where the dictionary had it.', 'hamlet-details.png'),
+    { file: 'screenshot-5-private.png', width: 1280, height: 800, html: privacy },
     { file: 'promo-small-440x280.png', width: 440, height: 280, html: small },
     { file: 'promo-marquee-1400x560.png', width: 1400, height: 560, html: marquee },
     // The store asks for 96 × 96 artwork with 16 pixels of transparent padding on each side.
