@@ -1,6 +1,6 @@
 {
   "name": "contextual-dictionary",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "A Chrome extension that defines the word you select and lists the meaning that fits the passage first, using a local model.",
   "license": "MIT",
@@ -25,7 +25,7 @@
     "build:site": "node scripts/build-site.mjs"
   },
   "dependencies": {
-    "@andrepaim/contextual-dictionary-core": "file:artifacts/contextual-dictionary-core-0.2.0.tgz",
+    "@andrepaim/contextual-dictionary-core": "file:artifacts/contextual-dictionary-core-0.2.1.tgz",
     "@huggingface/tokenizers": "0.2.0",
     "@noble/hashes": "2.4.0",
     "onnxruntime-web": "1.30.0"
