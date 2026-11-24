@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
+import { cardFixture } from '@andrepaim/contextual-dictionary-core/card-fixture'
+import cardCss from '@andrepaim/contextual-dictionary-core/card.css?inline'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { Card, MEANINGS_SHOWN, placeCard } from '../../../src/content/card'
+import { Card, placeCard } from '../../../src/content/card'
 import type { DictionaryResult, OrderDetails } from '../../../src/shared/contracts'
 
 const SOURCE = { name: 'Wiktionary', license: 'CC BY-SA 4.0', url: 'https://en.wiktionary.org/wiki/mouse' }
@@ -112,23 +114,65 @@ describe('Card', () => {
     const lists = shadow(card).querySelectorAll('ol')
     expect(lists.length).toBe(2)
     expect([...lists[0]!.querySelectorAll('[data-part="definition"]')].map(node => node.textContent)).toEqual(['A small rodent.', 'A pointing device.', 'A shy person.'])
-    expect(texts(card, '[data-part="example"]')).toEqual(['“The mouse ate the cheese.”', '“A field mouse.”'])
+    expect(texts(card, '[data-part="example"]')).toEqual(['“The mouse ate the cheese.”'])
   })
 
   test('"Show all meanings" reveals the rest and "Show fewer" hides them again', () => {
     const { card } = makeCard()
     card.showResult(result(), anchor)
     const toggle = () => shadow(card).querySelector<HTMLButtonElement>('[data-part="toggle"]')!
-    expect(MEANINGS_SHOWN).toBe(3)
     expect(toggle().textContent).toBe('Show all meanings')
     expect(toggle().getAttribute('aria-expanded')).toBe('false')
     toggle().click()
     expect(texts(card, 'section:first-of-type [data-part="definition"]')).toEqual(['A small rodent.', 'A pointing device.', 'A shy person.', 'A black eye.', 'A knot on a rope.'])
+    expect(texts(card, '[data-part="example"]')).toEqual(['“The mouse ate the cheese.”', '“A field mouse.”', '“He got a mouse in the fight.”'])
     expect(toggle().textContent).toBe('Show fewer')
     expect(toggle().getAttribute('aria-expanded')).toBe('true')
     toggle().click()
     expect(texts(card, '[data-part="definition"]')).toHaveLength(4)
     expect(toggle().textContent).toBe('Show all meanings')
+  })
+
+  test('renders the shared fixture with every preview cap and exposes all content on expansion', () => {
+    const { card } = makeCard()
+    card.showResult(cardFixture, anchor)
+    const renderedEntries = () => [...shadow(card).querySelectorAll('.dc-entry')].map(section => ({
+      lemma: section.querySelector('.dc-lemma')?.textContent,
+      partOfSpeech: section.querySelector('.dc-pos')?.textContent,
+      note: section.querySelector('.dc-note')?.textContent,
+      senses: [...section.querySelectorAll('.dc-senses li')].map(item => ({
+        definition: item.querySelector('.dc-definition')?.textContent,
+        examples: [...item.querySelectorAll('.dc-example')].map(example => example.textContent),
+      })),
+    }))
+    const entries = cardFixture.entries.map(entry => ({
+      lemma: entry.lemma,
+      partOfSpeech: entry.partOfSpeech,
+      note: entry.note,
+      senses: entry.senses.map(sense => ({ ...sense, examples: sense.examples.map(example => `“${example}”`) })),
+    }))
+    const preview = entries.slice(0, 3).map(entry => ({
+      ...entry,
+      senses: entry.senses.slice(0, 3).map(sense => ({ ...sense, examples: sense.examples.slice(0, 1) })),
+    }))
+    expect(renderedEntries()).toEqual(preview)
+    const attribution = shadow(card).querySelector<HTMLAnchorElement>('.dc-attribution')!
+    expect(attribution.textContent).toBe(`${cardFixture.source.name} · ${cardFixture.source.license}`)
+    expect(attribution.href).toBe(cardFixture.source.url)
+    const toggle = shadow(card).querySelector<HTMLButtonElement>('.dc-toggle')!
+    expect(toggle.getAttribute('aria-controls')).toBe(shadow(card).querySelector('.dc-body')?.id)
+    toggle.click()
+    expect(renderedEntries()).toEqual(entries)
+    toggle.click()
+    expect(renderedEntries()).toEqual(preview)
+  })
+
+  test('an additional example alone makes the card expandable', () => {
+    const { card } = makeCard()
+    const entry = result().entries[0]!
+    card.showResult(result({ entries: [{ ...entry, senses: entry.senses.slice(0, 1) }] }), anchor)
+    expect(shadow(card).querySelector('[data-part="toggle"]')?.textContent).toBe('Show all meanings')
+    expect(texts(card, '[data-part="example"]')).toHaveLength(1)
   })
 
   test('no toggle when every entry fits', () => {
@@ -228,9 +272,11 @@ describe('Card', () => {
     const { card } = makeCard()
     card.showResult(result(), anchor)
     const css = shadow(card).querySelector('style')!.textContent!
+    expect(cardCss).toContain('.dc-card')
+    expect(css).toContain(cardCss)
     expect(css).toContain('prefers-color-scheme: dark')
+    expect(css).toContain('prefers-reduced-motion: reduce')
     expect(css).toContain('max-height')
-    expect(css).toContain('overflow-y: auto')
     expect(document.head.querySelector('style')).toBeNull()
   })
 
@@ -260,32 +306,30 @@ describe('Card', () => {
   })
 })
 
-// The card element of 0.1.0 for result(), before and after "Show all meanings".
-const CARD_0_1_0 = '<div class="surface card" data-part="card" role="dialog" aria-label="Definitions of “mouse”" lang="en" tabindex="-1" style="max-height: 360px;"><div class="body"><section class="entry"><div class="head"><span class="lemma" data-part="lemma">mouse</span><span class="pos" data-part="pos">noun</span></div><ol><li><span class="definition" data-part="definition">A small rodent.</span><span class="example" data-part="example">“The mouse ate the cheese.”</span><span class="example" data-part="example">“A field mouse.”</span></li><li><span class="definition" data-part="definition">A pointing device.</span></li><li><span class="definition" data-part="definition">A shy person.</span></li></ol></section><section class="entry"><div class="head"><span class="lemma" data-part="lemma">mouse</span><span class="pos" data-part="pos">verb</span></div><p class="note" data-part="note">also spelt mouze</p><ol><li><span class="definition" data-part="definition">To hunt mice.</span></li></ol></section></div><div class="footer"><button class="toggle" data-part="toggle" type="button" aria-expanded="false">Show all meanings</button><a class="attribution" data-part="attribution" href="https://en.wiktionary.org/wiki/mouse" target="_blank" rel="noopener noreferrer">Wiktionary · CC BY-SA 4.0</a></div></div>'
-const CARD_0_1_0_ALL = '<div class="surface card" data-part="card" role="dialog" aria-label="Definitions of “mouse”" lang="en" tabindex="-1" style="max-height: 360px;"><div class="body"><section class="entry"><div class="head"><span class="lemma" data-part="lemma">mouse</span><span class="pos" data-part="pos">noun</span></div><ol><li><span class="definition" data-part="definition">A small rodent.</span><span class="example" data-part="example">“The mouse ate the cheese.”</span><span class="example" data-part="example">“A field mouse.”</span></li><li><span class="definition" data-part="definition">A pointing device.</span></li><li><span class="definition" data-part="definition">A shy person.</span></li><li><span class="definition" data-part="definition">A black eye.</span><span class="example" data-part="example">“He got a mouse in the fight.”</span></li><li><span class="definition" data-part="definition">A knot on a rope.</span></li></ol></section><section class="entry"><div class="head"><span class="lemma" data-part="lemma">mouse</span><span class="pos" data-part="pos">verb</span></div><p class="note" data-part="note">also spelt mouze</p><ol><li><span class="definition" data-part="definition">To hunt mice.</span></li></ol></section></div><div class="footer"><button class="toggle" data-part="toggle" type="button" aria-expanded="true">Show fewer</button><a class="attribution" data-part="attribution" href="https://en.wiktionary.org/wiki/mouse" target="_blank" rel="noopener noreferrer">Wiktionary · CC BY-SA 4.0</a></div></div>'
-
 describe('Card: order details', () => {
   const cardHtml = (card: Card) => shadow(card).querySelector('[data-part="card"]')!.outerHTML
   const toggle = (card: Card) => shadow(card).querySelector<HTMLButtonElement>('[data-part="toggle"]')!
   const statusLine = (card: Card) => shadow(card).querySelector('[data-part="order-status"]')
   /** Each meaning of entry `e` as its definition and its tag (null without one), with "—" for the divider. */
-  const rows = (card: Card, e = 0) => [...shadow(card).querySelectorAll('section.entry')[e]!.querySelector('ol')!.children].map(item =>
+  const rows = (card: Card, e = 0) => [...shadow(card).querySelectorAll('section.dc-entry')[e]!.querySelector('ol')!.children].map(item =>
     item.getAttribute('data-part') === 'unranked' ? '—' : [item.querySelector('[data-part="definition"]')!.textContent, item.querySelector('[data-part="was"]')?.textContent ?? null])
   // result(): the noun's five meanings and the verb's one. The model was offered all of them.
   const moved: OrderDetails = { status: 'ordered', positions: [[1, 0, 2, 4, 3], [0]], offered: [5, 1] }
 
-  test('without details the card is exactly the card of 0.1.0', () => {
+  test('without details the card shows no status or order annotations', () => {
     const { card } = makeCard()
     card.showResult(result(), anchor)
-    expect(cardHtml(card)).toBe(CARD_0_1_0)
+    expect(statusLine(card)).toBeNull()
+    expect(texts(card, '[data-part="was"], [data-part="unranked"]')).toEqual([])
     toggle(card).click()
-    expect(cardHtml(card)).toBe(CARD_0_1_0_ALL)
-    card.showResult(result(), anchor, undefined)
-    expect(cardHtml(card)).toBe(CARD_0_1_0)
+    expect(statusLine(card)).toBeNull()
+    expect(texts(card, '[data-part="was"], [data-part="unranked"]')).toEqual([])
   })
 
-  test('malformed details are shown as none: the card of 0.1.0, never wrong tags', () => {
+  test('malformed details render the same card as an ordinary lookup', () => {
     const { card } = makeCard()
+    card.showResult(result(), anchor)
+    const plainCard = cardHtml(card)
     for (const details of [
       { status: 'ordered' },
       { status: 'ordered', positions: [[1, 0, 2, 4, 3]], offered: [5, 1] },
@@ -295,7 +339,7 @@ describe('Card: order details', () => {
       'ordered',
     ]) {
       card.showResult(result(), anchor, details as unknown as OrderDetails)
-      expect(cardHtml(card), JSON.stringify(details)).toBe(CARD_0_1_0)
+      expect(cardHtml(card), JSON.stringify(details)).toBe(plainCard)
     }
   })
 
@@ -312,18 +356,18 @@ describe('Card: order details', () => {
     expect(rows(card)).toHaveLength(3)
     // The tag follows the definition text, before the examples.
     const second = shadow(card).querySelectorAll('ol')[0]!.children[1]!
-    expect([...second.children].map(child => child.getAttribute('data-part'))).toEqual(['definition', 'was', 'example', 'example'])
+    expect([...second.children].map(child => child.getAttribute('data-part'))).toEqual(['definition', 'was', 'example'])
   })
 
   test('the status line opens the footer', () => {
     const { card } = makeCard()
     card.showResult(result(), anchor, moved)
-    const footer = shadow(card).querySelector('.footer')!
+    const footer = shadow(card).querySelector('.dc-footer')!
     expect(footer.firstElementChild).toBe(statusLine(card))
     expect(statusLine(card)!.textContent).toBe('Ordered by context')
     expect([...footer.children].map(child => child.getAttribute('data-part'))).toEqual(['order-status', 'toggle', 'attribution'])
     card.showResult(result({ entries: [result().entries[1]!] }), anchor, { status: 'nothing-to-order' })
-    expect([...shadow(card).querySelector('.footer')!.children].map(child => child.getAttribute('data-part'))).toEqual(['order-status', 'attribution'])
+    expect([...shadow(card).querySelector('.dc-footer')!.children].map(child => child.getAttribute('data-part'))).toEqual(['order-status', 'attribution'])
   })
 
   test('each status has its line, and only "ordered" tags meanings', () => {
@@ -380,7 +424,7 @@ describe('Card: order details', () => {
     const { card } = makeCard()
     card.showResult(result(), anchor, { status: 'ordered', positions: [[1, 0, 2, 3, 4], [0]], offered: [2, 1] })
     const css = shadow(card).querySelector('style')!.textContent!
-    expect(css).toMatch(/\.unranked \{[^}]*display: block/)
+    expect(css).toMatch(/\.dc-unranked\s*\{[^}]*display:\s*block/)
   })
 
   test('large positions read as English ordinals', () => {
@@ -400,11 +444,9 @@ describe('Card: order details', () => {
     for (const tag of texts(card, '[data-part="was"]')) expect(tag).toMatch(/^was \d+(st|nd|rd|th)$/)
   })
 
-  test('details text is set as text, and the parts keep the card\'s muted colour', () => {
+  test('order annotations use the shared card classes and contain text alone', () => {
     const { card } = makeCard()
     card.showResult(result(), anchor, { status: 'ordered', positions: [[1, 0, 2, 3, 4], [0]], offered: [2, 1] })
-    for (const part of ['was', 'unranked', 'order-status']) expect(shadow(card).querySelector(`[data-part="${part}"]`)!.children).toHaveLength(0)
-    const css = shadow(card).querySelector('style')!.textContent!
-    for (const selector of ['.was', '.unranked', '.order-status']) expect(css).toMatch(new RegExp(`\\${selector} \\{[^}]*color: var\\(--muted\\)`))
+    for (const part of ['was', 'unranked', 'status']) expect(shadow(card).querySelector(`.dc-${part}`)!.children).toHaveLength(0)
   })
 })

@@ -29,7 +29,7 @@ An example: in Hamlet's "enterprises of great pith and moment", Wiktionary lists
 
 HOW IT WORKS
 • Double-click a word, or select up to four words, on an ordinary web page.
-• A card shows each entry with three meanings and examples. "Show all meanings" shows the rest.
+• A card shows up to three entries, three meanings per entry and one example per meaning. "Show all meanings" reveals the rest.
 • Press Escape or click elsewhere to close it.
 • Switch it off for a single site, or switch off the ordering, from the extension's window.
 • Turn on "Show order details" to see where each moved meaning was in the dictionary's order.

@@ -98,6 +98,8 @@ export async function buildExtension(target, { e2e = false } = {}) {
       logLevel: 'warning',
       define: { __VERSION__: JSON.stringify(version) },
       plugins: e2e ? [e2eEnvironment] : [],
+      // The content script injects the shared stylesheet into its shadow root.
+      ...(entry.output === 'content.js' ? { loader: { '.css': 'text' } } : {}),
       ...(entry.conditions && !fake ? { conditions: entry.conditions } : {}),
     })
   }

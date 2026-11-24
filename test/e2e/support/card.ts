@@ -12,7 +12,7 @@ export interface ShownEntry { lemma: string; pos: string; note: string | null; d
 /** The entries the card shows, in order. */
 export async function shownEntries(scope: Scope): Promise<ShownEntry[]> {
   await expect(card(scope)).toBeVisible()
-  return card(scope).locator('section.entry').evaluateAll(sections => sections.map(section => ({
+  return card(scope).locator('section.dc-entry').evaluateAll(sections => sections.map(section => ({
     lemma: section.querySelector('[data-part="lemma"]')!.textContent!,
     pos: section.querySelector('[data-part="pos"]')!.textContent!,
     note: section.querySelector('[data-part="note"]')?.textContent ?? null,

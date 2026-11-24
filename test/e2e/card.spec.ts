@@ -1,3 +1,4 @@
+import { cardFixture } from '@andrepaim/contextual-dictionary-core/card-fixture'
 import { expect, test, type Page } from '@playwright/test'
 import { card, cardHost, doubleClickWord, placeholder, shownEntries, gotoReady } from './support/card'
 import { MOUSE_DICTIONARY_ORDER } from './support/assets'
@@ -92,6 +93,65 @@ test('a click inside the card keeps it open, and "Show all meanings" is not need
   await card(page).locator('[data-part="lemma"]').first().click()
   await expect(card(page)).toBeVisible()
   await expect(card(page).locator('[data-part="toggle"]')).toHaveCount(0)
+})
+
+test('the shared fixture expands in a scrollable body with the controls kept in the footer', async () => {
+  const page = await session.context.newPage()
+  await page.setViewportSize({ width: 320, height: 520 })
+  await page.emulateMedia({ colorScheme: 'light' })
+  await gotoReady(page, `${session.pages}/article.html`)
+  await page.locator('#mouse').evaluate((element, query) => {
+    element.textContent = `A ${query} is visible.`
+    document.documentElement.style.setProperty('--dc-bg', 'salmon')
+  }, cardFixture.query)
+  await doubleClickWord(page.locator('#mouse'), cardFixture.query)
+
+  const dialog = card(page)
+  const body = dialog.locator('.dc-body')
+  const footer = dialog.locator('.dc-footer')
+  const toggle = footer.getByRole('button', { name: 'Show all meanings', exact: true })
+  const attribution = footer.getByRole('link', { name: 'Wiktionary · CC BY-SA 4.0' })
+  const entries = body.locator('.dc-entry')
+  const first = entries.first()
+  await expect(entries).toHaveCount(3)
+  await expect(first.locator('.dc-definition')).toHaveCount(3)
+  await expect(first.locator('li').first().locator('.dc-example')).toHaveText([`“${cardFixture.entries[0]!.senses[0]!.examples[0]}”`])
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(attribution).toHaveAttribute('href', `https://en.wiktionary.org/wiki/${cardFixture.entries[0]!.lemma}`)
+  const lightBackground = await dialog.evaluate(element => getComputedStyle(element).backgroundColor)
+  expect(lightBackground).not.toBe('rgb(250, 128, 114)')
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expect.poll(() => dialog.evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe(lightBackground)
+
+  await toggle.click()
+  const collapse = footer.getByRole('button', { name: 'Show fewer' })
+  await expect(collapse).toHaveAttribute('aria-expanded', 'true')
+  await expect(entries).toHaveCount(cardFixture.entries.length)
+  for (const [index, entry] of cardFixture.entries.entries()) {
+    const section = entries.nth(index)
+    await expect(section.locator('.dc-definition')).toHaveText(entry.senses.map(sense => sense.definition))
+    await expect(section.locator('.dc-example')).toHaveText(entry.senses.flatMap(sense => sense.examples.map(example => `“${example}”`)))
+  }
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe(cardFixture.query)
+  const box = (await dialog.boundingBox())!
+  expect(box.x).toBeGreaterThanOrEqual(8)
+  expect(box.x + box.width).toBeLessThanOrEqual(312)
+  const footerPosition = await footer.boundingBox()
+  expect(await body.evaluate(element => {
+    element.scrollTop = element.scrollHeight
+    return element.scrollTop
+  })).toBeGreaterThan(0)
+  expect(await footer.boundingBox()).toEqual(footerPosition)
+  await expect(attribution).toBeInViewport()
+
+  await collapse.focus()
+  await page.keyboard.press('Space')
+  await expect(entries).toHaveCount(3)
+  await expect(toggle).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(attribution).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(cardHost(page)).toBeHidden()
 })
 
 test('without the dictionary a double-click shows nothing and stays quiet', async () => {
