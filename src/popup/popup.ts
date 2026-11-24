@@ -1,5 +1,5 @@
 // The toolbar popup: a view over the back end's Status. Switches for
-// definitions, ordering and the current site; for each download, its consent
+// definitions, ordering, order details and the current site; for each download, its consent
 // with the exact size, progress, cancel, retry and removal. See docs/plan.md
 // section 5.5.
 import type { Backend, BundleName, BundleStatus, Request, Status } from '../shared/contracts'
@@ -204,6 +204,9 @@ export class PopupView {
         void this.#act(() => this.#backend.send({ type: 'set-settings', patch: { definitions: on } }))
       }),
       this.#switch('orderByContext', 'Order by context', settings.orderByContext, on => this.#setOrder(on)),
+      this.#switch('showOrderDetails', 'Show order details', settings.showOrderDetails, on => {
+        void this.#act(() => this.#backend.send({ type: 'set-settings', patch: { showOrderDetails: on } }))
+      }),
       this.#host
         ? this.#switch('site', `On ${this.#host}`, status.siteEnabled, on => {
           void this.#act(() => this.#backend.send({ type: 'set-site', host: this.#host!, enabled: on }))
