@@ -303,6 +303,49 @@ describe('contextualOrder', () => {
   })
 })
 
+describe('contextualOrder: positions and offered counts (order details)', () => {
+  /** The applied outcome's details; fails the test when the order was not applied. */
+  const details = (outcome: ReturnType<typeof contextualOrder>) => {
+    if (!outcome.applied) throw new Error(`expected an applied order, got ${outcome.reason}`)
+    return { positions: outcome.positions, offered: outcome.offered }
+  }
+
+  test('each meaning carries its dictionary position, and each entry the number of meanings offered', () => {
+    const outcome = contextualOrder(bank, request(), logits([1, 5, 1, -2, 3, 0]), format)
+    expect(details(outcome)).toEqual({ positions: [[1, 0, 2], [1, 0], [0]], offered: [3, 2, 1] })
+    // The positions describe the answer: senses[i] is the dictionary's senses[positions[i]].
+    outcome.result.entries.forEach((entry, e) => entry.senses.forEach((sense, i) => expect(sense).toBe(bank.entries[e]!.senses[details(outcome).positions[e]![i]!])))
+  })
+
+  test('ties keep dictionary order, so the positions are the identity', () => {
+    expect(details(contextualOrder(bank, request(), logits([2, 2, 2, 1, 1, 0]), format))).toEqual({ positions: [[0, 1, 2], [0, 1], [0]], offered: [3, 2, 1] })
+  })
+
+  test('meanings not offered follow in dictionary order, after the offered ones', () => {
+    const result = run(entry('noun', 6), entry('verb', 3))
+    const outcome = contextualOrder(result, request(result, deposit, 4), logits([-3, 4, -1, 2]), format)
+    expect(details(outcome)).toEqual({ positions: [[1, 0, 2, 3, 4, 5], [1, 0, 2]], offered: [2, 2] })
+  })
+
+  test('an entry offered nothing counts 0 and keeps its order', () => {
+    const result = run(entry('noun', 3), entry('verb', 3), entry('adj', 3))
+    const built = request(result, deposit, 4)
+    const capped = { ...built, candidates: built.candidates.filter(c => c.entry !== 2) }
+    expect(details(contextualOrder(result, capped, logits([0, 3, 0]), format))).toEqual({ positions: [[1, 0, 2], [0, 1, 2], [0, 1, 2]], offered: [2, 1, 0] })
+  })
+
+  test('offered meanings that are not the first ones still come first', () => {
+    const result = run(entry('noun', 4))
+    const built = { ...request(result, deposit, 2), candidates: [{ entry: 0, sense: 2 }, { entry: 0, sense: 3 }] }
+    expect(details(contextualOrder(result, built, logits([50, -2000], -2000), format))).toEqual({ positions: [[2, 3, 0, 1]], offered: [2] })
+  })
+
+  test('an order that is not applied carries no positions', () => {
+    const outcome = contextualOrder(bank, request(), logits([1, 5, 1, -2, 3, 0], 6), format)
+    expect(outcome).toEqual({ result: bank, applied: false, reason: 'NONE_FITS' })
+  })
+})
+
 describe('looksEnglish', () => {
   test('only an English passage is scored', () => {
     expect(looksEnglish('After the meeting, he walked over and deposited the money at the bank before it closed.')).toBe(true)
