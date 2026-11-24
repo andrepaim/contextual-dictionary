@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import type { Fetch } from '../../../src/assets/download'
 import { STORED_NAMES } from '../../../src/assets/manifest'
 import { openWiktionaryDictionary } from '../../../src/dict/lookup'
+import { SenseRanker } from '../../../src/sense/ranker'
 import { CodedError, type DefineAnswer, type DictionaryResult } from '../../../src/shared/contracts'
 import type { RuntimeStatus } from '../../../src/shared/offscreen-protocol'
 import { gate, until } from '../assets/helpers'
@@ -316,5 +317,93 @@ describe('OffscreenHost: removal', () => {
     expect((await define(fixture, 'r1', { orderByContext: true })).ordered).toBe(false)
     await fixture.host.idle()
     expect(fixture.workers).toHaveLength(1)
+  })
+})
+
+describe('OffscreenHost: order details', () => {
+  const DOG = { text: 'dog', before: 'The old ', after: ' barked at the mailman all night.' }
+  /** Every answer carries details, and `ordered` says whether their status is "ordered". */
+  const consistent = (answer: DefineAnswer) => {
+    expect(answer.order).toBeDefined()
+    expect(answer.ordered).toBe(answer.order!.status === 'ordered')
+    return answer.order
+  }
+
+  test('ordering off: "off", also with the model ready', async () => {
+    const fixture = await hostFixture({ prefer: 'computing' })
+    fixture.install('dictionary'); fixture.install('model')
+    expect(consistent(await define(fixture, 'r1', { orderByContext: false }))).toEqual({ status: 'off' })
+    await fixture.host.handle({ type: 'settings' }, settings({ orderByContext: true }))
+    await fixture.host.idle()
+    await fixture.host.handle({ type: 'settings' }, settings({ orderByContext: false }))
+    expect(consistent(await define(fixture, 'r2', { orderByContext: false }))).toEqual({ status: 'off' })
+  })
+
+  test('ordering on without the model: "no-model", and nothing is started', async () => {
+    const fixture = await hostFixture()
+    fixture.install('dictionary')
+    expect(consistent(await define(fixture, 'r1', { orderByContext: true }))).toEqual({ status: 'no-model' })
+    await fixture.host.idle()
+    expect(fixture.workers).toHaveLength(0)
+  })
+
+  test('nothing to reorder: an unknown word, or a word with one meaning per entry, with or without the model', async () => {
+    const fixture = await hostFixture({ prefer: 'computing' })
+    fixture.install('dictionary')
+    const on = { orderByContext: true }
+    expect(consistent(await define(fixture, 'r1', on, { text: 'qwzxqv', before: '', after: '' }))).toEqual({ status: 'nothing-to-order' })
+    expect(consistent(await define(fixture, 'r2', on, DOG))).toEqual({ status: 'nothing-to-order' })
+    fixture.install('model')
+    await fixture.host.handle({ type: 'settings' }, settings(on))
+    await fixture.host.idle()
+    expect(consistent(await define(fixture, 'r3', on, DOG))).toEqual({ status: 'nothing-to-order' })
+  })
+
+  test('the first lookup while the model starts: "loading"; then "ordered" with positions and offered counts', async () => {
+    const fixture = await hostFixture({ prefer: 'computing', loadMs: 50 })
+    fixture.install('dictionary'); fixture.install('model')
+    const on = { orderByContext: true }
+    expect(consistent(await define(fixture, 'r1', on))).toEqual({ status: 'loading' })
+    await fixture.host.idle()
+    const answer = await define(fixture, 'r2', on)
+    const order = consistent(answer)!
+    expect(order.status).toBe('ordered')
+    expect(nounMeanings(answer.result)).toEqual(DEVICE_FIRST)
+    const noun = answer.result.entries.findIndex(entry => entry.lemma === 'mouse' && entry.partOfSpeech === 'noun')
+    expect(order.positions![noun]).toEqual([1, 0])
+    expect(order.offered).toEqual(answer.result.entries.map(entry => entry.senses.length))
+    expect(order.positions).toHaveLength(answer.result.entries.length)
+  })
+
+  test('a cancelled lookup: "unavailable"', async () => {
+    const fixture = await hostFixture({ prefer: 'computing', scoreMs: 5_000 })
+    fixture.install('dictionary'); fixture.install('model')
+    const on = { orderByContext: true, budgetMs: 2000 }
+    await fixture.host.handle({ type: 'settings' }, settings(on))
+    await fixture.host.idle()
+    const pending = define(fixture, 'slow', on)
+    await until(() => fixture.workers[0]!.prompts.length === 1)
+    await fixture.host.handle({ type: 'cancel-define', requestId: 'slow' }, settings(on))
+    expect(consistent(await pending)).toEqual({ status: 'unavailable' })
+  })
+
+  test('a ranker that throws: dictionary order, "unavailable"', async () => {
+    const fixture = await hostFixture({}, {
+      createRanker: options => Object.assign(new SenseRanker(options), { rank: () => Promise.reject(new Error('broken')) }),
+    })
+    fixture.install('dictionary'); fixture.install('model')
+    const answer = await define(fixture, 'r1', { orderByContext: true })
+    expect(consistent(answer)).toEqual({ status: 'unavailable' })
+    expect(nounMeanings(answer.result)).toEqual(RODENT_FIRST)
+  })
+
+  test('details are numbers and one status word, never text', async () => {
+    const fixture = await hostFixture({ prefer: 'computing' })
+    fixture.install('dictionary'); fixture.install('model')
+    await fixture.host.handle({ type: 'settings' }, settings({ orderByContext: true }))
+    await fixture.host.idle()
+    const { order } = await define(fixture, 'r1', { orderByContext: true })
+    const values = JSON.stringify(order).match(/"[^"]*"/g)!.filter(text => !['"status"', '"positions"', '"offered"'].includes(text))
+    expect(values).toEqual(['"ordered"'])
   })
 })
