@@ -17,6 +17,7 @@ const REPOSITORY = 'https://github.com/andrepaim/contextual-dictionary'
 const IMAGES = [
   ['src/icons/icon-128.png', 'icon-128.png'],
   ['src/icons/icon-32.png', 'icon-32.png'],
+  ['docs/images/hamlet-moment-context.png', 'hamlet-moment-context.png'],
   ...['screenshot-1-context.png', 'screenshot-2-compare.png', 'screenshot-3-any-page.png', 'screenshot-4-details.png', 'screenshot-5-private.png'].map(name => [`store/${name}`, name]),
 ]
 
@@ -109,6 +110,7 @@ ${body}
 export function buildSite({ outDir = path.join(root, '_site') } = {}) {
   fs.rmSync(outDir, { recursive: true, force: true })
   fs.cpSync(path.join(root, 'site'), outDir, { recursive: true })
+  fs.copyFileSync(path.join(root, 'packages/core/src/card.css'), path.join(outDir, 'card.css'))
   fs.mkdirSync(path.join(outDir, 'images'), { recursive: true })
   for (const [from, name] of IMAGES) fs.copyFileSync(path.join(root, from), path.join(outDir, 'images', name))
   // Paths in the repository's documents become their addresses on GitHub.
