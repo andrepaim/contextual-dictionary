@@ -9,6 +9,8 @@ export default defineConfig({
     alias: [
       { find: /^@andrepaim\/contextual-dictionary-core$/, replacement: fileURLToPath(new URL('./packages/core/src/index.ts', import.meta.url)) },
       { find: /^@andrepaim\/contextual-dictionary-core\/pack$/, replacement: fileURLToPath(new URL('./packages/core/src/pack.ts', import.meta.url)) },
+      { find: /^@andrepaim\/contextual-dictionary-core\/card$/, replacement: fileURLToPath(new URL('./packages/core/src/card.ts', import.meta.url)) },
+      { find: /^@andrepaim\/contextual-dictionary-core\/card-fixture$/, replacement: fileURLToPath(new URL('./packages/core/src/card-fixture.ts', import.meta.url)) },
     ],
   },
   test: {
