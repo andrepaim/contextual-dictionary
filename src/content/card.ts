@@ -2,7 +2,8 @@
 // It lives in a shadow root on one host element, so page styles do not reach
 // it and its styles do not reach the page. All dictionary and page text is set
 // with textContent. See docs/plan.md section 5.5.
-import type { DictionaryEntry, DictionaryResult } from '../shared/contracts'
+import type { DictionaryEntry, DictionaryResult, OrderDetails } from '../shared/contracts'
+import { ordinal, orderStatusText, usableDetails } from './order-details'
 import type { Rect } from './selection'
 
 export type { Rect } from './selection'
@@ -66,6 +67,10 @@ li::marker { color: var(--muted); }
 .attribution { margin-left: auto; color: var(--muted); text-decoration: none; }
 a.attribution:hover { text-decoration: underline; }
 .toggle:focus-visible, a.attribution:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+.was { color: var(--muted); font-size: 12px; margin-left: 6px; white-space: nowrap; }
+.unranked { display: block; color: var(--muted); font-size: 12px; margin: 6px 0 4px -22px; padding-top: 4px; border-top: 1px solid var(--border); }
+.footer.with-status { flex-wrap: wrap; row-gap: 2px; }
+.order-status { flex: 1 0 100%; margin: 0; color: var(--muted); }
 `
 
 export type CardState = 'hidden' | 'placeholder' | 'card'
@@ -112,9 +117,14 @@ export class Card {
     this.#show(placeholder, anchor, 'placeholder')
   }
 
-  /** The meanings of `result`, in the order received; no card when it has no entries. */
-  showResult(result: DictionaryResult, anchor: Anchor): void {
+  /**
+   * The meanings of `result`, in the order received; no card when it has no
+   * entries. With `details` that match `result`, also what the context model
+   * did to the order; without them the card is the card of 0.1.0.
+   */
+  showResult(result: DictionaryResult, anchor: Anchor, details?: OrderDetails): void {
     if (!result.entries.length) { this.hide(); return }
+    const order = details === undefined ? undefined : usableDetails(result, details)
     const card = this.#element('div', 'surface card')
     card.dataset.part = 'card'
     card.setAttribute('role', 'dialog')
@@ -126,8 +136,15 @@ export class Card {
     card.append(body, footer)
     const hidden = result.entries.some(entry => entry.senses.length > MEANINGS_SHOWN)
     let showAll = false
-    const fill = () => body.replaceChildren(...result.entries.map(entry => this.#entry(entry, showAll)))
+    const fill = () => body.replaceChildren(...result.entries.map((entry, e) => this.#entry(entry, showAll, order && { positions: order.positions?.[e], offered: order.offered?.[e] })))
     fill()
+    if (order) {
+      footer.classList.add('with-status')
+      const line = this.#element('p', 'order-status')
+      line.dataset.part = 'order-status'
+      line.textContent = orderStatusText(order)
+      footer.append(line)
+    }
     if (hidden) {
       const toggle = this.#element('button', 'toggle')
       toggle.dataset.part = 'toggle'
@@ -180,7 +197,8 @@ export class Card {
     return element
   }
 
-  #entry(entry: DictionaryEntry, showAll: boolean): HTMLElement {
+  /** One entry; `order` gives its meanings' dictionary positions and how many were offered, with an applied order only. */
+  #entry(entry: DictionaryEntry, showAll: boolean, order?: { positions?: number[]; offered?: number }): HTMLElement {
     const section = this.#element('section', 'entry')
     const head = this.#element('div', 'head')
     const lemma = this.#element('span', 'lemma')
@@ -198,12 +216,28 @@ export class Card {
       section.append(note)
     }
     const list = this.#element('ol')
-    for (const sense of showAll ? entry.senses : entry.senses.slice(0, MEANINGS_SHOWN)) {
+    const { positions, offered } = order ?? {}
+    const shown = showAll ? entry.senses : entry.senses.slice(0, MEANINGS_SHOWN)
+    shown.forEach((sense, place) => {
+      if (positions && place === offered) {
+        // The meanings from here on were not offered to the model; they keep dictionary order.
+        const divider = this.#element('li', 'unranked')
+        divider.dataset.part = 'unranked'
+        divider.textContent = 'Not seen by the model'
+        list.append(divider)
+      }
       const item = this.#element('li')
       const definition = this.#element('span', 'definition')
       definition.dataset.part = 'definition'
       definition.textContent = sense.definition
       item.append(definition)
+      const was = positions?.[place]
+      if (was !== undefined && place < offered! && was !== place) {
+        const tag = this.#element('span', 'was')
+        tag.dataset.part = 'was'
+        tag.textContent = `was ${ordinal(was + 1)}`
+        item.append(tag)
+      }
       for (const text of sense.examples) {
         const example = this.#element('span', 'example')
         example.dataset.part = 'example'
@@ -211,7 +245,7 @@ export class Card {
         item.append(example)
       }
       list.append(item)
-    }
+    })
     section.append(list)
     return section
   }

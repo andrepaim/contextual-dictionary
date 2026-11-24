@@ -1,7 +1,7 @@
 // Watches the page's selection and shows the definition card for a word or a
 // short phrase. One lookup at a time: a new selection or a dismissal cancels
 // the one in flight, and a late answer is dropped. See docs/plan.md section 5.5.
-import type { Backend, DictionaryResult, Selection, Settings } from '../shared/contracts'
+import type { Backend, DictionaryResult, OrderDetails, Selection, Settings } from '../shared/contracts'
 import { BACKEND_ERRORS } from './backend'
 import { Card, type DismissReason } from './card'
 import { anchorRect, readSelection, type Rect } from './selection'
@@ -10,14 +10,14 @@ import { anchorRect, readSelection, type Rect } from './selection'
 export interface CardLike {
   readonly state: 'hidden' | 'placeholder' | 'card'
   showPlaceholder(anchor: () => Rect | null, query: string): void
-  showResult(result: DictionaryResult, anchor: () => Rect | null): void
+  showResult(result: DictionaryResult, anchor: () => Rect | null, details?: OrderDetails): void
   hide(): void
   contains(target: EventTarget | null): boolean
   destroy(): void
 }
 
 /** The part of a Status the controller acts on. */
-export interface ActivationState { settings: Pick<Settings, 'definitions'>; siteEnabled: boolean }
+export interface ActivationState { settings: Pick<Settings, 'definitions' | 'showOrderDetails'>; siteEnabled: boolean }
 
 export interface ControllerOptions {
   backend: Backend
@@ -88,6 +88,8 @@ export class Controller {
   #card: CardLike | null = null
   #lookup: Lookup | null = null
   #enabled = false
+  /** Whether cards show what the model did to the order; read when a lookup starts. */
+  #showDetails = false
   #attached = false
   #stopped = false
   #pointerDown = false
@@ -128,6 +130,7 @@ export class Controller {
   apply(state: ActivationState): void {
     if (this.#stopped) return
     this.#enabled = state.settings.definitions && state.siteEnabled
+    this.#showDetails = state.settings.showOrderDetails === true
     this.#attach(this.#enabled)
   }
 
@@ -220,6 +223,7 @@ export class Controller {
 
   #define(selection: Selection, key: string, anchor: () => Rect | null): void {
     const lookup: Lookup = { key, id: this.#requestId(), abort: new AbortController(), settled: false }
+    const showDetails = this.#showDetails
     this.#lookup = lookup
     const card = this.#card ??= this.#createCard({ document: this.#window.document, onDismiss: () => this.#cancel() })
     card.showPlaceholder(anchor, selection.text)
@@ -227,7 +231,8 @@ export class Controller {
       if (this.#lookup !== lookup || lookup.settled) return
       lookup.settled = true
       // One final render; an unknown word shows nothing.
-      card.showResult(answer.result, anchor)
+      if (showDetails) card.showResult(answer.result, anchor, answer.order)
+      else card.showResult(answer.result, anchor)
     }, error => {
       if (this.#lookup !== lookup) return
       lookup.settled = true

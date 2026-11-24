@@ -11,7 +11,7 @@ export interface StorageAreaLike {
   set(items: Record<string, unknown>): Promise<void>
 }
 
-const PATCHABLE = ['definitions', 'orderByContext', 'budgetMs', 'maxCandidates'] as const
+const PATCHABLE = ['definitions', 'orderByContext', 'showOrderDetails', 'budgetMs', 'maxCandidates'] as const
 
 export class SettingsStore {
   /** Changes run one after another, so two quick switches in the popup do not undo each other. */

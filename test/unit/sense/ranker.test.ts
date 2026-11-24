@@ -491,3 +491,173 @@ describe('SenseRanker, idle unload', () => {
     expect(ranker.status()).toEqual({ state: 'idle' })
   })
 })
+
+describe('SenseRanker.rank: order details', () => {
+  const ORDERED = { status: 'ordered', positions: [[1, 0], [0]], offered: [2, 1] }
+
+  test('an applied order gives the dictionary positions and offered counts; a cached answer gives the same', async () => {
+    const { ranker } = setup({ prefer: 'financial' })
+    await ready(ranker)
+    const fresh = (await after(1, ranker.rank(bank, passage()))).value
+    expect(fresh.details).toEqual(ORDERED)
+    expect(fresh.result.entries[0]!.senses).toEqual(financialFirst)
+    const cached = await ranker.rank(bank, passage())
+    expect(ranker.stats.cached).toBe(1)
+    expect(cached.details).toEqual(ORDERED)
+    expect(cached.result).toEqual(fresh.result)
+    expect(ranker.stats.applied).toBe(2)
+    await ranker.close()
+  })
+
+  test('an order the model leaves as it is still counts as ordered, with the identity positions', async () => {
+    const { ranker } = setup({ prefer: 'sloping' })
+    await ready(ranker)
+    expect((await after(1, ranker.rank(bank, passage()))).value.details).toEqual({ status: 'ordered', positions: [[0, 1], [0]], offered: [2, 1] })
+    await ranker.close()
+  })
+
+  test('meanings beyond maxCandidates are counted as not offered', async () => {
+    const { ranker } = setup({ prefer: 'meaning 3' }, { maxCandidates: 4 })
+    await ready(ranker)
+    const { details } = (await after(1, ranker.rank(many(6), passage()))).value
+    expect(details).toEqual({ status: 'ordered', positions: [[3, 0, 1, 2, 4, 5]], offered: [4] })
+    await ranker.close()
+  })
+
+  test('an idle or loading model: "loading", in dictionary order, and the lookup starts the load', async () => {
+    const { ranker } = setup({ loadMs: 100, prefer: 'financial' })
+    const idle = await ranker.rank(bank, passage())
+    expect(idle).toEqual({ result: bank, details: { status: 'loading' } })
+    expect(idle.result).toBe(bank)
+    expect(ranker.status().state).toBe('loading')
+    expect((await ranker.rank(bank, passage())).details).toEqual({ status: 'loading' })
+    await pass(100)
+    expect((await after(1, ranker.rank(bank, passage()))).value.details.status).toBe('ordered')
+    await ranker.close()
+  })
+
+  test('nothing to reorder: no entries or one meaning each, also before the model is ready (which still starts it)', async () => {
+    const { ranker, last } = setup({ prefer: 'financial' })
+    const single: DictionaryResult = { ...bank, entries: [bank.entries[1]!] }
+    const empty: DictionaryResult = { ...bank, entries: [] }
+    expect(await ranker.rank(single, passage())).toEqual({ result: single, details: { status: 'nothing-to-order' } })
+    expect(ranker.status().state).toBe('loading')
+    await pass(1)
+    expect(ranker.status().state).toBe('ready')
+    expect((await ranker.rank(single, passage())).details).toEqual({ status: 'nothing-to-order' })
+    expect((await ranker.rank(empty, passage())).details).toEqual({ status: 'nothing-to-order' })
+    expect(last().prompts).toEqual([])
+    expect(ranker.stats.skipped).toBe(2)
+    await ranker.close()
+  })
+
+  test('a passage that does not look English: "not-english"', async () => {
+    const { ranker } = setup({ prefer: 'financial' })
+    await ready(ranker)
+    const portuguese = { before: 'Ele depositou o dinheiro no ', text: 'bank', after: ' antes de fechar para o dia.' }
+    expect(await ranker.rank(bank, portuguese)).toEqual({ result: bank, details: { status: 'not-english' } })
+    await ranker.close()
+  })
+
+  test('other refused input: "unavailable"', async () => {
+    const { ranker } = setup({ prefer: 'financial' })
+    await ready(ranker)
+    expect(await ranker.rank(bank, { ...passage(), after: ' see footnote*' })).toEqual({ result: bank, details: { status: 'unavailable' } })
+    expect(ranker.stats.skipped).toBe(1)
+    await ranker.close()
+  })
+
+  test('the budget running out before the answer: "timed-out"', async () => {
+    const { ranker } = setup({ scoreMs: 300, prefer: 'financial' }, { budgetMs: 80 })
+    await ready(ranker)
+    const late = await after(80, ranker.rank(bank, passage()))
+    expect(late.value).toEqual({ result: bank, details: { status: 'timed-out' } })
+    expect(late.value.result).toBe(bank)
+    expect(ranker.stats.timedOut).toBe(1)
+    await pass(250)
+    expect((await ranker.rank(bank, passage())).details).toEqual(ORDERED)
+    await ranker.close()
+  })
+
+  test('"none of the above" winning: "none-fits"', async () => {
+    const { ranker } = setup({ prefer: 'financial', none: 9 })
+    await ready(ranker)
+    expect((await after(1, ranker.rank(bank, passage()))).value).toEqual({ result: bank, details: { status: 'none-fits' } })
+    await ranker.close()
+  })
+
+  test('a rejected prompt, unusable scores, a failed or closed model: "unavailable"', async () => {
+    const rejected = setup({ prefer: 'financial', rejectCode: 'TOO_LONG' }).ranker
+    await ready(rejected)
+    expect((await after(1, rejected.rank(bank, passage()))).value).toEqual({ result: bank, details: { status: 'unavailable' } })
+    await rejected.close()
+    expect(await rejected.rank(bank, passage())).toEqual({ result: bank, details: { status: 'unavailable' } })
+
+    const failed = setup({ fail: 'MODEL_MISMATCH' }, { retryMs: 1000 }).ranker
+    failed.warm()
+    await pass(1)
+    expect(await failed.rank(bank, passage())).toEqual({ result: bank, details: { status: 'unavailable' } })
+
+    const workers: FakeWorker[] = []
+    const nan = new SenseRanker({ createWorker: () => { const worker = new FakeWorker({ hang: true }); workers.push(worker); return worker }, budgetMs: 1000 })
+    nan.warm()
+    await pass(1)
+    workers[0]!.emit({ type: 'ready', format: fakeFormat })
+    const pending = nan.rank(bank, passage())
+    const sent = workers[0]!.posted.find(message => message.type === 'score') as { id: number }
+    workers[0]!.emit({ type: 'scored', id: sent.id, logits: new Float32Array(128).fill(Number.NaN) })
+    expect(await pending).toEqual({ result: bank, details: { status: 'unavailable' } })
+    await nan.close()
+  })
+
+  test('a crashed worker: "unavailable"', async () => {
+    const { ranker } = setup({ crashOnScore: true }, { budgetMs: 2000 })
+    await ready(ranker)
+    expect((await after(1, ranker.rank(bank, passage()))).value.details).toEqual({ status: 'unavailable' })
+    await ranker.close()
+  })
+
+  test('a superseded lookup: "unavailable"; the running and the newest ones are ordered', async () => {
+    const { ranker } = setup({ scoreMs: 150, prefer: 'financial' }, { budgetMs: 2000 })
+    await ready(ranker)
+    const first = ranker.rank(bank, passage(1))
+    const replaced = ranker.rank(bank, passage(2))
+    const latest = ranker.rank(bank, passage(3))
+    expect(await replaced).toEqual({ result: bank, details: { status: 'unavailable' } })
+    await pass(300)
+    expect((await first).details).toEqual(ORDERED)
+    expect((await latest).details).toEqual(ORDERED)
+    expect(ranker.stats.superseded).toBe(1)
+    await ranker.close()
+  })
+
+  test('a cancelled lookup, running or aborted before it starts: "unavailable"', async () => {
+    const { ranker } = setup({ scoreMs: 200, prefer: 'financial' }, { budgetMs: 2000 })
+    await ready(ranker)
+    const running = new AbortController()
+    const pending = ranker.rank(bank, passage(1), running.signal)
+    await pass(20)
+    running.abort()
+    expect(await pending).toEqual({ result: bank, details: { status: 'unavailable' } })
+    const aborted = new AbortController(); aborted.abort()
+    expect(await ranker.rank(bank, passage(2), aborted.signal)).toEqual({ result: bank, details: { status: 'unavailable' } })
+    await ranker.close()
+  })
+
+  test('a malformed result never fails the lookup: "unavailable"', async () => {
+    const { ranker } = setup()
+    const broken = { query: 'x', source, entries: null } as unknown as DictionaryResult
+    expect(await ranker.rank(broken, passage())).toEqual({ result: broken, details: { status: 'unavailable' } })
+    await ready(ranker)
+    expect(await ranker.rank(broken, passage())).toEqual({ result: broken, details: { status: 'unavailable' } })
+    await ranker.close()
+  })
+
+  test('order() returns rank()\'s result alone', async () => {
+    const { ranker } = setup({ prefer: 'financial' })
+    await ready(ranker)
+    const ranked = (await after(1, ranker.rank(bank, passage()))).value
+    expect(await ranker.order(bank, passage())).toEqual(ranked.result)
+    await ranker.close()
+  })
+})

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { Card, MEANINGS_SHOWN, placeCard } from '../../../src/content/card'
-import type { DictionaryResult } from '../../../src/shared/contracts'
+import type { DictionaryResult, OrderDetails } from '../../../src/shared/contracts'
 
 const SOURCE = { name: 'Wiktionary', license: 'CC BY-SA 4.0', url: 'https://en.wiktionary.org/wiki/mouse' }
 const anchor = () => ({ top: 100, bottom: 120, left: 200, right: 240 })
@@ -257,5 +257,154 @@ describe('Card', () => {
     card.destroy()
     expect(host.isConnected).toBe(false)
     expect(card.state).toBe('hidden')
+  })
+})
+
+// The card element of 0.1.0 for result(), before and after "Show all meanings".
+const CARD_0_1_0 = '<div class="surface card" data-part="card" role="dialog" aria-label="Definitions of “mouse”" lang="en" tabindex="-1" style="max-height: 360px;"><div class="body"><section class="entry"><div class="head"><span class="lemma" data-part="lemma">mouse</span><span class="pos" data-part="pos">noun</span></div><ol><li><span class="definition" data-part="definition">A small rodent.</span><span class="example" data-part="example">“The mouse ate the cheese.”</span><span class="example" data-part="example">“A field mouse.”</span></li><li><span class="definition" data-part="definition">A pointing device.</span></li><li><span class="definition" data-part="definition">A shy person.</span></li></ol></section><section class="entry"><div class="head"><span class="lemma" data-part="lemma">mouse</span><span class="pos" data-part="pos">verb</span></div><p class="note" data-part="note">also spelt mouze</p><ol><li><span class="definition" data-part="definition">To hunt mice.</span></li></ol></section></div><div class="footer"><button class="toggle" data-part="toggle" type="button" aria-expanded="false">Show all meanings</button><a class="attribution" data-part="attribution" href="https://en.wiktionary.org/wiki/mouse" target="_blank" rel="noopener noreferrer">Wiktionary · CC BY-SA 4.0</a></div></div>'
+const CARD_0_1_0_ALL = '<div class="surface card" data-part="card" role="dialog" aria-label="Definitions of “mouse”" lang="en" tabindex="-1" style="max-height: 360px;"><div class="body"><section class="entry"><div class="head"><span class="lemma" data-part="lemma">mouse</span><span class="pos" data-part="pos">noun</span></div><ol><li><span class="definition" data-part="definition">A small rodent.</span><span class="example" data-part="example">“The mouse ate the cheese.”</span><span class="example" data-part="example">“A field mouse.”</span></li><li><span class="definition" data-part="definition">A pointing device.</span></li><li><span class="definition" data-part="definition">A shy person.</span></li><li><span class="definition" data-part="definition">A black eye.</span><span class="example" data-part="example">“He got a mouse in the fight.”</span></li><li><span class="definition" data-part="definition">A knot on a rope.</span></li></ol></section><section class="entry"><div class="head"><span class="lemma" data-part="lemma">mouse</span><span class="pos" data-part="pos">verb</span></div><p class="note" data-part="note">also spelt mouze</p><ol><li><span class="definition" data-part="definition">To hunt mice.</span></li></ol></section></div><div class="footer"><button class="toggle" data-part="toggle" type="button" aria-expanded="true">Show fewer</button><a class="attribution" data-part="attribution" href="https://en.wiktionary.org/wiki/mouse" target="_blank" rel="noopener noreferrer">Wiktionary · CC BY-SA 4.0</a></div></div>'
+
+describe('Card: order details', () => {
+  const cardHtml = (card: Card) => shadow(card).querySelector('[data-part="card"]')!.outerHTML
+  const toggle = (card: Card) => shadow(card).querySelector<HTMLButtonElement>('[data-part="toggle"]')!
+  const statusLine = (card: Card) => shadow(card).querySelector('[data-part="order-status"]')
+  /** Each meaning of entry `e` as its definition and its tag (null without one), with "—" for the divider. */
+  const rows = (card: Card, e = 0) => [...shadow(card).querySelectorAll('section.entry')[e]!.querySelector('ol')!.children].map(item =>
+    item.getAttribute('data-part') === 'unranked' ? '—' : [item.querySelector('[data-part="definition"]')!.textContent, item.querySelector('[data-part="was"]')?.textContent ?? null])
+  // result(): the noun's five meanings and the verb's one. The model was offered all of them.
+  const moved: OrderDetails = { status: 'ordered', positions: [[1, 0, 2, 4, 3], [0]], offered: [5, 1] }
+
+  test('without details the card is exactly the card of 0.1.0', () => {
+    const { card } = makeCard()
+    card.showResult(result(), anchor)
+    expect(cardHtml(card)).toBe(CARD_0_1_0)
+    toggle(card).click()
+    expect(cardHtml(card)).toBe(CARD_0_1_0_ALL)
+    card.showResult(result(), anchor, undefined)
+    expect(cardHtml(card)).toBe(CARD_0_1_0)
+  })
+
+  test('malformed details are shown as none: the card of 0.1.0, never wrong tags', () => {
+    const { card } = makeCard()
+    for (const details of [
+      { status: 'ordered' },
+      { status: 'ordered', positions: [[1, 0, 2, 4, 3]], offered: [5, 1] },
+      { status: 'ordered', positions: [[1, 1, 2, 4, 3], [0]], offered: [5, 1] },
+      { status: 'ordered', positions: [[1, 0, 2, 4, 3], [0]], offered: [6, 1] },
+      { status: 'fine' },
+      'ordered',
+    ]) {
+      card.showResult(result(), anchor, details as unknown as OrderDetails)
+      expect(cardHtml(card), JSON.stringify(details)).toBe(CARD_0_1_0)
+    }
+  })
+
+  test('a moved meaning carries "was" and its dictionary position; one in its place carries nothing', () => {
+    const { card } = makeCard()
+    const reordered = result()
+    reordered.entries[0]!.senses = moved.positions![0]!.map(position => result().entries[0]!.senses[position]!)
+    card.showResult(reordered, anchor, moved)
+    expect(rows(card)).toEqual([['A pointing device.', 'was 2nd'], ['A small rodent.', 'was 1st'], ['A shy person.', null]])
+    toggle(card).click()
+    expect(rows(card)).toEqual([['A pointing device.', 'was 2nd'], ['A small rodent.', 'was 1st'], ['A shy person.', null], ['A knot on a rope.', 'was 5th'], ['A black eye.', 'was 4th']])
+    expect(rows(card, 1)).toEqual([['To hunt mice.', null]])
+    toggle(card).click()
+    expect(rows(card)).toHaveLength(3)
+    // The tag follows the definition text, before the examples.
+    const second = shadow(card).querySelectorAll('ol')[0]!.children[1]!
+    expect([...second.children].map(child => child.getAttribute('data-part'))).toEqual(['definition', 'was', 'example', 'example'])
+  })
+
+  test('the status line opens the footer', () => {
+    const { card } = makeCard()
+    card.showResult(result(), anchor, moved)
+    const footer = shadow(card).querySelector('.footer')!
+    expect(footer.firstElementChild).toBe(statusLine(card))
+    expect(statusLine(card)!.textContent).toBe('Ordered by context')
+    expect([...footer.children].map(child => child.getAttribute('data-part'))).toEqual(['order-status', 'toggle', 'attribution'])
+    card.showResult(result({ entries: [result().entries[1]!] }), anchor, { status: 'nothing-to-order' })
+    expect([...shadow(card).querySelector('.footer')!.children].map(child => child.getAttribute('data-part'))).toEqual(['order-status', 'attribution'])
+  })
+
+  test('each status has its line, and only "ordered" tags meanings', () => {
+    const { card } = makeCard()
+    const lines: Array<[OrderDetails, string]> = [
+      [moved, 'Ordered by context'],
+      [{ status: 'ordered', positions: [[0, 1, 2, 3, 4], [0]], offered: [5, 1] }, 'Ordered by context · same as dictionary order'],
+      [{ status: 'off' }, 'Dictionary order · ordering is off'],
+      [{ status: 'no-model' }, 'Dictionary order · context model not installed'],
+      [{ status: 'loading' }, 'Dictionary order · model still loading'],
+      [{ status: 'timed-out' }, 'Dictionary order · model took too long, try again'],
+      [{ status: 'nothing-to-order' }, 'Dictionary order · nothing to reorder'],
+      [{ status: 'not-english' }, 'Dictionary order · text does not look English'],
+      [{ status: 'none-fits' }, 'Dictionary order · the model found no fitting meaning'],
+      [{ status: 'unavailable' }, 'Dictionary order · ordering unavailable'],
+      // Positions that come with another status are not read.
+      [{ status: 'loading', positions: [[1, 0, 2, 4, 3], [0]], offered: [5, 1] }, 'Dictionary order · model still loading'],
+    ]
+    for (const [details, text] of lines) {
+      card.showResult(result(), anchor, details)
+      expect(statusLine(card)!.textContent).toBe(text)
+      const tags = shadow(card).querySelectorAll('[data-part="was"]').length
+      expect(tags > 0, text).toBe(details === moved)
+      expect(shadow(card).querySelector('[data-part="unranked"]')).toBeNull()
+    }
+  })
+
+  test('the divider stands before the meanings the model was not offered, only while they are visible', () => {
+    const { card } = makeCard()
+    // Offered two meanings of the noun: the shown third one was not offered.
+    card.showResult(result(), anchor, { status: 'ordered', positions: [[1, 0, 2, 3, 4], [0]], offered: [2, 1] })
+    expect(rows(card)).toEqual([['A small rodent.', 'was 2nd'], ['A pointing device.', 'was 1st'], '—', ['A shy person.', null]])
+    expect(shadow(card).querySelector('[data-part="unranked"]')!.textContent).toBe('Not seen by the model')
+    expect(shadow(card).querySelectorAll('[data-part="unranked"]')).toHaveLength(1)
+    // Offered three: the divider appears with "Show all meanings" and goes with "Show fewer".
+    card.showResult(result(), anchor, { status: 'ordered', positions: [[0, 2, 1, 3, 4], [0]], offered: [3, 1] })
+    expect(rows(card)).toEqual([['A small rodent.', null], ['A pointing device.', 'was 3rd'], ['A shy person.', 'was 2nd']])
+    toggle(card).click()
+    expect(rows(card)).toEqual([['A small rodent.', null], ['A pointing device.', 'was 3rd'], ['A shy person.', 'was 2nd'], '—', ['A black eye.', null], ['A knot on a rope.', null]])
+    toggle(card).click()
+    expect(shadow(card).querySelector('[data-part="unranked"]')).toBeNull()
+  })
+
+  test('meanings after the divider carry no tag, and an entry offered nothing starts with it', () => {
+    const { card } = makeCard()
+    card.showResult(result(), anchor, { status: 'ordered', positions: [[0, 1, 2, 4, 3], [0]], offered: [0, 0] })
+    expect(rows(card)).toEqual(['—', ['A small rodent.', null], ['A pointing device.', null], ['A shy person.', null]])
+    toggle(card).click()
+    expect(rows(card).slice(-2)).toEqual([['A black eye.', null], ['A knot on a rope.', null]])
+    expect(rows(card, 1)).toEqual(['—', ['To hunt mice.', null]])
+  })
+
+  test('the divider is not a numbered meaning', () => {
+    const { card } = makeCard()
+    card.showResult(result(), anchor, { status: 'ordered', positions: [[1, 0, 2, 3, 4], [0]], offered: [2, 1] })
+    const css = shadow(card).querySelector('style')!.textContent!
+    expect(css).toMatch(/\.unranked \{[^}]*display: block/)
+  })
+
+  test('large positions read as English ordinals', () => {
+    const { card } = makeCard()
+    const long = result({ entries: [{ lemma: 'set', partOfSpeech: 'verb', senses: Array.from({ length: 23 }, (_, i) => ({ definition: `meaning ${i}`, examples: [] })) }] })
+    const positions = [[21, 10, 11, 12, 22, ...Array.from({ length: 23 }, (_, i) => i).filter(i => ![21, 10, 11, 12, 22].includes(i))]]
+    card.showResult(long, anchor, { status: 'ordered', positions, offered: [23] })
+    expect(texts(card, '[data-part="was"]')).toEqual(['was 22nd', 'was 11th', 'was 12th'])
+    toggle(card).click()
+    expect(texts(card, '[data-part="was"]').slice(0, 5)).toEqual(['was 22nd', 'was 11th', 'was 12th', 'was 13th', 'was 23rd'])
+  })
+
+  test('no score, percentage or timing appears with details', () => {
+    const { card } = makeCard()
+    card.showResult(result(), anchor, { status: 'ordered', positions: [[1, 0, 2, 4, 3], [0]], offered: [2, 1] })
+    for (const part of ['order-status', 'unranked']) expect(shadow(card).querySelector(`[data-part="${part}"]`)!.textContent).not.toMatch(/[\d%]/)
+    for (const tag of texts(card, '[data-part="was"]')) expect(tag).toMatch(/^was \d+(st|nd|rd|th)$/)
+  })
+
+  test('details text is set as text, and the parts keep the card\'s muted colour', () => {
+    const { card } = makeCard()
+    card.showResult(result(), anchor, { status: 'ordered', positions: [[1, 0, 2, 3, 4], [0]], offered: [2, 1] })
+    for (const part of ['was', 'unranked', 'order-status']) expect(shadow(card).querySelector(`[data-part="${part}"]`)!.children).toHaveLength(0)
+    const css = shadow(card).querySelector('style')!.textContent!
+    for (const selector of ['.was', '.unranked', '.order-status']) expect(css).toMatch(new RegExp(`\\${selector} \\{[^}]*color: var\\(--muted\\)`))
   })
 })

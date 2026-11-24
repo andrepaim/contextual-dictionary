@@ -100,6 +100,32 @@ describe('PopupView switches', () => {
     expect(control('definitions').checked).toBe(false)
   })
 
+  test('"Show order details" sits below "Order by context", reflects the setting and sends it', async () => {
+    await open(makeStatus())
+    const names = [...root.querySelectorAll<HTMLInputElement>('[data-control]')].map(input => input.dataset.control)
+    expect(names).toEqual(['definitions', 'orderByContext', 'showOrderDetails', 'site'])
+    expect(labelOf(control('showOrderDetails'))).toBe('Show order details')
+    expect(control('showOrderDetails').getAttribute('role')).toBe('switch')
+    expect(control('showOrderDetails').checked).toBe(false)
+    backend.current = makeStatus({ settings: { showOrderDetails: true } })
+    await toggle('showOrderDetails')
+    expect(backend.ofType('set-settings')).toEqual([{ type: 'set-settings', patch: { showOrderDetails: true } }])
+    expect(control('showOrderDetails').checked).toBe(true)
+    backend.current = makeStatus()
+    await toggle('showOrderDetails')
+    expect(backend.ofType('set-settings')[1]).toEqual({ type: 'set-settings', patch: { showOrderDetails: false } })
+    expect(control('showOrderDetails').checked).toBe(false)
+  })
+
+  test('"Show order details" is available also with ordering off and the model missing, and asks for no download', async () => {
+    await open(makeStatus({ settings: { orderByContext: false, showOrderDetails: true } }))
+    expect(control('showOrderDetails').checked).toBe(true)
+    expect(control('showOrderDetails').disabled).toBe(false)
+    await toggle('showOrderDetails')
+    expect(root.querySelector('[data-part="consent"]')).toBeNull()
+    expect(backend.requests.filter(request => request.type !== 'status')).toEqual([{ type: 'set-settings', patch: { showOrderDetails: false } }])
+  })
+
   test('the site switch turns the extension off and on for the host', async () => {
     await open(makeStatus())
     backend.current = makeStatus({ siteEnabled: false })

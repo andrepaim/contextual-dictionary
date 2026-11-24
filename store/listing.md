@@ -32,6 +32,7 @@ HOW IT WORKS
 • A card shows each entry with three meanings and examples. "Show all meanings" shows the rest.
 • Press Escape or click elsewhere to close it.
 • Switch it off for a single site, or switch off the ordering, from the extension's window.
+• Turn on "Show order details" to see where each moved meaning was in the dictionary's order.
 
 PRIVATE BY DESIGN
 • The dictionary and the word-sense model both run on your computer.
@@ -82,7 +83,7 @@ Shows dictionary definitions for the word or short phrase the user selects on a 
 
 | Permission | Justification |
 | --- | --- |
-| `storage` | Keeps the user's settings (definitions on or off, ordering on or off, sites switched off) and the last status of the downloads. |
+| `storage` | Keeps the user's settings (definitions on or off, ordering on or off, order details on or off, sites switched off) and the last status of the downloads. |
 | `unlimitedStorage` | Keeps the downloaded dictionary (66.5 MB) and word-sense model (about 270 MB) in the extension's private file storage so the browser does not evict them. |
 | `offscreen` | Runs the dictionary lookup and the word-sense model in a hidden extension page with a Web Worker and WebAssembly threads, which a service worker cannot do. |
 | Host permission `https://github.com/andrepaim/contextual-dictionary/releases/download/*` and `https://release-assets.githubusercontent.com/*` | Downloads the dictionary and the model files from this project's GitHub release, once, after the user confirms each download. They are data files checked against SHA-256 digests pinned in the extension; no code is downloaded. |

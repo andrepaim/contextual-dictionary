@@ -181,7 +181,15 @@ export function senseRequest(result: DictionaryResult, selection: Selection, for
   return { skip: 'TOO_LONG' }
 }
 
-export type OrderOutcome = { result: DictionaryResult; applied: true } | { result: DictionaryResult; applied: false; reason: 'NONE_FITS' | 'INVALID_SCORES' }
+export type OrderOutcome =
+  | {
+    result: DictionaryResult; applied: true
+    /** positions[e][i]: the dictionary position of the meaning now at place i of entry e. */
+    positions: number[][]
+    /** offered[e]: how many meanings of entry e were offered; they come first. */
+    offered: number[]
+  }
+  | { result: DictionaryResult; applied: false; reason: 'NONE_FITS' | 'INVALID_SCORES' }
 
 /**
  * Sorts the scored meanings of each entry by the model's probability,
@@ -189,6 +197,8 @@ export type OrderOutcome = { result: DictionaryResult; applied: true } | { resul
  * Entries keep their order and the sort is stable, so equal scores keep
  * dictionary order. When "none of the above" scores at least as high as
  * every meaning, or the scores are unusable, `result` itself is returned.
+ * An applied order also gives each meaning's dictionary position and each
+ * entry's number of offered meanings, for the card's order details.
  */
 export function contextualOrder(result: DictionaryResult, request: SenseRequest, logits: ArrayLike<number>, format: SenseFormat): OrderOutcome {
   const count = request.candidates.length
@@ -203,16 +213,21 @@ export function contextualOrder(result: DictionaryResult, request: SenseRequest,
   if (none >= Math.max(...probabilities)) return { result, applied: false, reason: 'NONE_FITS' }
 
   const probability = new Map(request.candidates.map((candidate, i) => [`${candidate.entry}:${candidate.sense}`, probabilities[i]!]))
+  const positions: number[][] = [], offered: number[] = []
   const entries = result.entries.map((entry, e) => {
-    const scored: Array<{ sense: (typeof entry.senses)[number]; s: number; p: number }> = []
-    const rest: typeof entry.senses = []
+    type Placed = { sense: (typeof entry.senses)[number]; s: number }
+    const scored: Array<Placed & { p: number }> = []
+    const rest: Placed[] = []
     entry.senses.forEach((sense, s) => {
       const p = probability.get(`${e}:${s}`)
-      if (p === undefined) rest.push(sense)
+      if (p === undefined) rest.push({ sense, s })
       else scored.push({ sense, s, p })
     })
     scored.sort((a, b) => b.p - a.p || a.s - b.s)
-    return { ...entry, senses: [...scored.map(({ sense }) => sense), ...rest] }
+    const placed = [...scored, ...rest]
+    positions.push(placed.map(({ s }) => s))
+    offered.push(scored.length)
+    return { ...entry, senses: placed.map(({ sense }) => sense) }
   })
-  return { result: { ...result, entries }, applied: true }
+  return { result: { ...result, entries }, applied: true, positions, offered }
 }

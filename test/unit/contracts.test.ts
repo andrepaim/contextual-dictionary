@@ -42,6 +42,12 @@ describe('isRequest', () => {
     expect(isRequest({ type: 'set-settings', patch: {} })).toBe(true)
   })
 
+  test('accepts "Show order details" in a settings patch as a boolean only', () => {
+    expect(isRequest({ type: 'set-settings', patch: { showOrderDetails: true } })).toBe(true)
+    expect(isRequest({ type: 'set-settings', patch: { showOrderDetails: false, orderByContext: true } })).toBe(true)
+    for (const value of ['yes', 1, 0, null, {}, []]) expect(isRequest({ type: 'set-settings', patch: { showOrderDetails: value } }), JSON.stringify(value)).toBe(false)
+  })
+
   test('requests answered with a status may name the asking page host', () => {
     for (const request of [
       { type: 'set-settings', patch: { definitions: false }, host: 'example.org' },
@@ -83,7 +89,17 @@ describe('normalizeSettings', () => {
   test('the defaults are the ones chosen from the stage 3 measurements (docs/validation.md)', () => {
     // Model order put the labelled meaning first 55% of the time against 28% for dictionary order, so ordering is on;
     // a 750 ms budget answers every lookup of the evaluation set on 8 and 4 threads within the prompt length limit.
-    expect(DEFAULT_SETTINGS).toEqual({ definitions: true, orderByContext: true, disabledSites: [], budgetMs: 750, maxCandidates: 24 })
+    // "Show order details" (docs/order-details-plan.md) is off by default: the card looks as it did in 0.1.0.
+    expect(DEFAULT_SETTINGS).toEqual({ definitions: true, orderByContext: true, showOrderDetails: false, disabledSites: [], budgetMs: 750, maxCandidates: 24 })
+  })
+
+  test('"Show order details" keeps a boolean and falls back to the default, so settings stored by 0.1.0 load', () => {
+    expect(normalizeSettings({ showOrderDetails: true }).showOrderDetails).toBe(true)
+    expect(normalizeSettings({ showOrderDetails: false }).showOrderDetails).toBe(false)
+    for (const value of ['yes', 1, null, undefined]) expect(normalizeSettings({ showOrderDetails: value as unknown as boolean }).showOrderDetails).toBe(false)
+    // What 0.1.0 stored: every setting but this one.
+    expect(normalizeSettings({ definitions: true, orderByContext: false, disabledSites: ['a.org'], budgetMs: 750, maxCandidates: 24 }))
+      .toEqual({ ...DEFAULT_SETTINGS, orderByContext: false, disabledSites: ['a.org'] })
   })
 
   test('sites are lower-cased, de-duplicated and sorted; other values are dropped', () => {
