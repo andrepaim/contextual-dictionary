@@ -98,7 +98,7 @@ export function siteHeader(current) {
   const link = (address, label, more = '') => `<a${more} href="${address}"${address === current ? ' aria-current="page"' : ''}>${label}</a>`
   return `<header class="site-header wrap">
 <a class="brand" href="./"><img src="images/icon-128.png" width="30" height="30" alt="">Contextual Dictionary</a>
-<nav aria-label="Site">${link(`${home}#examples`, 'Examples', ' class="optional"')}${link(`${home}#how`, 'How it works', ' class="optional"')}${link(`${home}#accuracy`, 'Accuracy', ' class="optional"')}${link('guide.html', 'Guide')}${link('privacy.html', 'Privacy')}${link(`${home}#install`, 'Install', ' class="button compact"')}</nav>
+<nav aria-label="Site">${link(`${home}#examples`, 'Examples', ' class="optional"')}${link(`${home}#how`, 'How it works', ' class="optional"')}${link('guide.html', 'Guide')}${link('privacy.html', 'Privacy')}${link(`${home}#install`, 'Install', ' class="button compact"')}</nav>
 </header>`
 }
 
