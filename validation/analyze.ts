@@ -3,7 +3,7 @@
 // effect of the candidate cap, latency by meanings offered, and budget
 // coverage.
 //
-//   npx tsx validation/analyze.ts [--set wiktionary|written] [--threads 8] [--seed 1]
+//   npx tsx validation/analyze.ts [--set wiktionary|written|simple] [--threads 8] [--seed 1]
 //
 // Model order is computed with the extension's own contextualOrder
 // (packages/core/src/prompt.ts) on the stored logits; a prompt that was skipped or
@@ -143,6 +143,15 @@ if (values.set === 'written') {
   out('### By genre')
   out()
   table(ACC_HEADER, accuracyRows(groupBy(item => item.genre ?? '?'), DEFAULT_CAP))
+}
+if (values.set === 'simple') {
+  // Headwords of the English and hand-written sets stay out of any training made of English
+  // Wiktionary examples (docs/validation.md, "Held out of training"); the rest may be trained on.
+  const data = (name: string) => fs.readFileSync(new URL(`./data/${name}`, import.meta.url), 'utf8').split('\n').filter(line => line && !line.startsWith('#'))
+  const heldOut = new Set([...data('wiktionary-items.tsv').slice(1).map(line => line.split('\t')[0]!), ...data('written-labels.tsv').map(line => line.split('\t')[1]!)])
+  out('### By headword: held out of training or not')
+  out()
+  table(ACC_HEADER, accuracyRows(groupBy(item => (heldOut.has(item.word) ? 'held out' : 'not held out')), DEFAULT_CAP))
 }
 
 out('### Outcomes by cap (no budget)')
