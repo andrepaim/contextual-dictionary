@@ -1,11 +1,11 @@
 # Stage 3 validation
 
-How fast the extension is in practice, how well the model orders Wiktionary's meanings, what defaults were chosen from those numbers, and what was fixed. Everything here was measured on 2026-11-23 with the real model (`assets-v1`), the real dictionary pack and production builds of the extension in Chromium. The scripts are in `validation/`; how to rerun each measurement is at the end.
+How fast the extension is in practice, how well the model orders Wiktionary's meanings, what defaults were chosen from those numbers, and what was fixed. Everything here was measured on 2026-11-23 with the real model (`assets-v1`), the real dictionary pack and production builds of the extension in Chromium. The Simple English Wiktionary set was added on 2026-11-25, with the same model, machine and scripts. The scripts are in `validation/`; how to rerun each measurement is at the end.
 
 ## Answers in brief
 
 - **Speed.** On the test machine with 8 threads, a definition alone takes about 8 ms (p90 10–12 ms) once the dictionary is open, and the first one of a browser session about 0.1 s (was 1 s). With "Order by context" on, a lookup of a word with several meanings is ordered in about 0.27 s at the median and 0.6 s at worst (p99 0.59 s, maximum 0.69 s on 2,287 prompts), because prompts are now limited to 1,600 characters; the card waits at most 750 ms. Common words with many meanings ("mouse", "bank", "fire", "string") take about 0.4–0.6 s from the double-click to the card. With 2 threads (a stand-in for a small machine) 67% of lookups are answered within 750 ms; the rest show dictionary order first and the ordered list on a repeat. The model is ready 2.6–3.0 s after ordering is turned on in a new session (1.3–1.4 s when its files were already checked), and the extension's process uses about 1 GB more memory while it is loaded.
-- **Accuracy.** Yes, the model's order beats Wiktionary's order, clearly. On 2,300 items labelled by Wiktionary's own editors, with the shipped defaults, the labelled meaning is first in its entry 55.4% of the time with model order against 28.2% with dictionary order (paired 95% interval of the difference 24.8 to 29.7 points), and among the first three meanings in its entry 77.9% against 60.1%. On 104 hand-written web-style sentences: 64.4% against 26.9% first. It is better in every stratum and every part of speech. It is far from perfect: for entries with 17 or more meanings, the labelled meaning is first in under a third of cases.
+- **Accuracy.** Yes, the model's order beats Wiktionary's order, clearly. On 2,300 items labelled by Wiktionary's own editors, with the shipped defaults, the labelled meaning is first in its entry 55.4% of the time with model order against 28.2% with dictionary order (paired 95% interval of the difference 24.8 to 29.7 points), and among the first three meanings in its entry 77.9% against 60.1%. On 104 hand-written web-style sentences: 64.4% against 26.9% first. On 4,167 items from a second dictionary, Simple English Wiktionary, whose entries are short: 84.6% against 48.8% first. It is better in every stratum and every part of speech. It is far from perfect: for entries with 17 or more meanings, the labelled meaning is first in under a third of cases.
 - **Defaults.** "Order by context" is now on by default (the model still downloads only after the reader confirms it), `budgetMs` 750, `maxCandidates` 24, and a new prompt length limit of 1,600 characters.
 
 ## Method
@@ -37,6 +37,33 @@ The committed list `validation/data/wiktionary-items.tsv` holds the identifiers 
 
 The pdfpal pilot passages (`~/src/sense-model/data/pilot`) were not used: their labels are WordNet sense identifiers, not Wiktionary meanings, and mapping them would mean labelling them again.
 
+### The Simple English Wiktionary set
+
+A second dictionary whose editors attach each example to the meaning it illustrates. Simple English Wiktionary is a separate wiki: its definitions are its own, written as plain sentences ("If you run a place, you manage it."), and its examples are short invented sentences, not quotations. The set measures the model on definitions it was not chosen on, and it stays a fair test if a later model is trained on English Wiktionary's examples.
+
+1. `validation/build-simple-set.ts` reads the Kaikki extract of Simple English Wiktionary as served on 2026-10-30 (62,247 lines) and keeps entries by the English set's rules: one lower-case word, and at least two meanings in one part of speech after the pack's rules. 6,845 entries.
+2. An example qualifies as in the English set: at least six words, with the word or an inflected form standing alone. This extract marks no bold span and gives no quotation dates, so the first standalone occurrence is used and nothing is left out as archaic. Of 13,484 examples looked at, 12,323 qualified; 948 were short, 105 had no usable occurrence, 108 no text.
+3. An example that English Wiktionary also has for the same headword is left out: the same text without case and punctuation, or one inside the other when the shorter has four words or more. 648 of the 12,323 were left out, which left 234 entries with no example and 4,171 with one.
+4. One example per entry is drawn by the same seeded hash. Every entry is an item; there is no cap per stratum, because Simple English Wiktionary has few long entries. 4 entries were excluded because the labelled definition appears twice in the entry. 4,167 items remain: 2,596, 1,283, 262, 25, 0 and 1 per stratum; 2,237 nouns, 1,047 verbs, 646 adjectives, 115 adverbs, 122 others; 3,731 different headwords.
+5. There is no pack of Simple English Wiktionary. The meanings offered are every entry of the headword's spelling, in extract order, under the pack's rules (`simpleResult` in `validation/simple-items.ts`): proper names left out, empty glosses dropped, markup removed. 1,973 items offer more than one entry (the noun and the verb, for example). The lookup's inflection and compound steps do not run: in 923 items the selection is an inflected form and the meanings offered are still its headword's.
+6. Prompts are built and scored as for the English set: 4,566 distinct prompts, scored in 8 minutes. The same leakage check found nothing.
+
+`validation/data/simple-items.tsv` holds the identifiers, as for the English set.
+
+How this set differs from the English one:
+
+- The passages are shorter: 10 words (55 characters) at the median, against 21 words (121 characters).
+- The entries are shorter: 62% of the items are in entries with two meanings, where dictionary order is right about half the time. Its totals cannot be compared with the English set's; compare stratum with stratum.
+- It is not fully apart from English Wiktionary. The two wikis share editors, nearly all of its headwords are English Wiktionary headwords too, and 54 items' labelled definition is word for word one of English Wiktionary's definitions of that word (marked `definitionInEnglish` in the items).
+
+### Held out of training
+
+No model measured here was trained on Wiktionary: the model card of `sign/Ettin-150m-WSD`, read on 2026-11-25, names only WordNet-based training data (SemCor, WordNet's own examples, the Princeton WordNet Gloss Corpus, generated sentences for WordNet synsets) and unlabelled Wikipedia sentences for distillation.
+
+If a model is trained on English Wiktionary's examples, these sets stay tests only under this rule: **no example of a headword of the English set or of the hand-written set goes into training**, in any part of speech. Those are the 2,146 words of the first column of `wiktionary-items.tsv` and the lemmas of `written-labels.tsv`, 2,197 in all. The split is by headword, not by example, because the examples of one entry share its definitions.
+
+The Simple English Wiktionary set is not held out by headword: that would take 3,731 common words out of training. Its definitions and examples are never training data, and 953 of its items are on held-out headwords; `analyze.ts --set simple` reports those apart.
+
 ### Limits of the labels
 
 - An example can fit more than one meaning (Wiktionary lists near-synonymous sub-senses, and parent and child glosses), and the label is the one meaning the editors attached it to. Both orders are scored against the same single label, so this lowers both numbers.
@@ -44,6 +71,7 @@ The pdfpal pilot passages (`~/src/sense-model/data/pilot`) were not used: their 
 - Wiktionary's first meaning is not chosen by frequency (it is often the oldest or the most general), so dictionary order is a weak baseline. That is the baseline the card would otherwise show, which is why it is the one compared.
 - The examples are Wiktionary's, often literary or quoted, and shorter than web page context; the strata over-represent words with many meanings (weighted back to the extract's entries, the numbers are given too). The checkpoint was trained on WordNet-based data; its base model was pretrained on web text, which may include Wiktionary pages, and this was not checked.
 - The hand-written set is small (104 items; its intervals are about ±10 points) and model-written and model-labelled.
+- The Simple English Wiktionary set is easy: short entries, and learner sentences written to show one meaning plainly. It says little about words with many meanings (26 items in entries of nine or more), which is where the model is weakest.
 
 ## Accuracy
 
@@ -56,8 +84,9 @@ At the shipped defaults (at most 24 meanings, 1,600 characters), with no budget 
 | Wiktionary, stratified | 2,300 | 28.2% | **55.4%** | 60.1% | **77.9%** | 4.84 | 3.72 |
 | Wiktionary, weighted to the extract's entries | | 43.5% | **71.0%** | 86.9% | **95.3%** | | |
 | Hand-written | 104 | 26.9% | **64.4%** | 55.8% | **75.0%** | 6.10 | 4.73 |
+| Simple English Wiktionary | 4,167 | 48.8% | **84.6%** | 96.1% | **99.7%** | 1.71 | 1.18 |
 
-Paired bootstrap (2,000 resamples) 95% intervals of model minus dictionary: Wiktionary first +27.2 points (24.8 to 29.7), top three +17.8 (16.0 to 19.5); hand-written first +37.5 (27.9 to 47.1), top three +19.2 (11.5 to 27.9).
+Paired bootstrap (2,000 resamples) 95% intervals of model minus dictionary: Wiktionary first +27.2 points (24.8 to 29.7), top three +17.8 (16.0 to 19.5); hand-written first +37.5 (27.9 to 47.1), top three +19.2 (11.5 to 27.9); Simple English Wiktionary first +35.8 (34.0 to 37.6), top three +3.6 (3.0 to 4.2).
 
 "First" is the labelled meaning listed first within its entry; "top 3" within the first three meanings in its entry; rank is its position within the entry.
 
@@ -83,6 +112,18 @@ By part of speech (Wiktionary set, defaults):
 | other | 44 | 20.5% | 29.5% | 40.9% | 61.4% |
 
 Hand-written set by genre (defaults): news 18.5% → 59.3% first (27 items), forums 42.3% → 69.2% (26), recipes 42.3% → 65.4% (26), documentation 4.0% → 64.0% (25).
+
+Simple English Wiktionary set, by meanings in the labelled entry (defaults):
+
+| Meanings in the entry | Items | First, dictionary | First, model | Top 3, dictionary | Top 3, model | Mean rank, dictionary | Mean rank, model |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2 | 2,596 | 55.2% | 87.6% | 100.0% | 100.0% | 1.45 | 1.12 |
+| 3–4 | 1,283 | 41.0% | 80.8% | 95.2% | 99.7% | 1.94 | 1.24 |
+| 5–8 | 262 | 26.0% | 74.0% | 66.4% | 96.2% | 2.89 | 1.40 |
+| 9–16 | 25 | 28.0% | 84.0% | 48.0% | 100.0% | 4.20 | 1.24 |
+| 33+ | 1 | 0.0% | 0.0% | 0.0% | 100.0% | 13.00 | 2.00 |
+
+Dictionary order scores the same as in the English set's strata of the same size (55.2% and 54.9% for two meanings, 41.0% and 41.5% for three or four), and the model scores higher here: 87.6% against 78.1%, 80.8% against 72.0%, and 74.0% against 58.8% for five to eight. Why was not measured; the plain definitions and the invented examples are the likely reasons. By part of speech: nouns 50.9% → 86.2% first, verbs 47.1% → 87.2%, adjectives 46.1% → 81.9%, adverbs 42.6% → 70.4%, others 45.9% → 60.7%. On the 953 items whose headword is held out of training: 45.9% → 84.8%; on the other 3,214: 49.7% → 84.5%. The model answered "none of the above" for 1.0% of the items, and 10 items were not sent to it (6 passages judged not English, 4 with unsafe text). The candidate cap makes no difference in this set (84.2% first at 8 meanings, 84.6% from 12 up).
 
 ### The candidate cap
 
@@ -243,14 +284,15 @@ On the hand-written set, at 750 ms on 8 threads: cap 48 answers 40% in time (fir
 
 ## How to rerun
 
-All scripts read local inputs (the Kaikki extract, the pack, the model export; defaults as in `CLAUDE.md`, overridden by `CD_KAIKKI`, `CD_PACK`, `CD_MODEL_DIR`) and write under `~/.cache/contextual-dictionary/validation/` (`CD_VALIDATION_OUT`). None runs in CI.
+All scripts read local inputs (the Kaikki extracts, the pack, the model export; defaults as in `CLAUDE.md`, overridden by `CD_KAIKKI`, `CD_KAIKKI_SIMPLE`, `CD_PACK`, `CD_MODEL_DIR`) and write under `~/.cache/contextual-dictionary/validation/` (`CD_VALIDATION_OUT`). None runs in CI.
 
 ```bash
 npm ci && npm run build
 npx tsx validation/build-wiktionary-set.ts            # 40 s; regenerates validation/data/wiktionary-items.tsv (git diff should be empty)
 npx tsx validation/build-written-set.ts               # --list prints each sentence's meanings for labelling
-npx tsx validation/score-prompts.ts --threads 8       # about 75 minutes for all 9,990 prompts; resumable
-npx tsx validation/analyze.ts                         # Wiktionary set tables; --set written for the other
+npx tsx validation/build-simple-set.ts                # 30 s; reads CD_KAIKKI_SIMPLE too; regenerates validation/data/simple-items.tsv (git diff should be empty)
+npx tsx validation/score-prompts.ts --threads 8       # about 75 minutes for the first 9,990 prompts, 8 more for the Simple English set's 4,566; resumable
+npx tsx validation/analyze.ts                         # Wiktionary set tables; --set written or --set simple for the others
 npx tsx validation/score-prompts.ts --threads 4 --only threads-subset.txt   # the subset file is written by hand, see analyze-threads.ts
 npx tsx validation/analyze-threads.ts
 npx tsx validation/extension-bench.ts --install       # once: downloads assets-v1 (214 MB) into a template profile
