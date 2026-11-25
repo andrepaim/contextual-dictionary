@@ -24,7 +24,7 @@ import readline from 'node:readline'
 import { createGunzip } from 'node:zlib'
 import { parseArgs } from 'node:util'
 import { openWiktionaryDictionary } from '@andrepaim/contextual-dictionary-core'
-import { ENTRY_BUCKETS, VARIANTS, variantRequest, PATHS, bucketLabel, bucketOf, fileSource, readFormat, selectionAt, sha256Hex, tokenCounter } from './common'
+import { ENTRY_BUCKETS, PATHS, bucketLabel, bucketOf, fileSource, readFormat, selectionAt, sha256Hex, tokenCounter, variantPrompts, type StoredPrompt } from './common'
 import { judgeExample, keptSenses } from './wiktionary-items'
 
 const { values } = parseArgs({ options: { seed: { type: 'string', default: 'cd-validation-v1' }, 'per-stratum': { type: 'string', default: '450' } } })
@@ -106,7 +106,7 @@ const format = readFormat()
 const tokens = tokenCounter()
 const source = await fileSource(PATHS.pack)
 const dictionary = await openWiktionaryDictionary(source)
-const prompts = new Map<string, { hash: string; prompt: string; tokens: number; offered: number }>()
+const prompts = new Map<string, StoredPrompt>()
 const items: unknown[] = []
 const tsv: string[] = ['word\tpos\tmeaning\texample_sha256_16\tstratum']
 let leaks = 0
@@ -124,21 +124,13 @@ for (const [stratum, list] of strata) {
       continue
     }
     if (candidate.definitions.filter(definition => definition === candidate.definition).length > 1) { count('excluded: labelled definition repeated in its entry'); continue }
-    const perCap: Record<string, unknown> = {}
-    for (const variant of VARIANTS) {
-      const cap = variant.key
-      const request = variantRequest(result, selection, format, variant)
-      if ('skip' in request) { perCap[cap] = { skip: request.skip }; continue }
-      const hash = sha256Hex(request.prompt)
-      if (!prompts.has(hash)) prompts.set(hash, { hash, prompt: request.prompt, tokens: tokens(request.prompt), offered: request.candidates.length })
-      // No leakage: the prompt holds definitions only, never an example of any meaning offered.
-      const examples = result.entries.flatMap(item => item.senses.flatMap(sense => sense.examples))
+    // No leakage: the prompt holds definitions only, never an example of any meaning offered.
+    const examples = result.entries.flatMap(item => item.senses.flatMap(sense => sense.examples))
+    const perCap = variantPrompts(result, selection, { entry, sense: candidate.packSense }, format, tokens, prompts, request => {
       // The first line is the passage itself; the choices follow it.
       const choices = request.prompt.slice(request.prompt.indexOf('\n') + 1)
       if (choices.includes(candidate.text.trim().slice(0, 40)) || examples.some(example => example.length >= 20 && choices.includes(example))) leaks++
-      const labelledOffered = request.candidates.some(c => c.entry === entry && c.sense === candidate.packSense)
-      perCap[cap] = { prompt: hash, candidates: request.candidates.map(c => [c.entry, c.sense]), labelledOffered }
-    }
+    })
     items.push({
       id: `${candidate.word}|${candidate.pos}|${candidate.packSense}|${candidate.exampleHash}`,
       word: candidate.word, pos: candidate.pos, stratum, meanings: candidate.meanings, kaikkiLine: candidate.line, kaikkiSense: candidate.kaikkiSense,
