@@ -17,6 +17,7 @@ const expand = (value: string) => value.replace(/^~(?=\/|$)/, home)
 
 export const PATHS = {
   kaikki: expand(process.env.CD_KAIKKI ?? '~/.cache/contextual-dictionary/kaikki/english-2026-10-30.jsonl.gz'),
+  simple: expand(process.env.CD_KAIKKI_SIMPLE ?? '~/.cache/contextual-dictionary/kaikki/simple-english-2026-10-30.jsonl.gz'),
   pack: expand(process.env.CD_PACK ?? '~/.cache/contextual-dictionary/packs/wiktionary-en-v1.pack'),
   model: expand(process.env.CD_MODEL_DIR ?? '~/src/sense-model/artifacts/upstream-english'),
   out: expand(process.env.CD_VALIDATION_OUT ?? '~/.cache/contextual-dictionary/validation'),
@@ -70,6 +71,35 @@ export function variantRequest(result: DictionaryResult, selection: Selection, f
   return senseRequest(shown, selection, bounded, variant.cap)
 }
 export const BUDGETS = [250, 350, 500, 750, 1000, 2000] as const
+
+/** A distinct prompt as prompts.jsonl holds it. */
+export interface StoredPrompt { hash: string; prompt: string; tokens: number; offered: number }
+type BuiltRequest = Exclude<ReturnType<typeof variantRequest>, { skip: unknown }>
+
+/**
+ * What an item records for each variant: why no prompt is built, or the
+ * prompt's hash, the meanings offered and whether the labelled one is among
+ * them. Prompts not seen before are added to `prompts`; `inspect` sees every
+ * request that was built.
+ */
+export function variantPrompts(
+  result: DictionaryResult, selection: Selection, labelled: { entry: number; sense: number }, format: SenseFormat,
+  tokens: (text: string) => number, prompts: Map<string, StoredPrompt>, inspect?: (request: BuiltRequest) => void,
+): Record<string, unknown> {
+  const perCap: Record<string, unknown> = {}
+  for (const variant of VARIANTS) {
+    const request = variantRequest(result, selection, format, variant)
+    if ('skip' in request) { perCap[variant.key] = { skip: request.skip }; continue }
+    const hash = sha256Hex(request.prompt)
+    if (!prompts.has(hash)) prompts.set(hash, { hash, prompt: request.prompt, tokens: tokens(request.prompt), offered: request.candidates.length })
+    inspect?.(request)
+    perCap[variant.key] = {
+      prompt: hash, candidates: request.candidates.map(c => [c.entry, c.sense]),
+      labelledOffered: request.candidates.some(c => c.entry === labelled.entry && c.sense === labelled.sense),
+    }
+  }
+  return perCap
+}
 
 /** Reads a file by byte range, as the extension reads its stored copy. */
 export async function fileSource(file: string): Promise<ByteSource & { close(): Promise<void> }> {

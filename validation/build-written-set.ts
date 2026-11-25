@@ -11,7 +11,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { openWiktionaryDictionary } from '@andrepaim/contextual-dictionary-core'
-import { VARIANTS, variantRequest, PATHS, fileSource, readFormat, readJsonl, selectionAt, sha256Hex, tokenCounter } from './common'
+import { PATHS, fileSource, readFormat, readJsonl, selectionAt, tokenCounter, variantPrompts, type StoredPrompt } from './common'
 
 const { values } = parseArgs({ options: { list: { type: 'boolean', default: false } } })
 const data = new URL('./data/', import.meta.url)
@@ -43,7 +43,7 @@ const labels = new Map(fs.readFileSync(new URL('written-labels.tsv', data), 'utf
 }))
 const format = readFormat()
 const tokens = tokenCounter()
-const prompts = new Map(readJsonl<{ hash: string }>(path.join(PATHS.out, 'prompts.jsonl')).map(prompt => [prompt.hash, prompt]))
+const prompts = new Map(readJsonl<StoredPrompt>(path.join(PATHS.out, 'prompts.jsonl')).map(prompt => [prompt.hash, prompt]))
 const items: unknown[] = []
 const unlabelled: string[] = []
 for (const row of rows) {
@@ -54,15 +54,7 @@ for (const row of rows) {
   const result = await dictionary.define(selection)
   const entry = result.entries.findIndex(item => item.lemma === label.lemma && item.partOfSpeech === label.pos && item.senses[label.sense]?.definition.startsWith(label.prefix))
   if (entry < 0) throw new Error(`${row.id}: labelled meaning not found`)
-  const perCap: Record<string, unknown> = {}
-  for (const variant of VARIANTS) {
-    const cap = variant.key
-    const request = variantRequest(result, selection, format, variant)
-    if ('skip' in request) { perCap[cap] = { skip: request.skip }; continue }
-    const hash = sha256Hex(request.prompt)
-    if (!prompts.has(hash)) prompts.set(hash, { hash, prompt: request.prompt, tokens: tokens(request.prompt), offered: request.candidates.length } as { hash: string })
-    perCap[cap] = { prompt: hash, candidates: request.candidates.map(c => [c.entry, c.sense]), labelledOffered: request.candidates.some(c => c.entry === entry && c.sense === label.sense) }
-  }
+  const perCap = variantPrompts(result, selection, { entry, sense: label.sense }, format, tokens, prompts)
   items.push({
     id: row.id, word: row.target.toLowerCase(), genre: row.genre, pos: label.pos, meanings: result.entries[entry]!.senses.length,
     selection, labelled: { entry, sense: label.sense },

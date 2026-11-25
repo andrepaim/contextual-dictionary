@@ -38,7 +38,7 @@ npm run package     # reproducible release ZIP and SHA256SUMS.txt in package/
 npm run icons       # redraws src/icons/ (scripts/make-icons.mjs)
 ```
 
-- Measurements (`docs/validation.md`, "How to rerun"): `npx tsx validation/build-wiktionary-set.ts`, `validation/score-prompts.ts --threads 8`, `validation/analyze.ts`, `validation/extension-bench.ts`, and `validation/acceptance.ts` (downloads the real release). `validation/store-assets.ts` and `validation/site-assets.ts` remake the store's and the site's pictures from the built extension. They write under `~/.cache/contextual-dictionary/validation/`.
+- Measurements (`docs/validation.md`, "How to rerun"): `npx tsx validation/build-wiktionary-set.ts`, `validation/build-simple-set.ts`, `validation/score-prompts.ts --threads 8`, `validation/analyze.ts`, `validation/extension-bench.ts`, and `validation/acceptance.ts` (downloads the real release). `validation/store-assets.ts` and `validation/site-assets.ts` remake the store's and the site's pictures from the built extension. They write under `~/.cache/contextual-dictionary/validation/`.
 - End-to-end tests use `dist-e2e/` (`node scripts/build.mjs --e2e`): a fake model worker, an asset manifest read from `e2e-config.json` and loopback access, all swapped in at build time from `test/e2e/variant/`. The production build must contain none of it; `npm run check:build` fails if it does.
 
 ## Rules
@@ -66,4 +66,5 @@ npm run icons       # redraws src/icons/ (scripts/make-icons.mjs)
 
 - The model export: `~/src/sense-model/artifacts/upstream-english` (`model_metadata.json`, `calibration.json`, `tokenizer.json`, `tokenizer_config.json`, `onnx/model.int8.onnx`).
 - The Kaikki English extract of 2026-10-30: `~/.cache/contextual-dictionary/kaikki/english-2026-10-30.jsonl.gz` (534 MB; SHA-256 `4d03b6cba283744756c57ff661c2c6cbfe34fcf8ff513a966576cf7d97e91a99`).
+- The Kaikki Simple English Wiktionary extract as served on 2026-10-30 (`https://kaikki.org/dictionary/downloads/simple/simple-extract.jsonl.gz`, replaced in place by later extractions): `~/.cache/contextual-dictionary/kaikki/simple-english-2026-10-30.jsonl.gz` (4.7 MB; SHA-256 `79afd871e342db3b87c3f2044ed21efa312e4c4ee006814b57c4cf4536ef70a1`). Only the evaluation set of `validation/build-simple-set.ts` reads it.
 - The feature this ports: `~/src/pdfpal-ettin-definition-order` (`src/core/sense-order.ts`, `contextual-definitions.ts`, `sense-worker.ts`, `sense-download.ts`, `sense-model.ts`, their tests under `test/`, and `docs/contextual-definitions.md`). Read-only: never change that repository.
