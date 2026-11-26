@@ -3,7 +3,7 @@
 A Chrome extension that defines the word you select on any web page, from a copy of the English Wiktionary kept on your computer, and lists the meaning that fits the sentence first, using a small word-sense model that also runs on your computer.
 
 - **Dictionary:** English Wiktionary (Kaikki.org extract of 2026-10-30): about 1.2 million headwords and a million meanings, with examples.
-- **Order by context** (on by default once the model is downloaded): the model Ettin-150m-WSD (INT8 ONNX, run with ONNX Runtime on WebAssembly) lists the meanings inside each entry by how well they fit the passage. No meaning is dropped and no score is shown.
+- **Order by context** (on by default once the model is downloaded): a word-sense model fine-tuned from Ettin-150m-WSD on English Wiktionary examples (INT8 ONNX, run with ONNX Runtime on WebAssembly) lists the meanings inside each entry by how well they fit the passage. No meaning is dropped and no score is shown.
 - **Privacy:** what you select never leaves your computer. The only network use is the one-time download of the dictionary and the model, each of which you confirm. See [docs/privacy.md](docs/privacy.md).
 
 Site: https://andrepaim.github.io/contextual-dictionary/
@@ -44,7 +44,7 @@ Measured on a desktop with a 24-thread Intel CPU ([docs/validation.md](docs/vali
 - Entries keep their dictionary order: when a word has several entries (the financial "bank" and the river "bank"), the right meaning can be in a later entry.
 - Words with very many meanings ("run", "set", "draw" have over 100) are ordered only among the first ones offered to the model (prompts are limited to 1,600 characters); for entries with 17 or more meanings the model gets the right one first about a third of the time.
 - While the model is loaded (from the first lookup with "Order by context" on until ten idle minutes have passed), the extension uses about 1 GB of memory more; it is released when the model unloads.
-- The model was trained on WordNet definitions, not Wiktionary's, and up to 120 characters on each side of the selection is all it sees.
+- The model was fine-tuned on English Wiktionary's own examples and definitions ([docs/validation.md](docs/validation.md), "Training round 1"), and up to 120 characters on each side of the selection is all it sees.
 
 ## Develop
 
@@ -78,4 +78,4 @@ Pushing a tag `v<version>` (equal to `version` in `package.json`) runs `.github/
 
 ## Licences
 
-Code: MIT ([LICENSE](LICENSE)). The dictionary pack is CC BY-SA 4.0 (Wiktionary contributors, via Kaikki.org); the model is Apache-2.0 (its base model MIT); ONNX Runtime is MIT. Details in [NOTICE.md](NOTICE.md).
+Code: MIT ([LICENSE](LICENSE)). The dictionary pack is CC BY-SA 4.0 (Wiktionary contributors, via Kaikki.org); the model is Apache-2.0, fine-tuned from Ettin-150m-WSD (Apache-2.0, its base model MIT) on English Wiktionary and Wikipedia text (CC BY-SA); ONNX Runtime is MIT. Details in [NOTICE.md](NOTICE.md).

@@ -53,7 +53,7 @@ GOOD TO KNOW
 
 OPEN SOURCE
 Code under the MIT licence: https://github.com/andrepaim/contextual-dictionary
-Definitions from Wiktionary (CC BY-SA 4.0), via Kaikki.org. Model: Ettin-150m-WSD (Apache-2.0).
+Definitions from Wiktionary (CC BY-SA 4.0), via Kaikki.org. Model: fine-tuned from Ettin-150m-WSD (Apache-2.0) on Wiktionary examples.
 ```
 
 ### Images

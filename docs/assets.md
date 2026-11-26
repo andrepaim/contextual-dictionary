@@ -1,8 +1,29 @@
 # Release assets
 
-The extension downloads its dictionary and its model from one GitHub release of this repository, once, after the reader confirms each download. Every file is pinned by size and SHA-256 in `src/assets/manifest.ts`, and the extension checks them while they arrive (`src/assets/download.ts`) and again in the background after their first use in each session (`src/assets/service.ts`; a lookup does not wait for it, see `docs/validation.md`). Published assets never change: a new payload gets a new tag and new pins.
+The extension downloads its dictionary and its model from one GitHub release of this repository (`assets-v2` from this version on; `assets-v1` before), once, after the reader confirms each download. Every file is pinned by size and SHA-256 in `src/assets/manifest.ts`, and the extension checks them while they arrive (`src/assets/download.ts`) and again in the background after their first use in each session (`src/assets/service.ts`; a lookup does not wait for it, see `docs/validation.md`). Published assets never change: a new payload gets a new tag and new pins.
 
-## What is published
+## assets-v2 (prepared, not yet published)
+
+The model fine-tuned on English Wiktionary in training round 1 (`docs/validation.md`, "Training round 1"). `src/assets/manifest.ts` names `assets-v2`; until that release is published, downloads of both bundles fail, so the release must exist before this manifest is on `main`. Files download from `https://github.com/andrepaim/contextual-dictionary/releases/download/assets-v2/<file>`.
+
+| File | Bundle | What it is | Bytes | SHA-256 |
+| --- | --- | --- | ---: | --- |
+| `wiktionary-en-v1.pack` | dictionary | The same pack as in `assets-v1`, byte for byte (the release tag applies to every download, so the release carries it again). | 66,467,698 | `e698a7117d4a684d554c1c5850674ed9035c2daab7dbd8125c6c63758b6e6c32` |
+| `ettin-150m-wsd-int8.onnx.gz` | model | The fine-tuned checkpoint (revision `sha256:49bc2634bcf696171f367b59cedb961fcd71bb7d825ad6680ef5ed1ed8d25be3`), INT8 ONNX with the MatMul of the feed-forward output in layers 4, 7, 9, 11 and 15 in float and the token embedding in float16, gzip level 9. Stored gunzipped as `ettin-150m-wsd-int8.onnx`: 203,516,610 bytes, SHA-256 `6bac203419a0ad43b09b3806c22abb4870c48adf21657f3ef2a73a5d8369d6e4`. | 185,262,587 | `fdacbedebc3354331742f98e6ed24b3455b78c187d5606c345640bdccc752c2f` |
+| `model_metadata.json` | model | Inference metadata (as before) with the fine-tuned revision, the base checkpoint and its revision, the teacher, the training data and the export | 3,052 | `75a45b7a19fb743ebfaf7716f1eb29fdb02fb25971e1e7959caac6e139a72abc` |
+| `calibration.json` | model | The same file as in `assets-v1` | 101 | `84f67365897b09a6d6b7d2289f16dd6582d07e7e6e0f1b2094491a72b636d8ab` |
+| `tokenizer.json` | model | The same file as in `assets-v1` (the checkpoint's tokenizer is unchanged) | 3,583,228 | `6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30` |
+| `tokenizer_config.json` | model | The same file as in `assets-v1` | 487 | `d0ec2c8141eec0fa98e31a43c3a453f9c40dcde862762762b0f1898bfb793183` |
+| `NOTICES-model.txt` | – | Model notices: the base checkpoint, the teacher, the training data and their licences, with the Apache-2.0 and MIT texts | | |
+| `NOTICES-dictionary.txt` | – | As in `assets-v1` | 23,850 | `b107fc851a5cad95af090f8c23dca2385bd185f1e205c531cadac44a5dd1cda1` |
+
+The model bundle transfers 188.8 MB (147.0 MB before) and is stored in 207.1 MB (270.5 MB before); with the dictionary, 273.6 MB stored.
+
+**An extension that already has `assets-v1` installed.** The graph and the metadata keep their stored names and get new pins. On the first status check after the update the asset service finds both at a size other than the pinned one and removes them (`inspect` in `src/assets/service.ts`), so the old 267 MB graph is deleted at once and nothing is left behind. The model bundle then shows as not installed: the extension's window says "Needs a one-time download of 185.3 MB." next to a "Download" button (the graph and the metadata; the calibration and tokenizer files match their pins and are kept), and until the reader confirms it, cards keep dictionary order (with "Show order details" on, their status line says "Dictionary order · context model not installed"). The dictionary pack matches its pins, so it is kept and not downloaded again.
+
+**How it was staged.** `python3 -I validation/training/release_model_dir.py` assembled the model export (the graph from the export of the chosen run, the metadata with its revision and provenance, the calibration and tokenizer files copied from `assets-v1`'s export), then `node scripts/publish-assets.mjs --dry-run --model-dir=<that folder>` staged the release and printed the pins above; the transfer pins of the graph were copied from that run. The staged graph unpacks to the pinned graph. A second dry run of `assets-v1` with the unchanged script staged every published file of `assets-v1` byte for byte.
+
+## What was published in assets-v1
 
 Release [`assets-v1`](https://github.com/andrepaim/contextual-dictionary/releases/tag/assets-v1), "Dictionary pack and model files v1", published on 2026-11-23 as a prerelease, so it is never the repository's "latest" release. Tag `assets-v1` points at `c14220d` on `main`. Files download from `https://github.com/andrepaim/contextual-dictionary/releases/download/assets-v1/<file>`.
 
@@ -26,7 +47,8 @@ The gzip of the graph is deterministic: the header has no file name, a zero time
 | File | Licence | Attribution |
 | --- | --- | --- |
 | `wiktionary-en-v1.pack` | CC BY-SA 4.0 (Wiktionary's text is dual-licensed CC BY-SA 4.0 and GFDL; the pack is a derived work distributed under CC BY-SA 4.0) | Wiktionary contributors, through Kaikki.org (wiktextract). The changes are listed in `NOTICES-dictionary.txt`. |
-| The five model files | Apache-2.0 (checkpoint [sign/Ettin-150m-WSD](https://huggingface.co/sign/Ettin-150m-WSD/tree/8751b577199d1bb95b74fa2457da7065d57100ae), revision `8751b577199d1bb95b74fa2457da7065d57100ae`) | Base model [jhu-clsp/ettin-encoder-150m](https://huggingface.co/jhu-clsp/ettin-encoder-150m), MIT. Exported to dynamic INT8 ONNX with the compact-v1 inference contract; see `NOTICES-model.txt`. |
+| The five model files of `assets-v2` | Apache-2.0, as the checkpoint they were fine-tuned from ([sign/Ettin-150m-WSD](https://huggingface.co/sign/Ettin-150m-WSD/tree/8751b577199d1bb95b74fa2457da7065d57100ae), revision `8751b577199d1bb95b74fa2457da7065d57100ae`) | Fine-tuned by this project on English Wiktionary examples (CC BY-SA 4.0 and GFDL) with soft labels from [sign/Ettin-1B-WSD](https://huggingface.co/sign/Ettin-1B-WSD/tree/e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc) (Apache-2.0) on those and on English Wikipedia paragraphs (CC BY-SA 3.0 and GFDL); base model [jhu-clsp/ettin-encoder-150m](https://huggingface.co/jhu-clsp/ettin-encoder-150m), MIT; see `NOTICES-model.txt`. |
+| The five model files of `assets-v1` | Apache-2.0 (checkpoint [sign/Ettin-150m-WSD](https://huggingface.co/sign/Ettin-150m-WSD/tree/8751b577199d1bb95b74fa2457da7065d57100ae), revision `8751b577199d1bb95b74fa2457da7065d57100ae`) | Base model [jhu-clsp/ettin-encoder-150m](https://huggingface.co/jhu-clsp/ettin-encoder-150m), MIT. Exported to dynamic INT8 ONNX with the compact-v1 inference contract; see `NOTICES-model.txt` of `assets-v1`. |
 
 Each notice holds its licence texts verbatim: the Apache License 2.0 as published at https://www.apache.org/licenses/LICENSE-2.0.txt, the MIT licence of the Ettin repository (https://github.com/jhu-clsp/ettin-encoder-vs-decoder), and the CC BY-SA 4.0 legal code from https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt. `test/unit/assets/notices.test.ts` checks the Apache and CC texts by their SHA-256.
 
@@ -66,11 +88,11 @@ Neither hop sends `access-control-allow-origin` or `cross-origin-resource-policy
 
 Two things are not settled by observation alone and are for the in-browser download check in a later stage: whether the offscreen document, which is cross-origin isolated (`cross_origin_embedder_policy: require-corp`), can read a response that carries no `cross-origin-resource-policy` (expected, because `fetch` makes a CORS-mode request, which COEP does not block, but not yet seen in Chrome), and whether GitHub keeps this redirect host. GitHub used to redirect release downloads to `objects.githubusercontent.com`; if the host changes again, downloads fail with `DOWNLOAD_FAILED` until a build adds the new one.
 
-## Publish a future release (`assets-v2`)
+## Publish a new release
 
 `scripts/publish-assets.mjs` publishes the release that `src/assets/manifest.ts` names, once. For a new payload (a new pack, a new model export):
 
-1. Build or obtain the new inputs. A new pack's pins go in `docs/dictionary-stats.json` (the builder writes them). A file whose format changes gets a new name (for example `wiktionary-en-v2.pack`); then update `STORED_NAMES` and the source mapping in `scripts/assets-release.ts` (`sources()`, `MODEL_EXPORT_PATHS`).
+1. Build or obtain the new inputs (for `assets-v2`, see above). A new pack's pins go in `docs/dictionary-stats.json` (the builder writes them). A file whose format changes gets a new name (for example `wiktionary-en-v2.pack`); then update `STORED_NAMES` and the source mapping in `scripts/assets-release.ts` (`sources()`, `MODEL_EXPORT_PATHS`).
 2. In `src/assets/manifest.ts`, set `tag: 'assets-v2'`, change the file names that changed, set the stored pins of the new model files, and set every transfer pin of a changed file to `null` (the script fills nothing in; it checks the pins it finds). Update the descriptions in `scripts/assets-release.ts` if files are added, and the notices in `notices/`.
 3. Dry run and read the output: the pins, the release notes, the gzip round trip.
 
