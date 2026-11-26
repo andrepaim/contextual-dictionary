@@ -381,7 +381,25 @@ At 4 threads the new model is 5–10% slower at the median; one run of three ans
 
 In the same runs: model ready 2.40–2.56 s after turning ordering on (2.42–2.56 s), lookups with ordering on p50 / p99 235–242 / 505–517 ms (264–277 / 555–665 ms), 399 of 400 ordered (397), "mouse" ordered in 387–388 ms (379–389 ms).
 
-**What a reader sees.** The site's and the store's captures were looked up again in the extension with both models: the first meaning stays for "moment" (Hamlet), both "conductor" sentences, "bug", "bank", "mouse" and "crane"; it changes for "want" (Austen: from "To lack and be in need of…" to the dictionary's first meaning, "To wish for or desire…", the worse answer), "proposition" (Lincoln), "culture", and the store page's "cell" and "pitch", for which the new model answers "none of the above".
+**What changes from item to item.** "Labelled meaning first" for each test item at the defaults, the shipped model's answers against the new model's (both in the extension):
+
+| Set | Items | Both right | Shipped right, new wrong | Shipped wrong, new right | Both wrong | Shipped-correct items lost |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Wiktionary | 2,300 | 1,175 (51.1%) | 100 (4.3%): 3 "none of the above", 97 another meaning | 305 (13.3%) | 720 (31.3%) | 100 of 1,275, 7.8% |
+| Hand-written | 104 | 66 (63.5%) | 1 (1.0%): another meaning | 6 (5.8%) | 31 (29.8%) | 1 of 67, 1.5% |
+| Simple English | 4,167 | 3,399 (81.6%) | 126 (3.0%): 3 "none of the above", 123 another meaning | 266 (6.4%) | 376 (9.0%) | 126 of 3,525, 3.6% |
+
+Hand-written set by genre (both right / shipped right, new wrong / shipped wrong, new right / both wrong): news 15 / 1 / 1 / 10, documentation 16 / 0 / 0 / 9, forums 18 / 0 / 2 / 6, recipes 17 / 0 / 3 / 6.
+
+**What a reader sees.** The site's and the store's captures were looked up again in the extension with both models (the same pages and double-clicks as `validation/site-assets.ts` and `validation/store-assets.ts`; the shipped model's answers matched `site/_examples.json` for all eight examples). The first meaning stays for "moment" (Hamlet), both "conductor" sentences, "bug", "bank", "mouse" and "crane", most with other second and third meanings. It changes for:
+
+- "want" in the Austen example: from "To lack and be in need of…" to the dictionary's first meaning, "To wish for or desire…": a loss.
+- "proposition" in the Lincoln example: from the assertion that can be true or false to "A statement of religious doctrine…": a loss.
+- "culture" in "Researchers grew the culture in a dish for two weeks before adding the antibiotic.": from "The process of growing…" to "A group of bacteria.": arguably a gain, since what grows in the dish is the organisms ("The growth thus produced." or "A group of bacteria.").
+- "cell" in "Each cell in the spreadsheet holds a formula that adds up the row above it." (the store's demonstration page): the right meaning is the twentieth of the first entry (the unit of a statistical array where a row and a column meet); the shipped model opened on the general "A section or compartment of a larger structure.", the new model answers "none of the above" and the card keeps dictionary order: worse.
+- "pitch" in "The founders had ten minutes to give their pitch to a room of tired investors.": the right meaning ("An effort to sell or promote something.") is in the fourth of seven entries, and entries keep dictionary order, so both cards open on the first entry's tree sap: wrong under both; only the status line differs ("none of the above" for the new model).
+
+So two clear losses among about twelve captures the shipped model got right. At the Wiktionary set's rate of loss among shipped-correct items (7.8%) twelve such items lose two or more with probability about 0.24 and three or more 0.06; at the hand-written set's rate (1.5%) two or more would have probability about 0.01. The captures were chosen because the shipped model got them right, which makes losses more likely than for an average correct item. Ordinary churn at the Wiktionary rate, unusual at the hand-written rate.
 
 ### Limits
 
