@@ -8,19 +8,30 @@ const clone = (manifest: AssetManifest): AssetManifest => structuredClone(manife
 describe('the pinned manifest', () => {
   test('is valid and names the release of this repository', () => {
     expect(manifestProblems(ASSET_MANIFEST)).toEqual([])
-    expect(ASSET_MANIFEST.tag).toBe('assets-v1')
+    expect(ASSET_MANIFEST.tag).toBe('assets-v2')
     expect(ASSET_MANIFEST.baseUrl).toBe('https://github.com/andrepaim/contextual-dictionary/releases/download')
   })
 
-  test('pins the stored form of the five model files from the Ettin INT8 export', () => {
+  test('pins the five model files of the Wiktionary-trained export (training round 1, docs/validation.md)', () => {
     const model = ASSET_MANIFEST.bundles.model
     expect(model.map(file => file.storedName)).toEqual(['ettin-150m-wsd-int8.onnx', 'model_metadata.json', 'calibration.json', 'tokenizer.json', 'tokenizer_config.json'])
     const onnx = model[0]!
-    expect(onnx).toMatchObject({ name: 'ettin-150m-wsd-int8.onnx.gz', encoding: 'gzip', storedSize: 266954889, storedSha256: '8649a1139b81a56b16ec6853d6127882a1b9539a4c33c09e3fce93ab62822d68' })
+    // The graph keeps its stored name, so an installed extension replaces the old graph instead of keeping both.
+    expect(onnx).toMatchObject({
+      name: 'ettin-150m-wsd-int8.onnx.gz', encoding: 'gzip', size: 185262587, sha256: 'fdacbedebc3354331742f98e6ed24b3455b78c187d5606c345640bdccc752c2f',
+      storedSize: 203516610, storedSha256: '6bac203419a0ad43b09b3806c22abb4870c48adf21657f3ef2a73a5d8369d6e4',
+    })
+    expect(model.find(file => file.storedName === 'model_metadata.json')).toMatchObject({ storedSize: 3052, storedSha256: '75a45b7a19fb743ebfaf7716f1eb29fdb02fb25971e1e7959caac6e139a72abc' })
+    // Unchanged from assets-v1 (the same identity calibration, the same tokenizer): an installed extension keeps them.
     expect(model.find(file => file.storedName === 'tokenizer.json')).toMatchObject({ storedSize: 3583228, storedSha256: '6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30' })
-    expect(model.find(file => file.storedName === 'model_metadata.json')).toMatchObject({ storedSize: 1552, storedSha256: '7a07cdd82572cada84061c1cdb61670b2d220d9cc422397d18244874d9fb7707' })
     expect(model.find(file => file.storedName === 'calibration.json')).toMatchObject({ storedSize: 101, storedSha256: '84f67365897b09a6d6b7d2289f16dd6582d07e7e6e0f1b2094491a72b636d8ab' })
     expect(model.find(file => file.storedName === 'tokenizer_config.json')).toMatchObject({ storedSize: 487, storedSha256: 'd0ec2c8141eec0fa98e31a43c3a453f9c40dcde862762762b0f1898bfb793183' })
+  })
+
+  test('the assets-v1 graph and metadata no longer match their pins, so an installed copy is replaced', () => {
+    const [onnx, metadata] = ASSET_MANIFEST.bundles.model
+    expect(onnx!.storedSize).not.toBe(266954889)
+    expect(metadata!.storedSize).not.toBe(1552)
   })
 
   test('names the dictionary pack and exports every stored name', () => {
