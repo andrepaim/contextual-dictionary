@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { CodedError } from '../../../src/shared/contracts'
 import { LOGIT_COUNT, MODEL_REVISION, TEMPLATE_VERSION, createSenseSession } from '../../../src/model/session'
-import { CLS_ID, FakeTensor, FakeTokenizer, MASK_ID, REVISION, SEP_ID, calibration, fakeRuntime, loadInput, metadata, prompt, sequence, tokenizerConfig, tokenizerJson } from './fakes'
+import { CLS_ID, FakeTensor, FakeTokenizer, MASK_ID, OLD_REVISION, REVISION, SEP_ID, calibration, fakeRuntime, loadInput, metadata, prompt, sequence, tokenizerConfig, tokenizerJson } from './fakes'
 
 const codeOf = async (promise: Promise<unknown>) => {
   try { await promise } catch (error) { return error instanceof CodedError ? error.code : `not coded: ${String(error)}` }
@@ -53,6 +53,7 @@ describe('createSenseSession', () => {
     ['letters that are not text', { metadata: metadata({ letters: [1, 2, 3] }) }],
     ['a missing separator', { metadata: metadata({ separator: undefined }) }],
     ['no token limit', { metadata: metadata({ max_length: 0 }) }],
+    ['the metadata of the checkpoint assets-v1 shipped', { metadata: metadata({ model_revision: OLD_REVISION }) }],
     ['metadata that is not JSON', { metadata: '{' }],
     ['metadata that is not an object', { metadata: '[]' }],
     ['a calibration that is not JSON', { calibration: 'x' }],

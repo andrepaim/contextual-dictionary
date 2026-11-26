@@ -236,6 +236,21 @@ describe('pins and notes', () => {
     expect(notes).toContain(sha(CONTENT['onnx/model.int8.onnx']!))
   })
 
+  test('releaseNotes say the model was fine-tuned here, from what, on what, and with which teacher', async () => {
+    const { manifest, files } = await staged()
+    const notes = releaseNotes(manifest, files, { snapshot: '2026-10-30' })
+    // The trained checkpoint's revision, the base checkpoint and its revision, the teacher and its revision.
+    expect(notes).toContain('sha256:49bc2634bcf696171f367b59cedb961fcd71bb7d825ad6680ef5ed1ed8d25be3')
+    expect(notes).toContain('sign/Ettin-150m-WSD')
+    expect(notes).toContain('sign/Ettin-1B-WSD')
+    expect(notes).toContain('e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc')
+    // The training data and their licences.
+    expect(notes).toContain('English Wiktionary')
+    expect(notes).toContain('English Wikipedia')
+    expect(notes).toContain('CC BY-SA 3.0')
+    expect(notes).toContain('docs/validation.md')
+  })
+
   test('releaseNotes refuse a file they cannot describe', async () => {
     const { manifest, files } = await staged()
     expect(() => releaseNotes(manifest, [...files, { ...files[0]!, name: 'mystery.bin' }], { snapshot: '2026-10-30' })).toThrow('mystery.bin')

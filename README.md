@@ -3,7 +3,7 @@
 A Chrome extension that defines the word you select on any web page, from a copy of the English Wiktionary kept on your computer, and lists the meaning that fits the sentence first, using a small word-sense model that also runs on your computer.
 
 - **Dictionary:** English Wiktionary (Kaikki.org extract of 2026-10-30): about 1.2 million headwords and a million meanings, with examples.
-- **Order by context** (on by default once the model is downloaded): the model Ettin-150m-WSD (INT8 ONNX, run with ONNX Runtime on WebAssembly) lists the meanings inside each entry by how well they fit the passage. No meaning is dropped and no score is shown.
+- **Order by context** (on by default once the model is downloaded): a word-sense model fine-tuned from Ettin-150m-WSD on English Wiktionary examples (INT8 ONNX, run with ONNX Runtime on WebAssembly) lists the meanings inside each entry by how well they fit the passage. No meaning is dropped and no score is shown.
 - **Privacy:** what you select never leaves your computer. The only network use is the one-time download of the dictionary and the model, each of which you confirm. See [docs/privacy.md](docs/privacy.md).
 
 Site: https://andrepaim.github.io/contextual-dictionary/
@@ -23,7 +23,7 @@ Both are screenshots of version 0.1.0 on that page, with the switch off and on.
 1. Add it to Chrome (124 or later) from the [Chrome Web Store](https://chromewebstore.google.com/detail/contextual-dictionary/jdjkhefpmejijkjdknchpnghijibnali).
 2. Open the extension's window from the toolbar and confirm the downloads it offers:
    - **Dictionary:** 66.5 MB, needed for definitions.
-   - **Context model:** 147 MB to download, 271 MB on disk, needed for "Order by context".
+   - **Context model:** 189 MB to download, 207 MB on disk, needed for "Order by context".
 
 Both come from this repository's release [`assets-v1`](https://github.com/andrepaim/contextual-dictionary/releases/tag/assets-v1) and are checked against pinned SHA-256 digests ([docs/assets.md](docs/assets.md)). After that the extension works offline.
 
@@ -35,16 +35,16 @@ Double-click a word, or select up to four words, on an ordinary web page. A card
 
 ## What to expect
 
-Measured on a desktop with a 24-thread Intel CPU ([docs/validation.md](docs/validation.md)): a definition appears in about 10 ms, and the first one after the browser starts in 0.1–0.3 s. With "Order by context", half the cards appear within 0.3 s and none waits longer than 0.75 s (words with many meanings take 0.4–0.6 s); with a quarter of the threads, as on a smaller machine, about two thirds are ordered in time and the rest show the dictionary's order first. On 2,300 examples whose meaning Wiktionary's editors marked, the model's order put the right meaning first 55% of the time, against 28% for the dictionary's own order, and within the three shown 78% against 60%.
+Measured on a desktop with a 24-thread Intel CPU ([docs/validation.md](docs/validation.md)): a definition appears in about 10 ms, and the first one after the browser starts in 0.1–0.3 s. With "Order by context", half the cards appear within 0.3 s and none waits longer than 0.75 s (words with many meanings take 0.4–0.6 s); with a quarter of the threads, as on a smaller machine, about two thirds are ordered in time and the rest show the dictionary's order first. On 2,300 examples whose meaning Wiktionary's editors marked, the model's order put the right meaning first 64% of the time, against 28% for the dictionary's own order, and within the three shown 81% against 60%.
 
 **Limits**
 
 - English only, for definitions and passages; a passage that does not look English keeps dictionary order.
 - It cannot run on Chrome's own pages, the Chrome Web Store or Chrome's PDF viewer, or inside text fields. A double-click on a link follows the link, as in any browser.
 - Entries keep their dictionary order: when a word has several entries (the financial "bank" and the river "bank"), the right meaning can be in a later entry.
-- Words with very many meanings ("run", "set", "draw" have over 100) are ordered only among the first ones offered to the model (prompts are limited to 1,600 characters); for entries with 17 or more meanings the model gets the right one first less than a third of the time.
+- Words with very many meanings ("run", "set", "draw" have over 100) are ordered only among the first ones offered to the model (prompts are limited to 1,600 characters); for entries with 17 or more meanings the model gets the right one first about a third of the time.
 - While the model is loaded (from the first lookup with "Order by context" on until ten idle minutes have passed), the extension uses about 1 GB of memory more; it is released when the model unloads.
-- The model was trained on WordNet definitions, not Wiktionary's, and up to 120 characters on each side of the selection is all it sees.
+- The model was fine-tuned on English Wiktionary's own examples and definitions ([docs/validation.md](docs/validation.md), "Training round 1"), and up to 120 characters on each side of the selection is all it sees.
 
 ## Develop
 
@@ -78,4 +78,4 @@ Pushing a tag `v<version>` (equal to `version` in `package.json`) runs `.github/
 
 ## Licences
 
-Code: MIT ([LICENSE](LICENSE)). The dictionary pack is CC BY-SA 4.0 (Wiktionary contributors, via Kaikki.org); the model is Apache-2.0 (its base model MIT); ONNX Runtime is MIT. Details in [NOTICE.md](NOTICE.md).
+Code: MIT ([LICENSE](LICENSE)). The dictionary pack is CC BY-SA 4.0 (Wiktionary contributors, via Kaikki.org); the model is Apache-2.0, fine-tuned from Ettin-150m-WSD (Apache-2.0, its base model MIT) on English Wiktionary and Wikipedia text (CC BY-SA); ONNX Runtime is MIT. Details in [NOTICE.md](NOTICE.md).

@@ -19,7 +19,7 @@ Chrome does not update a copy installed this way: to update it, extract the new 
 Open the extension's window from the toolbar. It offers two downloads, each with its size, and starts neither until you confirm:
 
 - **Dictionary** (66.5 MB): English Wiktionary. Needed for any definition.
-- **Context model** (147 MB to download, 271 MB on disk): needed for **Order by context**.
+- **Context model** (189 MB to download, 207 MB on disk): needed for **Order by context**.
 
 Both come from this project's GitHub release and are checked against published fingerprints. After that the extension works offline.
 

@@ -8,7 +8,7 @@ Today the card looks the same whether the model reordered the meanings, agreed w
 
 ## 2. Decisions
 
-- **Positions, not scores.** No probability, percentage or confidence is shown anywhere. The model puts the right meaning first about 55% of the time (`docs/validation.md`); a number would look more certain than it is. This keeps the rule of `docs/plan.md`: no score is shown.
+- **Positions, not scores.** No probability, percentage or confidence is shown anywhere. The model puts the right meaning first about 64% of the time (`docs/validation.md`); a number would look more certain than it is. This keeps the rule of `docs/plan.md`: no score is shown.
 - **No timings** in the card.
 - **Off by default.** With the switch off, the card's DOM and appearance are exactly what they are in 0.1.0.
 - **The details are always computed and sent with the answer**; the switch only decides whether the card shows them. They hold numbers and one status word, no text, and nothing new is stored or sent off the computer.

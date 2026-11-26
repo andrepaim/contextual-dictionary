@@ -3,7 +3,10 @@
 // without a model or any WebAssembly.
 import type { OrtLike, SenseRuntime, TokenizerModuleLike } from '../../../src/model/session'
 
-export const REVISION = '8751b577199d1bb95b74fa2457da7065d57100ae'
+/** The Wiktionary-trained checkpoint of training round 1: sha256 of its model.safetensors (docs/validation.md). */
+export const REVISION = 'sha256:49bc2634bcf696171f367b59cedb961fcd71bb7d825ad6680ef5ed1ed8d25be3'
+/** The checkpoint assets-v1 shipped; its metadata must be refused now. */
+export const OLD_REVISION = '8751b577199d1bb95b74fa2457da7065d57100ae'
 export const MASK = '[MASK]'
 export const MASK_ID = 4
 export const CLS_ID = 1

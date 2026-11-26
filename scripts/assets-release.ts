@@ -59,8 +59,13 @@ export const MODEL_EXPORT_PATHS: Readonly<Record<string, string>> = {
   [STORED_NAMES.tokenizerConfig]: 'tokenizer_config.json',
 }
 
+/** The checkpoint the model was fine-tuned from (assets-v1 shipped it as is). */
 export const CHECKPOINT = 'sign/Ettin-150m-WSD'
 export const CHECKPOINT_REVISION = '8751b577199d1bb95b74fa2457da7065d57100ae'
+/** The fine-tuned checkpoint of training round 1 (docs/validation.md): sha256 of its model.safetensors, as in model_metadata.json. */
+export const TRAINED_REVISION = 'sha256:49bc2634bcf696171f367b59cedb961fcd71bb7d825ad6680ef5ed1ed8d25be3'
+export const TEACHER = 'sign/Ettin-1B-WSD'
+export const TEACHER_REVISION = 'e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc'
 
 // ------------------------------------------------------------------ digests
 
@@ -239,21 +244,21 @@ export function formatPins(staged: StagedFile[]): string {
 
 interface Description { what: (file: StagedFile) => string; licence: string }
 
-const MODEL_LICENCE = 'Apache-2.0 (base model MIT); see `NOTICES-model.txt`'
+const MODEL_LICENCE = 'Apache-2.0 (base checkpoint Apache-2.0, its base model MIT; trained on CC BY-SA text); see `NOTICES-model.txt`'
 const DESCRIPTIONS: Record<string, Description> = {
   'wiktionary-en-v1.pack': {
     what: () => 'English Wiktionary dictionary pack, format v1 (`docs/pack-format.md`), built by `scripts/build-dictionary.ts` (`docs/dictionary-build.md`)',
     licence: 'CC BY-SA 4.0 (Wiktionary contributors, via Kaikki.org); see `NOTICES-dictionary.txt`',
   },
   'ettin-150m-wsd-int8.onnx.gz': {
-    what: file => `Ettin-150m-WSD word-sense model, dynamic INT8 ONNX, gzip level 9; unpacks to \`${file.stored!.name}\`, ${file.stored!.size.toLocaleString('en-US')} bytes, SHA-256 \`${file.stored!.sha256}\``,
+    what: file => `Word-sense model fine-tuned from Ettin-150m-WSD on English Wiktionary examples, INT8 ONNX (five MatMuls in float, token embedding in float16), gzip level 9; unpacks to \`${file.stored!.name}\`, ${file.stored!.size.toLocaleString('en-US')} bytes, SHA-256 \`${file.stored!.sha256}\``,
     licence: MODEL_LICENCE,
   },
-  'model_metadata.json': { what: () => 'Inference metadata: answer letters, template `compact-v1`, maximum length, checkpoint revision', licence: MODEL_LICENCE },
+  'model_metadata.json': { what: () => 'Inference metadata: answer letters, template `compact-v1`, maximum length, the checkpoint revision, its base checkpoint, training data and export recipe', licence: MODEL_LICENCE },
   'calibration.json': { what: () => 'Calibration settings (identity, marked "uncalibrated")', licence: MODEL_LICENCE },
   'tokenizer.json': { what: () => 'Tokenizer of the checkpoint', licence: MODEL_LICENCE },
   'tokenizer_config.json': { what: () => 'Tokenizer configuration', licence: MODEL_LICENCE },
-  'NOTICES-model.txt': { what: () => 'Model notices, with the Apache-2.0 and MIT licence texts', licence: '—' },
+  'NOTICES-model.txt': { what: () => 'Model notices: the base checkpoint, the teacher, the training data and their licences, with the Apache-2.0 and MIT licence texts', licence: '—' },
   'NOTICES-dictionary.txt': { what: () => 'Dictionary notices, with the CC BY-SA 4.0 legal code', licence: '—' },
 }
 
@@ -273,7 +278,7 @@ export function releaseNotes(manifest: AssetManifest, staged: StagedFile[], opti
     '',
     `**Dictionary:** derived from the English Wiktionary (https://en.wiktionary.org/) through the Kaikki.org machine-readable extract made with wiktextract, snapshot of ${options.snapshot}. Distributed under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).`,
     '',
-    `**Model:** [${CHECKPOINT}](https://huggingface.co/${CHECKPOINT}/tree/${CHECKPOINT_REVISION}), revision \`${CHECKPOINT_REVISION}\` (Apache-2.0), fine-tuned from [jhu-clsp/ettin-encoder-150m](https://huggingface.co/jhu-clsp/ettin-encoder-150m) (MIT); exported to dynamic INT8 ONNX with the compact-v1 inference contract.`,
+    `**Model:** fine-tuned by this project (training round 1, \`docs/validation.md\`) from [${CHECKPOINT}](https://huggingface.co/${CHECKPOINT}/tree/${CHECKPOINT_REVISION}), revision \`${CHECKPOINT_REVISION}\` (Apache-2.0; its base model [jhu-clsp/ettin-encoder-150m](https://huggingface.co/jhu-clsp/ettin-encoder-150m), MIT). Trained checkpoint revision \`${TRAINED_REVISION}\`. Labels: English Wiktionary usage examples and quotations with the meaning their editors attached them to (Kaikki.org extract of ${options.snapshot}; Wiktionary text CC BY-SA 4.0 and GFDL). Soft labels: [${TEACHER}](https://huggingface.co/${TEACHER}/tree/${TEACHER_REVISION}), revision \`${TEACHER_REVISION}\` (Apache-2.0), on those examples and on English Wikipedia paragraphs (CC BY-SA 3.0 and GFDL). No training text is in these files. Exported to INT8 ONNX with the compact-v1 inference contract.`,
     '',
     'Check a download by hand with `sha256sum <file>` against the table above. See `docs/assets.md` in the repository.',
     '',

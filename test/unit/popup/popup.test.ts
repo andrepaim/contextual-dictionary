@@ -432,6 +432,9 @@ describe('PopupView accessibility and credits', () => {
     await open(makeStatus())
     const credits = root.querySelector('[data-part="credits"]')!.textContent!
     for (const text of ['Wiktionary', 'CC BY-SA 4.0', 'Ettin-150m-WSD', 'Apache-2.0', 'ONNX Runtime', 'MIT']) expect(credits).toContain(text)
+    // The model of assets-v2 is not the checkpoint itself: it was fine-tuned from it on English Wiktionary examples.
+    expect(credits).toContain('a model fine-tuned from Ettin-150m-WSD')
+    expect(root.textContent).toContain('A word-sense model fine-tuned on English Wiktionary')
     for (const link of root.querySelectorAll<HTMLAnchorElement>('[data-part="credits"] a')) {
       expect(link.getAttribute('href')).toMatch(/^https:\/\//)
       expect(link.getAttribute('target')).toBe('_blank')

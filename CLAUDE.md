@@ -1,6 +1,6 @@
 # Contextual Dictionary developer guide
 
-A Chrome (Manifest V3) extension: select a word on any page and a card shows its English Wiktionary meanings, with the one that fits the passage first. A local word-sense model (Ettin-150m-WSD, INT8 ONNX, `onnxruntime-web` on WebAssembly) chooses the order. Nothing the reader selects leaves the computer.
+A Chrome (Manifest V3) extension: select a word on any page and a card shows its English Wiktionary meanings, with the one that fits the passage first. A local word-sense model (fine-tuned from Ettin-150m-WSD on English Wiktionary, INT8 ONNX, `onnxruntime-web` on WebAssembly) chooses the order. Nothing the reader selects leaves the computer.
 
 **Read `docs/plan.md` before changing anything.** It holds the product decisions, the architecture, each module's specification, the tasks and their acceptance criteria.
 

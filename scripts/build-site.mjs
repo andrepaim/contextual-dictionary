@@ -106,7 +106,7 @@ export function siteHeader(current) {
 export function siteFooter() {
   return `<footer class="site-footer"><div class="wrap">
 <div class="credits"><a class="brand" href="./"><img src="images/icon-128.png" width="26" height="26" alt="">Contextual Dictionary</a>
-<p>Code under the MIT licence. Definitions from <a href="https://en.wiktionary.org/">Wiktionary</a> (CC BY-SA 4.0), via <a href="https://kaikki.org/">Kaikki.org</a>. The model is Ettin-150m-WSD (Apache-2.0), run with ONNX Runtime (MIT). Set in Newsreader and Inter (SIL Open Font License).</p></div>
+<p>Code under the MIT licence. Definitions from <a href="https://en.wiktionary.org/">Wiktionary</a> (CC BY-SA 4.0), via <a href="https://kaikki.org/">Kaikki.org</a>. The model is fine-tuned from Ettin-150m-WSD (Apache-2.0) on Wiktionary examples, run with ONNX Runtime (MIT). Set in Newsreader and Inter (SIL Open Font License).</p></div>
 <nav aria-label="Footer"><a href="guide.html">User guide</a><a href="try.html">Practice page</a><a href="privacy.html">Privacy</a><a href="${REPOSITORY}">GitHub</a><a href="${REPOSITORY}/releases">Releases</a><a href="${REPOSITORY}/issues">Support</a></nav>
 </div></footer>`
 }

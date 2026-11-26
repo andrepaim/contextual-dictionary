@@ -26,6 +26,16 @@ describe('NOTICES-model.txt', () => {
     ]) expect(notice, part).toContain(part)
   })
 
+  test('says the model was fine-tuned from that checkpoint, with which teacher and on which data, under which licences (assets-v2)', () => {
+    for (const part of [
+      'assets-v2', 'sha256:49bc2634bcf696171f367b59cedb961fcd71bb7d825ad6680ef5ed1ed8d25be3',
+      'sign/Ettin-1B-WSD', 'e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc', 'https://huggingface.co/sign/Ettin-1B-WSD/tree/e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc',
+      'English Wiktionary', 'Kaikki.org', '2026-10-30', 'CC BY-SA 4.0', 'GFDL',
+      'English Wikipedia', 'https://huggingface.co/datasets/wikimedia/wikipedia', 'b04c8d1ceb2f5cd4588862100d08de323dccfbaa', 'CC BY-SA 3.0',
+      'docs/validation.md',
+    ]) expect(notice, part).toContain(part)
+  })
+
   test('holds the Apache-2.0 text as published by the ASF and the base model MIT licence', () => {
     // SHA-256 of https://www.apache.org/licenses/LICENSE-2.0.txt
     expect(digest(embedded(notice, 'Apache License, Version 2.0'))).toBe('cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30')

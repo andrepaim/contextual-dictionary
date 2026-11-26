@@ -7,8 +7,8 @@
 // src/core/sense-worker.ts.
 import { CodedError, type ModelLoad, type SenseFormat } from '../shared/contracts'
 
-/** The checkpoint this extension is built for (sign/Ettin-150m-WSD, dynamic INT8 export). */
-export const MODEL_REVISION = '8751b577199d1bb95b74fa2457da7065d57100ae'
+/** The checkpoint this extension is built for: fine-tuned from sign/Ettin-150m-WSD in training round 1 (docs/validation.md); sha256 of its weights. */
+export const MODEL_REVISION = 'sha256:49bc2634bcf696171f367b59cedb961fcd71bb7d825ad6680ef5ed1ed8d25be3'
 export const TEMPLATE_VERSION = 'compact-v1'
 /** The model answers one logit per letter; the first 128 are the choices. */
 export const LOGIT_COUNT = 128
