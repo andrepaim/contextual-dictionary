@@ -8,6 +8,8 @@ How fast the extension is in practice, how well the model orders Wiktionary's me
 - **Accuracy.** Yes, the model's order beats Wiktionary's order, clearly. On 2,300 items labelled by Wiktionary's own editors, with the shipped defaults, the labelled meaning is first in its entry 55.4% of the time with model order against 28.2% with dictionary order (paired 95% interval of the difference 24.8 to 29.7 points), and among the first three meanings in its entry 77.9% against 60.1%. On 104 hand-written web-style sentences: 64.4% against 26.9% first. On 4,167 items from a second dictionary, Simple English Wiktionary, whose entries are short: 84.6% against 48.8% first. It is better in every stratum and every part of speech. It is far from perfect: for entries with 17 or more meanings, the labelled meaning is first in under a third of cases.
 - **Defaults.** "Order by context" is now on by default (the model still downloads only after the reader confirms it), `budgetMs` 750, `maxCandidates` 24, and a new prompt length limit of 1,600 characters.
 
+- **Since `assets-v2`** (training round 1, below): the model is fine-tuned from Ettin-150m-WSD on English Wiktionary's own examples. In the extension at the shipped defaults it puts the labelled meaning first 64.3% of the time on the Wiktionary set (55.4% before; paired 95% interval of the difference +7.3 to +10.6 points), 69.2% on the hand-written set (64.4%; +0.0 to +9.6) and 88.0% on the Simple English Wiktionary set (84.6%; +2.5 to +4.3). It answers within the 750 ms budget as often on 8 and 2 threads and in two of three runs on 4 threads (94% in the third), uses about 110 MB less memory while loaded, and downloads 188.8 MB instead of 147.0 MB. Development data chose another run (labels only) as best; this one was chosen after the test results were known, so its test numbers are not an unbiased estimate (see "Which run ships").
+
 ## Method
 
 ### Machine and load
@@ -282,6 +284,113 @@ On the hand-written set, at 750 ms on 8 threads: cap 48 answers 40% in time (fir
 - **Wiktionary's long joined definitions** ("A thread or cord on which…: A series of items…") make prompts long and cards wordy; a future pack could keep the last gloss level apart for display.
 - The Web Store privacy text is in `docs/privacy.md`; Wikipedia may need a browser that is not headless for a future manual check.
 
+## Training round 1 (assets-v2)
+
+On 2026-11-25 and 26 the small model was fine-tuned on English Wiktionary's own examples, with the larger model of its family as a teacher, and the result replaced the checkpoint in the release `assets-v2` (`docs/assets.md`). Same machine as above, with an NVIDIA GeForce RTX 3060 (12 GB) for training and scoring in PyTorch. The scripts are `validation/build-train-set.ts`, `validation/build-unlabelled-set.ts` and `validation/training/` (`README.md` there); everything they write is under `~/.cache/contextual-dictionary/validation/train/` and holds Wiktionary or Wikipedia text, so none of it is committed.
+
+### Data
+
+**Labelled examples.** `build-train-set.ts` reads the same Kaikki extract as the evaluation builders and applies their rules (one lower-case word, at least two meanings in one part of speech after the pack's rules, `judgeExample`, the context cut of `selectionAt`, the lookup in the real pack, `senseRequest` through `variantRequest`), but keeps every usable example, at most 12 per entry (seeded), in two prompt forms: the shipped defaults (`24|c1600`) and no cap (`127`). The rule of "Held out of training" above is applied: the 2,197 headwords of `wiktionary-items.tsv` and `written-labels.tsv` are skipped (3,754 entries), and an item is also dropped when the lookup returns an entry of a held-out lemma (2,274). The other headwords are split by `sha256("cd-train-r1\n" + headword)`: the first 4% of the hash space is the development side (`validation/training-items.ts`).
+
+| | Items | Headwords | 2 meanings | 3–4 | 5–8 | 9–16 | 17–32 | 33+ |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Training | 125,031 | 34,993 | 48,394 | 41,108 | 25,404 | 9,846 | 279 | 0 |
+| Development | 4,951 | 1,378 | 1,863 | 1,756 | 952 | 380 | 0 | 0 |
+
+Training items: 69,789 nouns, 24,365 verbs, 25,837 adjectives, 3,462 adverbs, 1,578 others; 96,528 quotations and 28,503 usage examples. **The held-out headwords take nearly all entries with many meanings**: 464 entries with 17–32 meanings and all 63 with 33+ are held out, so 45 such entries (279 items) remain for training and none for development. Training cannot learn much about long entries, and development cannot see them.
+
+Each prompt became a sense-model example (`validation/training/prepare_examples.py`), and sense-model's own `format_prompt` had to rebuild the extension's prompt byte for byte; every one did. The no-cap form differs from the defaults for 5.6% of the items (most entries are short). Where the cap leaves the labelled meaning out of the prompt (1,667 training items), the prompt is not turned into a "none of the above" label (sense-model's `gold_ids: []` means that no offered meaning fits, which is not true there); it is used with the teacher's answers only.
+
+**Leak checks** (`validation/training/check_leaks.py`, built into `build-train-set.ts`): no training or development headword, and no lemma the unlabelled stream looked up, is held out; training and development headwords are disjoint. The headword rule did not catch everything: the same quotation is often filed under several headwords, and 46 training passages and 2 development passages were equal to a Wiktionary test passage after normalisation (case folded, punctuation dropped); 557 more shared a run of ten words with a test passage. All 605 were dropped, and the same check on the final files found no equal passage and no shared run of ten words with any of the three test sets. 4 identifiers that appeared twice (the same example under the same meaning) are kept once. Final training examples: 129,093 labelled, 1,658 teacher-only.
+
+**Unlabelled stream** (teacher only). One shard of English Wikipedia as published at `https://huggingface.co/datasets/wikimedia/wikipedia`, revision `b04c8d1ceb2f5cd4588862100d08de323dccfbaa`, file `20231101.en/train-00001-of-00041.parquet` (351 MB, SHA-256 `6cd57a5825312ca966313d4a1b614690b5c4fb53cee9b124bc0e999977eb36cf`, CC BY-SA 3.0 and GFDL as the dataset states), downloaded on 2026-11-25. `validation/training/wiki_paragraphs.py` took a seeded sample of 60,000 prose paragraphs of 120–700 characters; `build-unlabelled-set.ts` picked one lower-case word per paragraph whose lookup gives a prompt and whose looked-up lemmas are neither held out nor on the development side, at most 15 per lemma: 47,910 items, 55,138 examples.
+
+### Training
+
+The trainer (`validation/training/train_thin.py`) uses sense-model's own dataset, loss and trainer class (`wsd.train`) and its model class, with three differences from `wsd train`: candidates keep the extension's order (sense-model shuffles them), batches are grouped by length, and two defects found on the way are worked around in the script: under transformers 5 the loss and gradients came out multiplied by the number of accumulation steps (the model's `forward` takes `**kwargs`, so the trainer assumes the loss is already normalised), and a run resumed after a crash drew a new batch order (the length-grouped sampler shuffles from global random state; the script seeds it by epoch). Both belong fixed in sense-model.
+
+Recipe, as the upstream card describes its own: loss 0.3 × label cross-entropy (label smoothing 0.1) + 0.7 × T² × KL to the teacher at T = 2; learning rate 5e-5, cosine schedule, batch 64 (4 × 16 accumulation), seed 42, at most 3 epochs; evaluation every 300 steps on 2,000 development prompts of each form, the best checkpoint by "labelled meaning first" at the defaults, early stopping after 4 evaluations without improvement. Teacher: `sign/Ettin-1B-WSD` revision `e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc`, soft labels computed in bf16 (agreeing with fp32 on 99.4% of top choices, development accuracy identical; batched scores equal to one-at-a-time scores). Every accuracy below is fp32.
+
+| Run | Data | Stopped at | Chosen checkpoint |
+| --- | --- | ---: | ---: |
+| Labels only | 129,093 labelled | step 4,200 of 6,054 | 3,000 |
+| Teacher only | the labelled prompts without their labels, the teacher-only ones and the unlabelled stream (185,889) | step 4,200 of 8,715 | 3,000 |
+| Labels and teacher | the same 185,889, labels where there are | step 4,200 of 8,715 | 3,000 (1.03 epochs) |
+
+Development, all 4,931 items, labelled meaning first / top three at the defaults (and with no cap):
+
+| Model | First | Top 3 | First, no cap |
+| --- | ---: | ---: | ---: |
+| Dictionary order | 38.1% | 84.3% | 38.1% |
+| Untrained (float) | 72.1% | 96.6% | 72.8% |
+| Teacher (Ettin-1B-WSD, float) | 79.3% | 97.3% | 80.1% |
+| Labels only | **78.6%** | 97.5% | 79.5% |
+| Teacher only | 76.7% | 97.3% | 77.7% |
+| Labels and teacher | 78.0% | 97.5% | 79.0% |
+
+Test sets, scored once per finished run, float PyTorch, labelled meaning first (paired bootstrap 95% interval of the difference from the untrained float model, 2,000 resamples, seed 1):
+
+| Set, form | Untrained | Labels only | Teacher only | Labels and teacher |
+| --- | ---: | ---: | ---: | ---: |
+| Wiktionary, defaults | 59.0% | 66.1% (+5.5 to +8.6) | 62.7% (+2.4 to +5.1) | 64.2% (+3.8 to +6.7) |
+| Wiktionary, no cap | 66.0% | 75.1% (+7.3 to +10.9) | 71.3% (+3.9 to +6.8) | 73.3% (+5.8 to +8.9) |
+| Hand-written, defaults | 65.4% | 69.2% (−1.9 to +9.6) | 67.3% (−2.9 to +6.7) | 70.2% (+0.0 to +9.6) |
+| Hand-written, no cap | 75.0% | 80.8% (−1.0 to +12.5) | 79.8% (−1.0 to +10.6) | 83.7% (+3.8 to +14.4) |
+| Simple English, defaults | 86.6% | 87.0% (−0.4 to +1.3) | 87.6% (+0.3 to +1.8) | 88.5% (+1.1 to +2.7) |
+
+### Which run ships
+
+Development chose labels only (78.6% against 78.0%), and the export step of the round exported that one. The owner chose labels and teacher after the test results above were known. Against labels only, it is better on the hand-written and Simple English sets and one point worse on the Wiktionary set, and it still answers "none of the above" (labels only did on no test item). Because that choice looked at the test sets, the shipped model's test numbers are not an unbiased estimate of its accuracy; the difference between the two runs is within the noise of the hand-written set.
+
+### Export
+
+The same recipe as the quantization study of 2026-11-25, with the outlier layers measured again for this model (`validation/training/act_stats_model.py`, 200 development prompts): the input of the feed-forward output (`mlp.Wo`) peaks at 42.9 (layer 4), 1,089 (7), 24.8 (9), 1,663 (11) and 740 (15) times its 99.9th percentile; the next are 13.5 (12) and 13.1 (14), under the cut-off of 15. The ONNX export is sense-model's own (float parity with PyTorch: maximum logit error 4.3 × 10⁻⁶); then `quantize_dynamic` with INT8 weights per channel for the MatMuls except those five, and the token embedding stored in float16 with a cast to float (`validation/training/export_quant.py`). Graph: 203,516,610 bytes; 185,262,587 as the release compresses it (gzip level 9; `assets-v1`: 266,954,889 and 143,435,614). INT8 against float on 1,000 development prompts: the same top choice for 96.6%.
+
+### In the extension, against the shipped model
+
+`validation/score-prompts.ts` with the export, 8 threads, the `24|c1600` prompts of the three sets, the shipped model's answers being those of the measurements above (`scores-8.jsonl`, reproduced exactly by a rerun on 2026-11-25):
+
+| Set | First, `assets-v1` | First, `assets-v2` | Paired 95% interval of the difference | Top 3, `assets-v1` / `assets-v2` | First at 750 ms, `assets-v2` | "None of the above", `assets-v1` / `assets-v2` |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Wiktionary | 55.4% | **64.3%** | +7.3 to +10.6 | 77.9% / 81.2% | 64.2% | 7 / 22 of 2,287 |
+| Hand-written | 64.4% | **69.2%** | +0.0 to +9.6 | 75.0% / 76.0% | 68.3% | 6 / 8 of 104 |
+| Simple English | 84.6% | **88.0%** | +2.5 to +4.3 | 99.7% / 99.6% | 88.0% | 42 / 18 of 4,157 |
+
+By meanings in the entry (Wiktionary set, defaults), first: 85.0% (2), 78.9% (3–4), 73.2% (5–8), 53.7% (9–16), 37.0% (17–32), 22.2% (33+), against 78.1, 72.0, 58.8, 43.0, 30.5 and 19.0 for `assets-v1`. Weighted to the extract's entries: 79.2% first (71.0%).
+
+**Latency, 8 threads.** 600 prompts (the 300 slowest of an earlier run and 300 others, seeded), each export twice back to back, the second time in reverse order, each run starting at a load average of 1.3–1.5: the untrained export with the same recipe p50 412 / p99 640 / max 846 ms (1 of 1,200 over 750 ms), labels only 406 / 557 / 619 (0), labels and teacher 421 / 633 / 731 (0); by prompt, the labels-and-teacher export takes 0.93–1.12 times as long as the untrained export (10th to 90th percentile, median 1.03). The run over all 6,548 prompts had 17 over 750 ms (maximum 1,268 ms), 13 of them in one stretch of the run, none of which was slow again in the reruns: activity outside the measurement, which cannot be seen from WSL.
+
+**Fewer threads** (the method of "Fewer threads" above: the same 512 prompts of 300 items and their 24|c1600 prompts, both models back to back at each thread count, each run starting at a load average of 0.9–1.5 with the other processes on the machine idle):
+
+| Threads | Within 750 ms, `assets-v1` / `assets-v2` | Within 500 ms | First at 750 ms, `assets-v1` / `assets-v2` | Top 3 at 750 ms | p50 / p90, all 512 prompts |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 8 | 100% / 100% | 76% / 83% | 58.0% / 67.3% | 80.7% / 82.7% | 380 / 1,158 ms; 358 / 1,081 ms |
+| 4 (three runs) | 100, 100, 100% / 94, 100, 100% | 73–85% / 67–78% | 58.0% / 65.0, 67.3, 67.3% | 80.7% / 80.7–82.7% | 352–394 / 1,109–1,251 ms; 374–429 / 1,131–1,337 ms |
+| 2 | 72% / 71% | 54% / 55% | 51.3% / 57.3% | 73.0% / 73.0% | 586 / 1,812 ms; 610 / 1,801 ms |
+
+At 4 threads the new model is 5–10% slower at the median; one run of three answered 94% within 750 ms, against 100% in the other two and for the old model (the first run of each model was its slowest). These 4 and 2 threads run on this machine's performance cores, so a small machine is slower for both models.
+
+**Memory** (`validation/extension-bench.ts` on a measurement copy of the production build whose downloads come from a local server holding the staged releases; nothing else differs; two runs each, the defaults):
+
+| State | `assets-v1` RSS / PSS | `assets-v2` RSS / PSS |
+| --- | ---: | ---: |
+| Dictionary open, no model | 248–249 / 79–80 MB | 250–252 / 80–81 MB |
+| Model loaded | 1,294–1,302 / 1,118–1,126 MB | 1,183–1,188 / 1,007–1,009 MB |
+| After 400 ordered lookups | 1,036–1,042 / 855–862 MB | 994–999 / 813–816 MB |
+| After the idle unload | 278 / 97 MB | 277 / 96 MB |
+
+In the same runs: model ready 2.40–2.56 s after turning ordering on (2.42–2.56 s), lookups with ordering on p50 / p99 235–242 / 505–517 ms (264–277 / 555–665 ms), 399 of 400 ordered (397), "mouse" ordered in 387–388 ms (379–389 ms).
+
+**What a reader sees.** The site's and the store's captures were looked up again in the extension with both models: the first meaning stays for "moment" (Hamlet), both "conductor" sentences, "bug", "bank", "mouse" and "crane"; it changes for "want" (Austen: from "To lack and be in need of…" to the dictionary's first meaning, "To wish for or desire…", the worse answer), "proposition" (Lincoln), "culture", and the store page's "cell" and "pitch", for which the new model answers "none of the above".
+
+### Limits
+
+- The development set has no entry with more than 16 meanings, and training has 279 items with 17–32 and none with more: what was learnt about long entries comes from the teacher and from short entries.
+- The run that ships was chosen after the test results were known (above).
+- The hand-written set is small and was written and labelled by a model.
+- One machine; the latency on 4 and 2 threads is that of fast cores.
+- The Wikipedia shard is one of 41, and the unlabelled stream avoids the held-out headwords, which are many of the commonest words.
+
 ## How to rerun
 
 All scripts read local inputs (the Kaikki extracts, the pack, the model export; defaults as in `CLAUDE.md`, overridden by `CD_KAIKKI`, `CD_KAIKKI_SIMPLE`, `CD_PACK`, `CD_MODEL_DIR`) and write under `~/.cache/contextual-dictionary/validation/` (`CD_VALIDATION_OUT`). None runs in CI.
@@ -298,6 +407,18 @@ npx tsx validation/analyze-threads.ts
 npx tsx validation/extension-bench.ts --install       # once: downloads assets-v1 (214 MB) into a template profile
 npx tsx validation/extension-bench.ts --build dist --label after --cap 24 --budget 750 [--idle] [--start-on]
 npm run package && npx tsx validation/acceptance.ts --public   # downloads assets-v1 again into a fresh profile
+```
+
+Training round 1 (`validation/training/README.md`; a CUDA GPU, the sense-model repository for its model and loss, and the inputs above):
+
+```bash
+npx tsx validation/build-train-set.ts                                   # labelled training and development items (CD_TRAIN_OUT)
+python3 -I validation/training/wiki_paragraphs.py <shard.parquet> ~/.cache/contextual-dictionary/validation/train/data/wiki-paragraphs.jsonl --n 60000
+npx tsx validation/build-unlabelled-set.ts --input ~/.cache/contextual-dictionary/validation/train/data/wiki-paragraphs.jsonl
+python3 -I validation/training/prepare_examples.py ...                  # see validation/training/README.md for each step
+bash validation/training/stage2.sh                                      # teacher scores, the three runs, development and test scoring, export
+python3 -I validation/training/release_model_dir.py --export <export> --weights <model.safetensors> --shipped ~/src/sense-model/artifacts/upstream-english --out <dir>
+node scripts/publish-assets.mjs --dry-run --model-dir=<dir>             # stages assets-v2 and prints its pins
 ```
 
 `threads-subset.txt` holds the prompt hashes of variants `48`, `48|c1200` and `48|c1600` of the first 300 items taken every fifth in id order (the snippet that wrote it is the selection in `analyze-threads.ts`).
