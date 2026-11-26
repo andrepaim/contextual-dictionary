@@ -193,7 +193,7 @@ describe('buildSite', () => {
     const page = read('index.html')
     const store = 'href="https://chromewebstore.google.com/detail/contextual-dictionary/jdjkhefpmejijkjdknchpnghijibnali"'
     expect(/<p class="actions">[\s\S]*?<\/p>/.exec(page)![0]).toContain(`<a class="button" ${store}>`)
-    expect(/<ol class="steps">[\s\S]*?<\/li>/.exec(page)![0]).toContain(`<a class="button" ${store}>`)
+    expect(/id="install"[\s\S]*?<ol class="steps">[\s\S]*?<\/li>/.exec(page)![0]).toContain(`<a class="button" ${store}>`)
     expect(page).not.toMatch(/under review|Until it is approved/)
   })
 
