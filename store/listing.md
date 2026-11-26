@@ -68,8 +68,9 @@ Definitions from Wiktionary (CC BY-SA 4.0), via Kaikki.org. Model: Ettin-150m-WS
 | Screenshot 5 | `screenshot-5-private.png` | 1280 × 800 |
 | Small promo tile | `promo-small-440x280.png` | 440 × 280 |
 | Marquee promo tile (optional) | `promo-marquee-1400x560.png` | 1400 × 560 |
+| Promo video (optional) | a YouTube link: upload `site/media/contextual-dictionary.webm` to YouTube and paste its address | 1920 × 1080, 37 s, no sound |
 
-Screenshots 1, 2 and 4 show `shakespeare.mit.edu/hamlet/hamlet.3.1.html` (4 with "Show order details" on); 3 shows a demonstration page written for this purpose; 5 shows the extension's window. They were taken with version 0.2.0. The cards and the window are captures of the running extension, set in a frame with a headline. The screenshots are 24-bit PNG without transparency, as the store asks.
+Screenshots 1, 2 and 4 show `shakespeare.mit.edu/hamlet/hamlet.3.1.html` (4 with "Show order details" on); 3 shows a demonstration page written for this purpose; 5 shows the extension's window. They were taken with version 0.3.1. The cards and the window are captures of the running extension, set in a frame with a headline. The screenshots are 24-bit PNG without transparency, as the store asks. The promo video is the film of the project site, a recording of the extension on the site's practice page made by `validation/site-video.ts`; the store takes it only as a YouTube link.
 
 ## Privacy tab
 
