@@ -131,6 +131,21 @@ describe('buildSite', () => {
     }
   })
 
+  test('the home page plays the film of the extension from the site itself, started by the reader', () => {
+    const page = read('index.html')
+    const film = /<video\b[\s\S]*?<\/video>/.exec(page)![0]
+    expect(film).toMatch(/^<video controls preload="none" poster="images\/film\.png" width="1920" height="1080" aria-label="[^"]+">/)
+    expect(film).not.toMatch(/autoplay|loop/)
+    expect(film).toContain('<source src="media/contextual-dictionary.webm" type="video/webm">')
+    // For a browser that cannot play it: a link to the file.
+    expect(film).toContain('<a href="media/contextual-dictionary.webm">')
+    const picture = fs.readFileSync(path.join(out, 'images/film.png')), recording = fs.readFileSync(path.join(out, 'media/contextual-dictionary.webm'))
+    expect([picture.readUInt32BE(16), picture.readUInt32BE(20)]).toEqual([1920, 1080])
+    expect(recording.subarray(0, 4).toString('hex')).toBe('1a45dfa3')
+    // Small enough to keep in the repository and to attach to a GitHub issue.
+    expect(recording.length).toBeLessThan(10_000_000)
+  })
+
   test('the home page lists the extension\'s answers for the examples, the practice page every passage', () => {
     const home = read('index.html'), practice = read('try.html')
     const listed = examples.examples.filter(example => example.show === 'example' || example.show === 'miss')
@@ -169,14 +184,14 @@ describe('buildSite', () => {
     for (const name of PAGES) {
       const page = read(name)
       expect(page, name).not.toMatch(/<script|<iframe|\son\w+=|@import|url\(\s*["']?https?:/i)
-      for (const [, , address] of page.matchAll(/<(img|link|source)\b[^>]*?\s(?:src|href|srcset)="([^"]+)"/g)) expect(address, name).not.toMatch(/^(https?:)?\/\//)
+      for (const [, , address] of page.matchAll(/<(img|link|source|video)\b[^>]*?\s(?:src|href|srcset|poster)="([^"]+)"/g)) expect(address, name).not.toMatch(/^(https?:)?\/\//)
     }
     expect(read('site.css')).not.toMatch(/@import|url\(\s*["']?(https?:)?\/\//i)
   })
 
   test('every local address in the pages and the style sheet is a file of the site', () => {
     for (const name of PAGES) {
-      for (const [, address] of read(name).matchAll(/\s(?:src|href|srcset)="([^"#]*)(?:#[^"]*)?"/g)) {
+      for (const [, address] of read(name).matchAll(/\s(?:src|href|srcset|poster)="([^"#]*)(?:#[^"]*)?"/g)) {
         if (!address || /^(https?:|mailto:)/.test(address)) continue
         expect(fs.existsSync(path.join(out, address)), `${name}: ${address}`).toBe(true)
       }
