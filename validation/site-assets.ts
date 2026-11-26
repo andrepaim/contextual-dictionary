@@ -6,7 +6,7 @@
 //   npx tsx validation/site-assets.ts [--answers-only]
 //
 // Everything is real: the built extension in Chromium with the real
-// dictionary and model (release assets-v1, downloaded once into the profile
+// dictionary and model (the release the build pins, downloaded once into the profile
 // that validation/store-assets.ts also uses), looking words up on the site's
 // own practice page, served from this computer. The pictures are captures of
 // the browser window, cut off below the card and otherwise untouched; only

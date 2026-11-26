@@ -44,6 +44,7 @@ SETUP
 The first time you open the extension's window it offers two downloads, and each one asks for your confirmation:
 • Dictionary: 66.5 MB. About 1.2 million English headwords with examples.
 • Context model: 189 MB. Needed only for ordering by context.
+• Updating from an earlier version: 0.4.0 has a new context model. The window asks you once to confirm its download (185 MB); until then cards keep the dictionary's order. The dictionary is kept.
 
 GOOD TO KNOW
 • English only.
@@ -70,7 +71,7 @@ Definitions from Wiktionary (CC BY-SA 4.0), via Kaikki.org. Model: fine-tuned fr
 | Marquee promo tile (optional) | `promo-marquee-1400x560.png` | 1400 × 560 |
 | Promo video (optional) | a YouTube link: upload `site/media/contextual-dictionary.webm` to YouTube and paste its address | 1920 × 1080, 37 s, no sound |
 
-Screenshots 1, 2 and 4 show `shakespeare.mit.edu/hamlet/hamlet.3.1.html` (4 with "Show order details" on); 3 shows a demonstration page written for this purpose; 5 shows the extension's window. They were taken with version 0.3.1. The cards and the window are captures of the running extension, set in a frame with a headline. The screenshots are 24-bit PNG without transparency, as the store asks. The promo video is the film of the project site, a recording of the extension on the site's practice page made by `validation/site-video.ts`; the store takes it only as a YouTube link.
+Screenshots 1, 2 and 4 show `shakespeare.mit.edu/hamlet/hamlet.3.1.html` (4 with "Show order details" on); 3 shows a demonstration page written for this purpose; 5 shows the extension's window. They were taken with version 0.4.0. The cards and the window are captures of the running extension, set in a frame with a headline. The screenshots are 24-bit PNG without transparency, as the store asks. The promo video is the film of the project site, a recording of the extension on the site's practice page made by `validation/site-video.ts`; the store takes it only as a YouTube link.
 
 ## Privacy tab
 
@@ -121,5 +122,5 @@ Free, public, all regions.
 ## Notes for the review
 
 - A content script on all sites usually means a longer, in-depth review.
-- If a reviewer asks about the downloads: they are data files from this repository's release `assets-v1`, described in `docs/assets.md` and `docs/privacy.md`.
+- If a reviewer asks about the downloads: they are data files from this repository's release `assets-v2`, described in `docs/assets.md` and `docs/privacy.md`.
 - Each upload needs a higher version than the last; the release workflow enforces that the tag equals the version.

@@ -6,7 +6,7 @@
 //   npx tsx validation/store-assets.ts [--capture-only | --compose-only]
 //
 // The screenshots are real: the built extension in Chromium with the real
-// dictionary and model (release assets-v1, downloaded once into a profile
+// dictionary and model (the release the build pins, downloaded once into a profile
 // under ~/.cache/contextual-dictionary/store-profile), on
 // shakespeare.mit.edu and on a small demonstration page. The captures are
 // then set in a frame with a headline. Opt-in, never part of CI.
