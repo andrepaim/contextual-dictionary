@@ -106,6 +106,7 @@ main:has(.band:last-child) + .site-footer { margin-top: 0 }
 .band header p { margin-top: .9rem; color: var(--soft) }
 .band header p + p { margin-top: .7rem }
 .band .more { display: inline-block; margin-top: 1rem; font-weight: 600 }
+.film video { display: block; width: 100%; height: auto; border: 1px solid var(--rule); border-radius: .75rem; background: #fbfaf7; box-shadow: var(--shadow) }
 
 .examples { list-style: none }
 .examples > li { padding-block: 1.7rem; border-top: 1px solid var(--rule) }
