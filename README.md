@@ -25,7 +25,7 @@ Both are screenshots of version 0.1.0 on that page, with the switch off and on.
    - **Dictionary:** 66.5 MB, needed for definitions.
    - **Context model:** 189 MB to download, 207 MB on disk, needed for "Order by context".
 
-Both come from this repository's release [`assets-v1`](https://github.com/andrepaim/contextual-dictionary/releases/tag/assets-v1) and are checked against pinned SHA-256 digests ([docs/assets.md](docs/assets.md)). After that the extension works offline.
+Both come from this repository's release [`assets-v2`](https://github.com/andrepaim/contextual-dictionary/releases/tag/assets-v2) and are checked against pinned SHA-256 digests ([docs/assets.md](docs/assets.md)). After that the extension works offline.
 
 Without the store: download `contextual-dictionary-<version>.zip` from [Releases](https://github.com/andrepaim/contextual-dictionary/releases) (`SHA256SUMS.txt` is next to it), unzip it into a folder you will keep, then open `chrome://extensions`, switch on **Developer mode**, click **Load unpacked** and choose the folder. Chrome does not update that copy, and it keeps its own downloads and settings, apart from the store's.
 
