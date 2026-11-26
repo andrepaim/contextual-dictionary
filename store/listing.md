@@ -69,7 +69,7 @@ Definitions from Wiktionary (CC BY-SA 4.0), via Kaikki.org. Model: Ettin-150m-WS
 | Small promo tile | `promo-small-440x280.png` | 440 × 280 |
 | Marquee promo tile (optional) | `promo-marquee-1400x560.png` | 1400 × 560 |
 
-Screenshots 1, 2 and 4 show `shakespeare.mit.edu/hamlet/hamlet.3.1.html` (4 with "Show order details" on); 3 shows a demonstration page written for this purpose; 5 shows the extension's window. They were taken with version 0.2.0. The cards and the window are captures of the running extension, set in a frame with a headline. The screenshots are 24-bit PNG without transparency, as the store asks.
+Screenshots 1, 2 and 4 show `shakespeare.mit.edu/hamlet/hamlet.3.1.html` (4 with "Show order details" on); 3 shows a demonstration page written for this purpose; 5 shows the extension's window. They were taken with version 0.3.1. The cards and the window are captures of the running extension, set in a frame with a headline. The screenshots are 24-bit PNG without transparency, as the store asks.
 
 ## Privacy tab
 
