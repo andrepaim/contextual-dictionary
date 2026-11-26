@@ -4,6 +4,7 @@ import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 // @ts-expect-error plain JavaScript build script without types
 import { buildSite, examplesHtml, markdownToHtml, siteHeader } from '../../../scripts/build-site.mjs'
+import { ASSET_MANIFEST } from '../../../src/assets/manifest'
 
 describe('markdownToHtml', () => {
   test('headings, paragraphs and inline marks', () => {
@@ -178,6 +179,25 @@ describe('buildSite', () => {
       expect(headings.length).toBeGreaterThan(3)
       for (const heading of headings) expect(page, heading).toContain(`>${escaped(heading)}</h2>`)
     }
+  })
+
+  test('the privacy page, the README and the store listing name the release this build downloads from', () => {
+    const source = (file: string) => fs.readFileSync(new URL(`../../../${file}`, import.meta.url), 'utf8')
+    const { tag } = ASSET_MANIFEST
+    expect(read('privacy.html')).toContain(`GitHub release <code>${tag}</code>`)
+    expect(source('README.md')).toContain(`release [\`${tag}\`](https://github.com/andrepaim/contextual-dictionary/releases/tag/${tag})`)
+    expect(source('store/listing.md')).toContain(`release \`${tag}\``)
+    for (const file of ['README.md', 'docs/privacy.md', 'store/listing.md']) {
+      for (const [other] of source(file).matchAll(/assets-v\d+/g)) expect(other, file).toBe(tag)
+    }
+  })
+
+  test('the home page says that an update with a new context model asks for that download again', () => {
+    const answer = /<summary>How do I update or remove it\?<\/summary><p>([\s\S]*?)<\/p>/.exec(read('index.html'))?.[1] ?? ''
+    expect(answer).toContain('Chrome updates it by itself')
+    expect(answer).toContain('new context model')
+    expect(answer).toContain('dictionary order')
+    expect(answer).not.toContain('your downloads and settings are kept')
   })
 
   test('the pages run no scripts and load nothing from other sites', () => {
