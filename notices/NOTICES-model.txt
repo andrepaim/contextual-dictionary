@@ -94,8 +94,8 @@ What was changed
 ----------------
 
 The checkpoint above was fine-tuned with sense-model's model and loss on
-compact-v1 prompts built by the extension's own code, then exported to
-ONNX and quantized: INT8 weights per channel for the MatMul operations
+compact-v1 prompts built by the extension's own code, then exported to an
+INT8 ONNX graph: INT8 weights per channel for the MatMul operations
 (activations quantized at run time), with the MatMul of the feed-forward
 output in layers 4, 7, 9, 11 and 15 kept in float, and the token embedding
 stored in float16. The package includes the tokenizer and inference
