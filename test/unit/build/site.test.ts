@@ -156,7 +156,7 @@ describe('buildSite', () => {
     expect(privacy).toContain('<td><code>unlimitedStorage</code></td>')
     expect(guide).toContain('<title>User guide · Contextual Dictionary</title>')
     expect(guide).toContain('<h2 id="order-details">Order details</h2>')
-    expect(guide).toMatch(/<ol>\n<li>Download/)
+    expect(guide).toMatch(/<ol>\n<li>Open <a href="https:\/\/chromewebstore\.google\.com\/detail\/contextual-dictionary\/jdjkhefpmejijkjdknchpnghijibnali">/)
     expect(guide).toContain('href="privacy.html"')
     for (const [document, page] of [['privacy.md', privacy], ['user-guide.md', guide]] as const) {
       const headings = fs.readFileSync(new URL(`../../../docs/${document}`, import.meta.url), 'utf8').split('\n').filter(line => line.startsWith('## ')).map(line => line.slice(3))
@@ -189,7 +189,15 @@ describe('buildSite', () => {
     for (const name of PAGES) for (const [, id] of read(name).matchAll(/href="(?:\.\/)?#([^"]+)"/g)) expect(home, `${name}: #${id}`).toContain(`id="${id}"`)
   })
 
-  test('the home page links to the download, the source, the guide, the privacy page and the practice page', () => {
+  test('the home page installs from the Chrome Web Store: the opening button and the first step lead to the listing', () => {
+    const page = read('index.html')
+    const store = 'href="https://chromewebstore.google.com/detail/contextual-dictionary/jdjkhefpmejijkjdknchpnghijibnali"'
+    expect(/<p class="actions">[\s\S]*?<\/p>/.exec(page)![0]).toContain(`<a class="button" ${store}>`)
+    expect(/id="install"[\s\S]*?<ol class="steps">[\s\S]*?<\/li>/.exec(page)![0]).toContain(`<a class="button" ${store}>`)
+    expect(page).not.toMatch(/under review|Until it is approved/)
+  })
+
+  test('the home page links to the ZIP download, the source, the guide, the privacy page and the practice page', () => {
     const page = read('index.html')
     expect(page).toContain('href="https://github.com/andrepaim/contextual-dictionary/releases/latest"')
     expect(page).toContain('href="https://github.com/andrepaim/contextual-dictionary"')

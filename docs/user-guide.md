@@ -2,9 +2,17 @@
 
 ## Install
 
+1. Open [Contextual Dictionary in the Chrome Web Store](https://chromewebstore.google.com/detail/contextual-dictionary/jdjkhefpmejijkjdknchpnghijibnali) and click **Add to Chrome**. It needs Chrome 124 or later, on a computer.
+2. Pin the extension (the puzzle icon in the toolbar) so its window is one click away.
+
+Chrome keeps it up to date; your downloads and settings stay.
+
+It also installs without the store, from a ZIP file:
+
 1. Download `contextual-dictionary-<version>.zip` from the project's [releases](https://github.com/andrepaim/contextual-dictionary/releases) and unzip it into a folder you will keep.
 2. Open `chrome://extensions`, switch on **Developer mode** (top right), click **Load unpacked** and choose that folder.
-3. Pin the extension (the puzzle icon in the toolbar) so its window is one click away.
+
+Chrome does not update a copy installed this way: to update it, extract the new release over the same folder and click **Reload** on the extension in `chrome://extensions`. It is a separate extension from the store's, with its own downloads and settings. If you move to the store's, use **Remove** for each download in the old copy's window, then remove the old copy.
 
 ## First run
 
