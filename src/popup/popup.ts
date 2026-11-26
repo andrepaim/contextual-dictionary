@@ -35,13 +35,13 @@ export function formatMegabytes(bytes: number): string {
 
 const NAMES: Record<BundleName, { title: string; noun: string; description: string }> = {
   dictionary: { title: 'Dictionary', noun: 'dictionary', description: 'English Wiktionary, for the definitions.' },
-  model: { title: 'Context model', noun: 'model', description: 'Ettin-150m-WSD, for “Order by context”. It runs on this computer.' },
+  model: { title: 'Context model', noun: 'model', description: 'A word-sense model fine-tuned on English Wiktionary, for “Order by context”. It runs on this computer.' },
 }
 
 const CREDITS: Array<string | { text: string; href: string }> = [
   'Definitions from ', { text: 'Wiktionary', href: 'https://en.wiktionary.org/' }, ', under ',
-  { text: 'CC BY-SA 4.0', href: 'https://creativecommons.org/licenses/by-sa/4.0/' }, '. Meanings ordered by ',
-  { text: 'Ettin-150m-WSD', href: 'https://huggingface.co/sign/Ettin-150m-WSD' }, ' (Apache-2.0), run with ',
+  { text: 'CC BY-SA 4.0', href: 'https://creativecommons.org/licenses/by-sa/4.0/' }, '. Meanings ordered by a model fine-tuned from ',
+  { text: 'Ettin-150m-WSD', href: 'https://huggingface.co/sign/Ettin-150m-WSD' }, ' (Apache-2.0) on Wiktionary examples, run with ',
   { text: 'ONNX Runtime', href: 'https://github.com/microsoft/onnxruntime' }, ' (MIT). What you select never leaves this computer.',
 ]
 
