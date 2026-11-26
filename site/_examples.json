@@ -1,6 +1,6 @@
 {
   "about": "The passages of the practice page and, under \"result\", what the extension answered for each (written by validation/site-assets.ts; do not edit results by hand). show: hero = the opening picture of the home page, example and miss = listed on the home page, practice = on the practice page only.",
-  "extension": "0.3.1",
+  "extension": "0.4.0",
   "examples": [
     {
       "id": "hamlet",
@@ -27,21 +27,21 @@
       "id": "austen",
       "show": "example",
       "source": "Jane Austen, Pride and Prejudice, chapter 1",
-      "word": "want",
+      "word": "single",
       "quote": "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
       "passage": "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.",
       "result": {
         "dictionary": {
-          "first": "(transitive) To wish for or desire (something); to feel a need or desire for; to crave, hanker, or demand."
+          "first": "Not accompanied by anything else; one in number."
         },
         "context": {
-          "first": "(transitive, now colloquial) To lack and be in need of or require (something, such as a noun or verbal noun).",
-          "was": 6
+          "first": "Not married, and (in modern times) not dating or without a significant other.",
+          "was": 5
         },
         "entries": [
-          "want (verb)",
-          "want (noun)",
-          "want (noun)"
+          "single (adj)",
+          "single (noun)",
+          "single (verb)"
         ],
         "status": "Ordered by context"
       }
@@ -139,20 +139,19 @@
       "id": "lincoln",
       "show": "practice",
       "source": "Abraham Lincoln, Gettysburg Address",
-      "word": "proposition",
+      "word": "conceived",
       "quote": "A new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.",
       "passage": "Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.",
       "result": {
         "dictionary": {
-          "first": "(uncountable) The act of offering (an idea) for consideration."
+          "first": "(ambitransitive) To have a child; to become pregnant (with)."
         },
         "context": {
-          "first": "(countable, mathematics, philosophy) An assertion so formulated that it can be considered true or false.",
-          "was": 8
+          "first": "(transitive) To develop; to form in the mind; to imagine.",
+          "was": 2
         },
         "entries": [
-          "proposition (noun)",
-          "proposition (verb)"
+          "conceive (verb)"
         ],
         "status": "Ordered by context"
       }
@@ -169,8 +168,8 @@
           "first": "The arts, customs, lifestyles, background, and habits that characterize humankind, or a particular society or nation."
         },
         "context": {
-          "first": "(microbiology) The process of growing a bacterial or other biological entity in an artificial medium.",
-          "was": 6
+          "first": "A group of bacteria.",
+          "was": 8
         },
         "entries": [
           "culture (noun)",
