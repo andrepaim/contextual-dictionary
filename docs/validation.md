@@ -274,6 +274,19 @@ On the hand-written set, at 750 ms on 8 threads: cap 48 answers 40% in time (fir
   - `blog.mozilla.org/en/`: "web" 415 ms. On the first run, "browser" in a post title showed no card: the title is inside a link, and a double-click on a link follows it, as in any browser. Words inside links are skipped by the script since then.
   - `docs.python.org`, "An Informal Introduction to Python" (in place of Wikipedia): "interpreter" 380 ms, "string" 401 ms, "slice" 410 ms, "list" 446 ms. In "within a string literal" the first meaning shown is still "A long, thin and flexible structure made from threads…", and in "Slice indices…" "(colloquial) An amount of anything": the programming meanings are sub-senses deep in long entries, and the model did not put them first.
 
+### 2026-11-26: `assets-v2`
+
+The release `assets-v2` was published on 2026-11-26 with `scripts/publish-assets.mjs` (which verified every upload and downloaded the files back anonymously). Checked again from this branch:
+
+- Every file of `assets-v2` downloaded anonymously with `curl` equals its pin in `src/assets/manifest.ts` (transfer size and SHA-256; the graph unpacks to the stored pin), and the two notices equal the files in `notices/`.
+- `CD_TEST_REAL_ASSETS=1 npx vitest run test/unit/assets/real-assets.test.ts`: the whole release through the extension's own download code, the dictionary (66.5 MB) in 5.9 s and the model (188.8 MB) in 16.6 s; both bundles ready and verified.
+- `npm run package` (`contextual-dictionary-0.3.1.zip`, 3,849,004 bytes, SHA-256 `86fb5e6837c8b1de34a2a9b231c5dd2d13ff79a1c05187aacbeb5daf762360b1`; the version is unchanged) and `npx tsx validation/acceptance.ts --zip package/contextual-dictionary-0.3.1.zip --public`, starting at a load average of 0.30:
+  - Fresh profile: the model section said "A word-sense model fine-tuned on English Wiktionary, for “Order by context”. It runs on this computer." and "Needs a one-time download of 188.8 MB."; the dictionary installed in 6.2 s, the model in 17.5 s, and the model was ready 1.55 s later. Stored: 66,467,698 and 207,103,478 bytes.
+  - "mouse" in "Drag the mouse to move the cursor on screen." with ordering on: card in 460 ms, first meanings "(computing) An input device…", "(computing, by extension) An input device…", "(figurative, obsolete) Any mammal…"; again: 72 ms. Ordering off: 58 ms, dictionary order.
+  - "bank" in both sentences: 412 and 426 ms; the first entry is still the financial one in both (entries keep dictionary order).
+  - Offline: "bank" in 440 ms with 3 entries, "mouse" still ordered. After a browser restart on the same profile: files and settings kept, first lookup 280 ms, second 161 ms, "mouse" ordered once the model was ready.
+  - Public pages: `en.wikipedia.org` answered HTTP 429 again; MDN ("fires" 438 ms, "element" 317, "pointing" 462, "event" 246), `blog.mozilla.org` ("web" 399 ms) and `docs.python.org` ("interpreter" 372 ms, "string" 417, "slice" 378, "list" 429).
+
 ## Recommendations (not done)
 
 - **Let the model reorder entries, or mark the best entry.** Homographs are separate entries in Wiktionary ("bank" has a financial and a river entry), and the card keeps entries in dictionary order, so the best meaning of a later entry stays below the whole first entry. The ranker already scores meanings across entries; moving the entry holding the best-scored meaning first (or opening on it) would fix the river-bank case. This changes plan decision "entries keep dictionary order", so it is for the coordinator.
