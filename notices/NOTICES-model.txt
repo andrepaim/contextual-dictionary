@@ -1,7 +1,7 @@
 Notices for the model files of Contextual Dictionary
 ====================================================
 
-These notices cover the model files published in the release assets-v1 of
+These notices cover the model files published in the release assets-v2 of
 https://github.com/andrepaim/contextual-dictionary:
 
   ettin-150m-wsd-int8.onnx.gz  (unpacks to ettin-150m-wsd-int8.onnx)
@@ -15,8 +15,22 @@ repository). These files are not part of the code; they are distributed
 under the terms below.
 
 
-The checkpoint
---------------
+The model
+---------
+
+A word-sense model fine-tuned by this project from the checkpoint below,
+"training round 1", run s2-labels-teacher; how it was made and measured is
+in docs/validation.md in the repository.
+Revision of the fine-tuned checkpoint (the SHA-256 of its weights, also in
+model_metadata.json):
+sha256:49bc2634bcf696171f367b59cedb961fcd71bb7d825ad6680ef5ed1ed8d25be3
+Licence of these files: Apache License, Version 2.0 (full text below), the
+licence of the checkpoint it was fine-tuned from. The training data are
+under the licences stated below, with their attributions.
+
+
+The checkpoint it was fine-tuned from
+-------------------------------------
 
 Ettin-150m-WSD English sense selection model by sign (Nagish Inc.)
 Hugging Face repository: sign/Ettin-150m-WSD
@@ -24,6 +38,9 @@ Revision: 8751b577199d1bb95b74fa2457da7065d57100ae
 Upstream checkpoint and model card:
 https://huggingface.co/sign/Ettin-150m-WSD/tree/8751b577199d1bb95b74fa2457da7065d57100ae
 Checkpoint licence: Apache License, Version 2.0 (full text below).
+Upstream training sources as documented by the authors: generated synset
+examples, WordNet usage examples, SemCor, Princeton WordNet Gloss Corpus,
+and teacher-scored Wikipedia prompts.
 
 
 The base model
@@ -37,32 +54,69 @@ repository linked from the base model card,
 https://github.com/jhu-clsp/ettin-encoder-vs-decoder.
 
 
+The teacher
+-----------
+
+The training used soft labels (answer distributions at temperature 2)
+computed by a larger model of the same family:
+Ettin-1B-WSD by sign (Nagish Inc.)
+Hugging Face repository: sign/Ettin-1B-WSD
+Revision: e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc
+https://huggingface.co/sign/Ettin-1B-WSD/tree/e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc
+Licence: Apache License, Version 2.0 (full text below). None of its
+weights are in these files.
+
+
+The training data
+-----------------
+
+No training text is in these files.
+
+- English Wiktionary (https://en.wiktionary.org/), by the Wiktionary
+  contributors: usage examples and quotations, each with the meaning its
+  editors attached it to, through the Kaikki.org machine-readable extract
+  (https://kaikki.org/, made with wiktextract) of 2026-10-30. Wiktionary's
+  text is available under CC BY-SA 4.0
+  (https://creativecommons.org/licenses/by-sa/4.0/) and the GFDL.
+- English Wikipedia (https://en.wikipedia.org/), by the Wikipedia
+  contributors: paragraphs of the dump of 2023-11-01 as published at
+  https://huggingface.co/datasets/wikimedia/wikipedia, revision
+  b04c8d1ceb2f5cd4588862100d08de323dccfbaa, file
+  20231101.en/train-00001-of-00041.parquet, used without labels (only the
+  teacher's soft labels). That dataset states the licences CC BY-SA 3.0
+  (https://creativecommons.org/licenses/by-sa/3.0/) and GFDL.
+
+Headwords of the project's own test sets were held out of training
+(docs/validation.md, "Held out of training").
+
+
 What was changed
 ----------------
 
-The upstream classifier was exported using sense-model's compact-v1
-inference contract and converted to a dynamically quantized INT8 ONNX
-graph. The package includes the tokenizer and inference metadata. It is an
-English CPU inference distribution, with no training data included.
+The checkpoint above was fine-tuned with sense-model's model and loss on
+compact-v1 prompts built by the extension's own code, then exported to
+ONNX and quantized: INT8 weights per channel for the MatMul operations
+(activations quantized at run time), with the MatMul of the feed-forward
+output in layers 4, 7, 9, 11 and 15 kept in float, and the token embedding
+stored in float16. The package includes the tokenizer and inference
+metadata. It is an English CPU inference distribution.
 
 In detail:
 
-- ettin-150m-wsd-int8.onnx.gz: the INT8 ONNX graph, compressed with gzip
+- ettin-150m-wsd-int8.onnx.gz: the ONNX graph, compressed with gzip
   (level 9, no file name or time in the header). Unpacking it gives the
   graph byte for byte.
-- model_metadata.json: written by the export. The answer letters, the
-  "none of the above" slot, the prompt template version (compact-v1), the
-  maximum prompt length (2,048 tokens) and the checkpoint revision.
-- calibration.json: written by the export. Identity settings (temperature
-  1.0, no thresholds), marked "uncalibrated".
-- tokenizer.json, tokenizer_config.json: the checkpoint's tokenizer files
-  as saved again by the export. The vocabulary, normalisation and special
-  tokens are unchanged; the saved copy has no truncation setting in
-  tokenizer.json and sets "local_files_only" in tokenizer_config.json.
-
-Upstream training sources as documented by the authors: generated synset
-examples, WordNet usage examples, SemCor, Princeton WordNet Gloss Corpus,
-and teacher-scored Wikipedia prompts.
+- model_metadata.json: the answer letters, the "none of the above" slot,
+  the prompt template version (compact-v1), the maximum prompt length
+  (2,048 tokens), the fine-tuned checkpoint's revision, the checkpoint it
+  was fine-tuned from, the teacher, the training data and the export.
+- calibration.json: identity settings (temperature 1.0, no thresholds),
+  marked "uncalibrated"; the same file as in assets-v1.
+- tokenizer.json, tokenizer_config.json: the checkpoint's tokenizer files,
+  the same files as in assets-v1. The vocabulary, normalisation and special
+  tokens are those of the checkpoint; the saved copy has no truncation
+  setting in tokenizer.json and sets "local_files_only" in
+  tokenizer_config.json.
 
 
 ----- BEGIN Apache License, Version 2.0 -----
