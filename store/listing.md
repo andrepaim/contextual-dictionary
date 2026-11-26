@@ -1,6 +1,6 @@
 # Chrome Web Store listing
 
-Everything to paste into the Chrome Web Store Developer Dashboard, and the images to upload. Not submitted yet. The images are made by `validation/store-assets.ts` from the built extension with the real dictionary and model.
+Everything to paste into the Chrome Web Store Developer Dashboard, and the images to upload. Published at https://chromewebstore.google.com/detail/contextual-dictionary/jdjkhefpmejijkjdknchpnghijibnali. The images are made by `validation/store-assets.ts` from the built extension with the real dictionary and model.
 
 ## Package
 

@@ -24,8 +24,8 @@
   <div>
     <h1 id="headline">What does this <mark>word</mark> mean <em>here?</em></h1>
     <p class="lead">Double-click a word on any web page. Contextual Dictionary shows its meanings from the English Wiktionary and lists the one that fits the sentence first. The dictionary and the model that orders it both run on your computer.</p>
-    <p class="actions"><a class="button" href="#install">Install for Chrome</a><a href="#examples">See what it changes</a></p>
-    <p class="terms">Free and open source. No account. Chrome Web Store submission under review.</p>
+    <p class="actions"><a class="button" href="https://chromewebstore.google.com/detail/contextual-dictionary/jdjkhefpmejijkjdknchpnghijibnali">Add to Chrome</a><a href="#examples">See what it changes</a></p>
+    <p class="terms">Free and open source. No account. For Chrome 124 or later, on a computer.</p>
   </div>
 <!-- hero -->
 </section>
@@ -90,7 +90,7 @@
 <section class="band" id="install" aria-labelledby="install-title"><div class="wrap">
   <header>
     <h2 id="install-title">Install it</h2>
-    <p>The Chrome Web Store listing is under review. Until it is approved, the extension installs from a ZIP file in four steps.</p>
+    <p>It installs from the Chrome Web Store in three steps, and downloads its dictionary and its model once.</p>
   </header>
   <div>
     <ul class="needs">
@@ -99,8 +99,7 @@
       <li><b>Free</b>, MIT licence</li>
     </ul>
     <ol class="steps">
-      <li><div><h3>Download the ZIP and unzip it</h3><p>Take <code>contextual-dictionary-&lt;version&gt;.zip</code> from the latest release and extract it into a folder you will keep.</p><a class="button" href="https://github.com/andrepaim/contextual-dictionary/releases/latest">Get the latest release</a></div></li>
-      <li><div><h3>Load the folder in Chrome</h3><p>Open <code>chrome://extensions</code>, switch on <b>Developer mode</b>, click <b>Load unpacked</b> and choose the folder.</p></div></li>
+      <li><div><h3>Add it to Chrome</h3><p>Open Contextual Dictionary in the Chrome Web Store and click <b>Add to Chrome</b>.</p><a class="button" href="https://chromewebstore.google.com/detail/contextual-dictionary/jdjkhefpmejijkjdknchpnghijibnali">Open the Chrome Web Store</a></div></li>
       <li><div><h3>Confirm the two downloads</h3><p>Open the extension from the toolbar. The dictionary (66.5 MB) gives you definitions; the context model (147 MB) orders them. Each starts only when you confirm it.</p></div></li>
       <li><div><h3>Double-click a word</h3><p>Any ordinary web page will do, including this one. The <a href="try.html">practice page</a> has the passages shown above.</p></div></li>
     </ol>
@@ -108,7 +107,8 @@
       <details><summary>Where does it not work?</summary><p>On Chrome’s own pages, the Chrome Web Store, Chrome’s built-in PDF viewer and inside text fields. A double-click on a link follows the link, as in any browser.</p></details>
       <details><summary>Can I use it without the model?</summary><p>Yes. With only the dictionary installed, or with “Order by context” switched off, the card shows the dictionary’s order and uses no extra memory.</p></details>
       <details><summary>How fast is it?</summary><p>On a desktop computer, half the cards are ordered within 0.3 seconds and none waits longer than 0.75. On a slower machine about two thirds are ordered in time; the rest show the dictionary’s order, and looking the word up again shows the model’s.</p></details>
-      <details><summary>How do I update or remove it?</summary><p>To update, extract the new release over the same folder and click <b>Reload</b> on the extension in <code>chrome://extensions</code>; your downloads and settings are kept. To remove it, use <b>Remove</b> for each download in the extension’s window, then remove the extension.</p></details>
+      <details><summary>How do I update or remove it?</summary><p>Chrome updates it by itself; your downloads and settings are kept. To remove it, use <b>Remove</b> for each download in the extension’s window, then remove the extension in <code>chrome://extensions</code>.</p></details>
+      <details><summary>Can I install it without the Chrome Web Store?</summary><p>Yes. Every <a href="https://github.com/andrepaim/contextual-dictionary/releases/latest">release</a> has a ZIP file that Chrome loads as an unpacked extension; the <a href="guide.html">guide</a> has the steps. Chrome does not update that copy, and it keeps its own downloads and settings, apart from the store’s.</p></details>
     </div>
   </div>
 </div></section>

@@ -20,15 +20,14 @@ Both are screenshots of version 0.1.0 on that page, with the switch off and on.
 
 ## Install
 
-Not in the Chrome Web Store yet. Install the release ZIP as an unpacked extension (Chrome 124 or later):
-
-1. Download `contextual-dictionary-<version>.zip` from [Releases](https://github.com/andrepaim/contextual-dictionary/releases) (`SHA256SUMS.txt` is next to it) and unzip it into a folder you will keep.
-2. Open `chrome://extensions`, switch on **Developer mode**, click **Load unpacked** and choose the folder.
-3. Open the extension's window from the toolbar and confirm the downloads it offers:
+1. Add it to Chrome (124 or later) from the [Chrome Web Store](https://chromewebstore.google.com/detail/contextual-dictionary/jdjkhefpmejijkjdknchpnghijibnali).
+2. Open the extension's window from the toolbar and confirm the downloads it offers:
    - **Dictionary:** 66.5 MB, needed for definitions.
    - **Context model:** 147 MB to download, 271 MB on disk, needed for "Order by context".
 
 Both come from this repository's release [`assets-v1`](https://github.com/andrepaim/contextual-dictionary/releases/tag/assets-v1) and are checked against pinned SHA-256 digests ([docs/assets.md](docs/assets.md)). After that the extension works offline.
+
+Without the store: download `contextual-dictionary-<version>.zip` from [Releases](https://github.com/andrepaim/contextual-dictionary/releases) (`SHA256SUMS.txt` is next to it), unzip it into a folder you will keep, then open `chrome://extensions`, switch on **Developer mode**, click **Load unpacked** and choose the folder. Chrome does not update that copy, and it keeps its own downloads and settings, apart from the store's.
 
 ## Use
 
