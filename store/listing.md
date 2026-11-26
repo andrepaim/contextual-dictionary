@@ -43,11 +43,11 @@ PRIVATE BY DESIGN
 SETUP
 The first time you open the extension's window it offers two downloads, and each one asks for your confirmation:
 • Dictionary: 66.5 MB. About 1.2 million English headwords with examples.
-• Context model: 147 MB. Needed only for ordering by context.
+• Context model: 189 MB. Needed only for ordering by context.
 
 GOOD TO KNOW
 • English only.
-• The ordering is a help, not an oracle. On 2,300 test sentences it put the right meaning first 55% of the time, against 28% for dictionary order. No meaning is ever hidden.
+• The ordering is a help, not an oracle. On 2,300 test sentences it put the right meaning first 64% of the time, against 28% for dictionary order. No meaning is ever hidden.
 • While the model is in use the extension needs about 1 GB of memory. It is released after ten idle minutes.
 • It does not run on Chrome's own pages, the Chrome Web Store, PDFs or inside text fields.
 
@@ -85,7 +85,7 @@ Shows dictionary definitions for the word or short phrase the user selects on a 
 | Permission | Justification |
 | --- | --- |
 | `storage` | Keeps the user's settings (definitions on or off, ordering on or off, order details on or off, sites switched off) and the last status of the downloads. |
-| `unlimitedStorage` | Keeps the downloaded dictionary (66.5 MB) and word-sense model (about 270 MB) in the extension's private file storage so the browser does not evict them. |
+| `unlimitedStorage` | Keeps the downloaded dictionary (66.5 MB) and word-sense model (about 207 MB) in the extension's private file storage so the browser does not evict them. |
 | `offscreen` | Runs the dictionary lookup and the word-sense model in a hidden extension page with a Web Worker and WebAssembly threads, which a service worker cannot do. |
 | Host permission `https://github.com/andrepaim/contextual-dictionary/releases/download/*` and `https://release-assets.githubusercontent.com/*` | Downloads the dictionary and the model files from this project's GitHub release, once, after the user confirms each download. They are data files checked against SHA-256 digests pinned in the extension; no code is downloaded. |
 | Content script on all sites (`<all_urls>`) | A dictionary has to work on whatever page the user is reading. The script waits for a double-click or a short selection, reads the selected text and up to 120 characters on each side of it, and shows the card. It reads nothing else and sends nothing off the device. |

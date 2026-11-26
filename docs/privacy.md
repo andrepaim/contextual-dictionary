@@ -10,7 +10,7 @@ Contextual Dictionary shows dictionary meanings for a word you select on a web p
 ## What it keeps on your computer
 
 - **Its settings**, in the browser's extension storage: whether definitions, "Order by context" and "Show order details" are on, the sites you switched off (their host names), and two numbers that tune the ordering (a time budget and a limit on meanings).
-- **The two downloads** in the extension's private file storage: the dictionary (an English Wiktionary file, 66.5 MB) and the word-sense model (267 MB once unpacked, plus four small files). "Remove" in the extension's window deletes them.
+- **The two downloads** in the extension's private file storage: the dictionary (an English Wiktionary file, 66.5 MB) and the word-sense model (204 MB once unpacked, plus four small files). "Remove" in the extension's window deletes them.
 - **A short-lived answer cache**, in memory only and gone when the browser closes: up to 64 entries, each a SHA-256 hash of a prompt and the model's numbers for it. It holds no words and no page text.
 - **The last status of the downloads and the model** (phases such as "ready", sizes, error codes), in the browser's session storage, so the extension window can show it at once. It holds no words and no page text.
 
@@ -26,7 +26,7 @@ Contextual Dictionary shows dictionary meanings for a word you select on a web p
 | --- | --- |
 | Content script on all sites (`<all_urls>`) | To notice a selection on any page and show the card next to it. It reads only the selection and its surrounding text, as described above. |
 | `storage` | To keep the settings and the last status. |
-| `unlimitedStorage` | To keep the 337 MB of downloaded files without the browser evicting them. |
+| `unlimitedStorage` | To keep the 274 MB of downloaded files without the browser evicting them. |
 | `offscreen` | To run the dictionary and the model in a hidden extension page with a Web Worker. |
 | Host access to `github.com/andrepaim/contextual-dictionary/releases/download/*` and `release-assets.githubusercontent.com` | To download the two files you confirmed, and nothing else. |
 
