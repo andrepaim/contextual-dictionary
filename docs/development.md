@@ -70,4 +70,4 @@ The dictionary pack and the model files are not in the repository. They are publ
 The defaults (`DEFAULT_SETTINGS`, `RANKER_DEFAULTS.maxPromptChars`) come from measurements, and change only with new numbers.
 
 - [`validation.md`](validation.md): speed, accuracy, memory, the choice of defaults, release acceptance and training round 1, with how to rerun each measurement at the end. The scripts are in `validation/`; they read local inputs (listed in [`CLAUDE.md`](../CLAUDE.md), "Local inputs") or the network and never run in CI.
-- [`validation/training/README.md`](../validation/training/README.md): the Python and shell scripts of training round 1, as run on a GPU machine.
+- [`validation/training/README.md`](../validation/training/README.md): the Python and shell scripts of training round 1, as run on a GPU machine. The float weights of the model it made are on Hugging Face, [andrepaim/Ettin-150m-WSD-wiktionary](https://huggingface.co/andrepaim/Ettin-150m-WSD-wiktionary/tree/affc67b9a87c51a07ce642726cee993c593ad744).
