@@ -86,7 +86,7 @@ $PY -I validation/dataset/assemble.py --out $DATASET --lemmas $WORK/lemmas-all.j
   against revision `84b6444`: only `scripts/` and two descriptions in the manifest differ (the paths of this move).
 - The dataset card, `README.md` at the dataset's root, is written by hand and not by `assemble.py`: start from the
   published one, and update its numbers, its links (it still names this repository's `validation/training/`, which
-  moved to sense-model and here) and its limits.
+  no longer exists: its scripts moved to sense-model and to this folder) and its limits.
 - Look through the folder for anything that should not be published (`grep -r "$HOME" $DATASET` finds nothing).
 
 ## Publish (a separate, explicit step)
