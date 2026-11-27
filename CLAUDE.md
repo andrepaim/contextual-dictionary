@@ -34,7 +34,7 @@ npm run typecheck
 npm test            # unit tests with coverage thresholds (85% lines, 80% branches)
 npm run build       # unpacked extension in dist/
 npm run test:e2e    # builds dist/ and the end-to-end variant dist-e2e/, then runs Playwright (npx playwright install chromium once)
-npm run check       # secret scan, typecheck, unit tests, build, build check (scripts/check-build.mjs)
+npm run check       # secret scan, core package check, typecheck, unit tests, build, build check (scripts/check-build.mjs)
 npm run package     # reproducible release ZIP and SHA256SUMS.txt in package/
 npm run icons       # redraws src/icons/ (scripts/make-icons.mjs)
 ```
