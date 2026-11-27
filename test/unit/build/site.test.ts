@@ -128,6 +128,19 @@ describe('buildSite', () => {
     expect(page).not.toContain('Captured in Chrome,')
   })
 
+  test('the opening picture\'s text describes what the capture shows: the practice page, with no browser around it', () => {
+    const page = read('index.html')
+    const hero = examples.examples.find(example => example.show === 'hero')!
+    expect(page).toContain(`alt="The practice page: ${escaped(hero.source)}, with the word “${escaped(hero.word)}” selected and the Contextual Dictionary card open below it.`)
+    expect(page).not.toContain('alt="Chrome showing')
+  })
+
+  test('the home page gives the share of lookups ordered in time on a slower machine as measured with assets-v2 (71% on 2 threads)', () => {
+    const answer = /<summary>How fast is it\?<\/summary><p>([\s\S]*?)<\/p>/.exec(read('index.html'))?.[1] ?? ''
+    expect(answer).toContain('about 70% are ordered in time')
+    expect(answer).not.toContain('two thirds')
+  })
+
   test('pictures are given at the size they were captured, at two pixels to one', () => {
     const page = read('index.html')
     const sized = [...page.matchAll(/<(?:img src|source [^>]*srcset)="(images\/(?:lookup|window)[^"]+)" width="([\d.]+)" height="([\d.]+)"/g)]
