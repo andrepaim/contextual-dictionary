@@ -27,7 +27,7 @@ CI (`.github/workflows/ci.yml`) runs the same checks, the package and the end-to
 The dictionary lookup, the pack reader and writer, prompt building and contextual ordering live in `packages/core/`, published as `@andrepaim/contextual-dictionary-core` ([its API](../packages/core/README.md)). The extension installs it from the checked-in npm tarball in `artifacts/`, the same file another project can install. To use it elsewhere, replace `COMMIT_SHA` with a full commit SHA that contains the tarball:
 
 ```sh
-npm install --ignore-scripts 'https://raw.githubusercontent.com/andrepaim/contextual-dictionary/COMMIT_SHA/artifacts/contextual-dictionary-core-0.2.1.tgz'
+npm install --ignore-scripts 'https://raw.githubusercontent.com/andrepaim/contextual-dictionary/COMMIT_SHA/artifacts/contextual-dictionary-core-0.3.0.tgz'
 ```
 
 After changing the core's source:
