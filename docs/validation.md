@@ -1,6 +1,6 @@
 # Stage 3 validation
 
-**Which model each part describes.** From "Answers in brief" to "Recommendations (not done)", the numbers are those of `assets-v1`, the model of the extension's releases 0.1.0 to 0.3.1, except the bullet "Since `assets-v2`" and "2026-11-26: `assets-v2`" under "Acceptance". Release 0.4.0 uses `assets-v2`, the model of "Training round 1 (assets-v2)": its numbers are in that section, against `assets-v1` in "In the extension, against the shipped model (`assets-v1`)". The defaults (`budgetMs` 750, 24 meanings, 1,600 characters) were chosen with `assets-v1` and are unchanged.
+**Which model each part describes.** From "Answers in brief" to "Recommendations (not done)", the numbers are those of `assets-v1`, the model of the extension's releases 0.1.0 to 0.3.1, except the bullet "Since `assets-v2`" and "2026-11-26: `assets-v2`" under "Acceptance". Release 0.4.0 uses `assets-v2`, the model of "Training round 1 (assets-v2)": its numbers are in that section, against `assets-v1` in "In the extension, against the shipped model (`assets-v1`)". The defaults (`budgetMs` 750, 24 meanings, 1,600 characters) were chosen with `assets-v1` and are unchanged. "The best entry first (2026-11-27)" is on `main` and not yet released: with `assets-v2` it moves the entry holding the best meaning to the top of the card, with a margin chosen on training round 1's development set, and measures what the reader sees first on the card rather than first within the entry, which is what "labelled meaning first" counts elsewhere in this document.
 
 How fast the extension is in practice, how well the model orders Wiktionary's meanings, what defaults were chosen from those numbers, and what was fixed. Everything here was measured on 2026-11-23 with the real model (`assets-v1`), the real dictionary pack and production builds of the extension in Chromium. The Simple English Wiktionary set was added on 2026-11-25, with the same model, machine and scripts. The scripts are in `validation/`; how to rerun each measurement is at the end.
 
@@ -432,6 +432,80 @@ So two clear losses among about twelve captures the shipped model got right. At 
 - One machine; the latency on 4 and 2 threads is that of fast cores.
 - The Wikipedia shard is one of 41, and the unlabelled stream avoids the held-out headwords, which are many of the commonest words.
 
+## The best entry first (2026-11-27)
+
+On `main`, not released. Until now the model ordered the meanings inside each entry and the entries kept dictionary order. Now, with "Order by context" on, the entry that holds the model's best meaning moves to the top of the card when that meaning's probability beats the first entry's best by at least 0.25; the other entries keep dictionary order among themselves. Nothing new is scored: the one prompt already offers the meanings of every entry and one softmax ranks them all (`contextualOrder` with `bestEntryFirst`, `packages/core/README.md`; the margin is `RANKER_DEFAULTS.entryMargin` in `src/sense/ranker.ts`). Everything that kept dictionary order still does, entries included: "none of the above", an answer later than the budget, a skipped passage, a failure.
+
+Measured from stored scores with `validation/entry-order.ts`, which runs the real `contextualOrder` and the card's own `cardPreview` (three entries, three meanings each) on every item. The measurement ran no model; the development scores are the float PyTorch scores of the run that ships (`teacher/s2-labels-teacher-dev-fp32.jsonl` of training round 1), the test scores are its INT8 answers in the extension (`browser-out/scores-s2-labels-teacher-recipe.jsonl`, 8 threads, 750 ms budget). Outputs under `~/.cache/contextual-dictionary/validation/entry-order/`.
+
+### What the headline counted
+
+"Labelled meaning first" in this document counts first **within the labelled entry**. What a reader sees first is the first meaning of the first entry. On the Wiktionary set with `assets-v2` at 750 ms, the labelled meaning is first in its entry for 64.2% of the items, but the very first meaning on the card for 52.2% (weighted to the extract's entries: 79.1% and 65.7%); 79.9% are visible in the collapsed card. On the hand-written set 68.3% and 41.3%, on the Simple English set 88.0% and 71.5%.
+
+Why the labelled meaning is not the first on the card (Wiktionary set, today's order, 1,100 items, 47.8%; the same split as `error-breakdown/breakdown.md`, sections 2b and 3, which the script reproduces):
+
+| Cause | Items | Share of all items | Weighted share |
+| --- | ---: | ---: | ---: |
+| Another meaning of its entry ranked higher | 449 | 19.5% | 18.4% |
+| Not offered to the model (the 24-meaning cap or the 1,600-character limit) | 352 | 15.3% | 2.1% |
+| Right in its entry, but its entry is not the first | 276 | 12.0% | 13.4% |
+| "None of the above", late or not English (and offered) | 23 | 1.0% | 0.4% |
+
+Of the 352 not offered, 19 also got "none of the above" or a late answer. The third row is what this change addresses: one item in eight, nearly as many as the model's own ranking errors once weighted.
+
+### The margin, chosen on development data
+
+The rule was fixed before any development number was looked at (`chooseMargin` in the script): among the margins 0, 0.05, …, 0.50 in probability, the one with the most items gained minus twice the items made worse (labelled meaning first on the card, against today's order), the smaller on a tie. An item made worse loses a right first meaning the card showed before, so it counts twice: a larger margin is worth it when it saves one loss for fewer than two gains.
+
+The 4,931 development items of training round 1 (the 20 that overlap a test passage left out, as `dev_eval.py` does) are split by headword: `sha256("entry-order-r1\n" + headword)` below half its range is half A (2,640 items, 677 headwords), the rest half B (2,291 items, 698 headwords). Each item's labelled entry and the entries' positions are those of the real pack lookup made by `build-train-set.ts`; a fresh lookup of every changed item gave the same meaning counts. The development set has no entry with more than 16 meanings. Bootstrap intervals resample whole headwords (2,000 resamples, seed 1).
+
+Half A, against today's order (67.5% first on the card):
+
+| Margin | Entry moved | First on card | Gained | Made worse | Gained − 2 × worse |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 0 | 404 | 76.6% | 273 | 32 | 209 |
+| 0.10 | 390 | 76.6% | 268 | 28 | 212 |
+| 0.20 | 362 | 76.5% | 259 | 21 | 217 |
+| **0.25** | 356 | 76.6% | 257 | 18 | **221** |
+| 0.30 | 343 | 76.4% | 251 | 15 | 221 |
+| 0.40 | 313 | 75.9% | 236 | 14 | 208 |
+| 0.50 | 273 | 75.2% | 215 | 11 | 193 |
+
+The rule chose 0.25 (0.30 ties). Half B, the confirmation, against today's order (68.1%):
+
+| Order | First on card | Δ (95% CI) | Gained | Made worse |
+| --- | ---: | ---: | ---: | ---: |
+| Best entry first, no margin | 74.2% | +6.1 (4.4 to 7.8) | 174 | 35 |
+| Best entry first, margin 0.25 | 74.3% | +6.2 (4.7 to 7.8) | 158 | 16 |
+
+On half B the margin halves the items made worse and costs nothing in first-on-card (margin minus no margin +0.1 points, −0.4 to 0.7: 19 losses avoided, 16 gains given up). The rule applied to half B alone would also have chosen 0.25.
+
+**The whole development set** is the independent check of the effect, since the decision to move entries was taken from the test sets' simulation (`error-breakdown/`). Against today's 67.8% (3,343 items) first on the card: without a margin 75.5%, +7.7 points (6.3 to 9.1), 447 gained and 67 made worse; with 0.25, 75.5%, +7.7 (6.4 to 9.1), 415 gained and 34 made worse. Visible in the collapsed card: 97.2% today, 97.4% with the margin (9 gained, 1 made worse: an entry pushed from third to fourth place). The entry moved in 587 lookups (11.9%) with the margin, 689 without. Of the 415 gains, 326 move an entry of another part of speech out of the way; of the 34 losses, 24 put an entry of another part of speech first.
+
+### On the test sets, once, with the margin fixed
+
+INT8 in the extension, 750 ms budget; "today" reproduces the breakdown's 52.2%, 41.3% and 71.5%. Paired bootstrap by item, 2,000 resamples, seed 1:
+
+| Set | Items | First on card: dictionary / today / new | Δ new − today (95% CI) | Gained | Made worse | Visible: today / new | Δ visible (95% CI) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Wiktionary | 2,300 | 23.5% / 52.2% / **60.7%** | +8.5 (7.2 to 9.8) | 220 | 25 | 79.9% / 80.6% | +0.7 (0.4 to 1.0); 16 gained, 0 worse |
+| Wiktionary, weighted | | 36.7% / 65.7% / **75.1%** | +9.4 | | | 95.1% / 95.9% | +0.8 |
+| Hand-written | 104 | 12.5% / 41.3% / **64.4%** | +23.1 (15.4 to 31.7) | 24 | 0 | 68.3% / 75.0% | +6.7 (1.9 to 11.5); 7 gained, 0 worse |
+| Simple English | 4,167 | 40.1% / 71.5% / **84.8%** | +13.3 (12.1 to 14.4) | 608 | 55 | 99.5% / 99.6% | +0.1 (0.0 to 0.2); 3 gained, 0 worse |
+
+First within the entry is unchanged (64.2%, 68.3%, 88.0%). Without the margin the gains were 237, 25 and 630 and the losses 36, 3 and 77 (first on card 60.9%, 62.5%, 84.8%); on the Wiktionary set the margin gives up 0.3 points of first-on-card (−0.7 to 0.1) for 11 fewer losses, on the other two it costs nothing. The entry moved in 445 Wiktionary lookups (19.3%). "Right in its entry, but its entry is not the first" falls from 276 to 81 items on the Wiktionary set, 28 to 4 on the hand-written set and 685 to 132 on Simple English; the other causes are unchanged. On the Wiktionary set 182 of the 220 gains move an entry of another part of speech out of the way, and 20 of the 25 losses put one first; on the hand-written set 13 of 24 gains do.
+
+The showcases of the site and the store (`site/_examples.json` and the demonstration page of `validation/store-assets.ts`, looked up again with the real pack and `assets-v2` in the browser on 2026-11-27): no first meaning changes with the margin. Without it, Alice's "bank" would have opened on "A bench, as for rowers in a galley" (probability 0.36 against 0.18 for the first entry's best), which the margin stops; "cell" and "pitch" stay "none of the above".
+
+### Limits
+
+- The decision to move entries was made from the test sets' simulation; only the margin was chosen on development data, and the development set confirms the effect independently.
+- Each Wiktionary label is the entry the example is filed under. Most gains and most losses cross a part-of-speech boundary (a noun entry before an adjective entry of the same word, for instance), where the filing can be arbitrary, so some gains and some losses are artifacts of filing rather than better or worse cards.
+- The hand-written set is small (104 items) and was written and labelled by a model.
+- The development scores are float PyTorch and have no budget; the test scores are the INT8 extension at 750 ms.
+- Lookups the extension does not send to the model (every entry with one meaning, or "nothing to reorder") cannot move an entry either.
+- Nothing here measures how the reordered card reads: whether a reader is helped or confused when the second entry comes first.
+
 ## How to rerun
 
 All scripts read local inputs (the Kaikki extracts, the pack, the model export; defaults as in `CLAUDE.md`, overridden by `CD_KAIKKI`, `CD_KAIKKI_SIMPLE`, `CD_PACK`, `CD_MODEL_DIR`) and write under `~/.cache/contextual-dictionary/validation/` (`CD_VALIDATION_OUT`). None runs in CI.
@@ -448,6 +522,16 @@ npx tsx validation/analyze-threads.ts
 npx tsx validation/extension-bench.ts --install       # once: downloads the release the build pins (now assets-v2, 255 MB) into a template profile
 npx tsx validation/extension-bench.ts --build dist --label after --cap 24 --budget 750 [--idle] [--start-on]
 npm run package && npx tsx validation/acceptance.ts --public   # downloads that release again into a fresh profile
+```
+
+The best entry first (seconds each; reads training round 1's development items and scores, and the test sets' INT8 answers of `assets-v2`; `--pack` looks the changed items up again in the pack):
+
+```bash
+npx tsx validation/entry-order.ts --set dev --half A --sweep --margin 0            # the margins on half A and the rule's choice
+npx tsx validation/entry-order.ts --set dev --half B --sweep                       # the confirmation on half B
+npx tsx validation/entry-order.ts --set dev --pack                                 # the whole development set
+S=~/.cache/contextual-dictionary/validation/train/browser-out/scores-s2-labels-teacher-recipe.jsonl
+npx tsx validation/entry-order.ts --set wiktionary --scores $S --pack              # and --set written --pack, --set simple
 ```
 
 Training round 1: every step, with its command, inputs, outputs and time, is in `validation/training/README.md`, "Steps". It needs a CUDA GPU, the Python environment of `validation/training/requirements.txt`, the sense-model checkout at `~/src/sense-model` (the scripts import it from there), the evaluation sets above, and the scripts copied into `~/.cache/contextual-dictionary/validation/train/scripts/`, from where they run. In outline (`T` that folder, `PY=../teacher/venv/bin/python`, commands with `scripts/` run from `T`):

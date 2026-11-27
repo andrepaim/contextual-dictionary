@@ -18,6 +18,7 @@ This plan is the plan of record that version 0.1.0 (2026-11-23) was built from. 
 | 2026-11-25 | A Simple English Wiktionary evaluation set, and the rule for which headwords stay out of training | #25 | `docs/validation.md` |
 | 2026-11-26 | The extension is public in the Chrome Web Store; the site, the guide and the README lead to the listing | #26 | `store/listing.md`, `docs/user-guide.md` |
 | 2026-11-26, 0.4.0 | The model fine-tuned on English Wiktionary (training round 1), published as release `assets-v2` | #29, #30 | `docs/validation.md` ("Training round 1"), `docs/assets.md` |
+| 2026-11-27, on `main`, not released | The entry holding the model's best meaning moves to the top of the card, beyond a margin of 0.25 in probability; the other entries keep dictionary order. Core package 0.3.0 (`contextualOrder` option `bestEntryFirst`, off by default); order details tag the moved entry | this pull request | `docs/validation.md` ("The best entry first"), `packages/core/README.md`, `docs/order-details-plan.md` |
 
 Paths in sections 4 and 5 are those of 0.1.0; the notes beside them give where the code is now.
 
@@ -26,7 +27,7 @@ Paths in sections 4 and 5 are those of 0.1.0; the notes beside them give where t
 **Goals**
 
 1. Double-click a word, or select a short phrase, on any ordinary web page: a card shows its Wiktionary entries.
-2. With the model installed and the setting on, the meanings inside each entry are listed by contextual fit. Entries keep dictionary order; no definition or example is dropped; the card shows no scores.
+2. With the model installed and the setting on, the meanings inside each entry are listed by contextual fit. Entries keep dictionary order; no definition or example is dropped; the card shows no scores. **Since 2026-11-27 (on `main`, not yet released):** the entry that holds the model's best meaning moves to the top when that meaning beats the first entry's best by at least 0.25 in probability; the other entries keep dictionary order (`docs/validation.md`, "The best entry first").
 3. Everything runs locally. The only network use is one confirmed download of the model and the dictionary.
 4. Lookups fail open: any problem leaves dictionary order.
 5. Works offline after the download.
@@ -70,7 +71,7 @@ Paths in sections 4 and 5 are those of 0.1.0; the notes beside them give where t
 | Render policy | One final render. A lightweight placeholder appears at once; the card renders when the order is known or the budget ends, whichever is first. A late answer is cached for the next lookup of the same passage and never reorders a visible card. |
 | Budget | Default 350 ms for a ready model, configurable 50–2000 ms. Revisit with stage 3 numbers. **Stage 3: 750 ms**, with the prompt length limit below: every lookup of the evaluation set answered in time on 8 and 4 threads (`docs/validation.md`). |
 | Candidates | All meanings are offered when they fit. Above `maxCandidates` (default 48, revisit in stage 3) or the token limit, only the first meanings in dictionary order are scored; the rest keep their order after the scored ones. **Stage 3:** the time depends on the prompt's length, not the number of meanings, so the ranker also limits prompts to 1,600 characters (about 420 tokens, below the 2,048-token limit, so no prompt is refused as too long); `maxCandidates` default 24. |
-| Ordering policy | Same as pdfpal: stable sort inside each entry; dictionary order on "none of the above" win or tie, single-meaning entries, non-English passage, unsafe text (`*`, control tokens), failure or timeout. |
+| Ordering policy | Same as pdfpal: stable sort inside each entry; dictionary order on "none of the above" win or tie, single-meaning entries, non-English passage, unsafe text (`*`, control tokens), failure or timeout. **Since 2026-11-27 (on `main`, not yet released):** also the entry holding the best meaning first, beyond a margin of 0.25; every case above still keeps dictionary order, entries included. |
 | Opt-in | Definitions work as soon as the dictionary is installed. "Order by context" is a separate switch. Each download shows its size and starts only after confirmation. **Stage 3:** the switch is on by default, because model order clearly beat dictionary order; the model still downloads only after confirmation. |
 | Sites | Works on all sites by default with a per-site off switch in the popup. |
 | Assets | Published as a GitHub release `assets-v1` of this repository: `ettin-150m-wsd-int8.onnx.gz`, the small model files, `wiktionary-en-v1.pack`, and notices. Every file is pinned by size and SHA-256 in `src/assets/manifest.ts`. Published assets are never changed; a new payload gets a new tag. **Since 0.4.0:** release `assets-v2`, with the same file names, the fine-tuned model and the same pack (`docs/assets.md`). |

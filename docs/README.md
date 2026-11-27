@@ -7,7 +7,7 @@ Every document of the project, with one line each. The first group describes the
 - [`user-guide.md`](user-guide.md): installing, the first downloads, looking a word up, the switches and the order details, for readers. Published on the site as the guide.
 - [`privacy.md`](privacy.md): what the extension reads, keeps and sends, and why it needs each permission. Published on the site.
 - [`assets.md`](assets.md): the GitHub releases the dictionary and the model download from, their pins, how to verify a download by hand and how to publish a new release.
-- [`validation.md`](validation.md): the measurements behind the defaults (speed, accuracy, memory, release acceptance), training round 1 that made the `assets-v2` model, and how to rerun each.
+- [`validation.md`](validation.md): the measurements behind the defaults (speed, accuracy, memory, release acceptance), training round 1 that made the `assets-v2` model, the best entry first on the card (on `main`, not released), and how to rerun each.
 - [`pack-format.md`](pack-format.md): the dictionary pack's file format, version 1.
 - [`dictionary-build.md`](dictionary-build.md): building the pack from the Kaikki.org extract, with its statistics (`dictionary-stats.json`).
 - [`development.md`](development.md): building, testing and releasing; the shared core package, the site and its captures.
