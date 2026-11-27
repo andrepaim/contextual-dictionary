@@ -27,7 +27,7 @@ CI (`.github/workflows/ci.yml`) runs the same checks, the package and the end-to
 The dictionary lookup, the pack reader and writer, prompt building and contextual ordering live in `packages/core/`, published as `@andrepaim/contextual-dictionary-core` ([its API](../packages/core/README.md)). The extension installs it from the checked-in npm tarball in `artifacts/`, the same file another project can install. To use it elsewhere, replace `COMMIT_SHA` with a full commit SHA that contains the tarball:
 
 ```sh
-npm install --ignore-scripts 'https://raw.githubusercontent.com/andrepaim/contextual-dictionary/COMMIT_SHA/artifacts/contextual-dictionary-core-0.2.1.tgz'
+npm install --ignore-scripts 'https://raw.githubusercontent.com/andrepaim/contextual-dictionary/COMMIT_SHA/artifacts/contextual-dictionary-core-0.3.0.tgz'
 ```
 
 After changing the core's source:
@@ -67,7 +67,7 @@ The dictionary pack and the model files are not in the repository. They are publ
 
 ## Measurements and training
 
-The defaults (`DEFAULT_SETTINGS`, `RANKER_DEFAULTS.maxPromptChars`) come from measurements, and change only with new numbers.
+The defaults (`DEFAULT_SETTINGS`, `RANKER_DEFAULTS.maxPromptChars`, `RANKER_DEFAULTS.entryMargin`) come from measurements, and change only with new numbers.
 
 - [`validation.md`](validation.md): speed, accuracy, memory, the choice of defaults, release acceptance and training round 1, with how to rerun each measurement at the end. The scripts are in `validation/`; they read local inputs (listed in [`CLAUDE.md`](../CLAUDE.md), "Local inputs") or the network and never run in CI.
 - [`validation/training/README.md`](../validation/training/README.md): the Python and shell scripts of training round 1, as run on a GPU machine. The float weights of the model it made are on Hugging Face, [andrepaim/Ettin-150m-WSD-wiktionary](https://huggingface.co/andrepaim/Ettin-150m-WSD-wiktionary/tree/affc67b9a87c51a07ce642726cee993c593ad744).

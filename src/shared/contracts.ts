@@ -79,13 +79,19 @@ export interface OrderDetails {
    * senses. The rest follow in dictionary order.
    */
   offered?: number[]
+  /**
+   * Only with status 'ordered'. entryPositions[e] is the 0-based dictionary
+   * position of result.entries[e]; the identity unless the entry holding the
+   * model's best meaning moved first.
+   */
+  entryPositions?: number[]
 }
 
 export interface Ranker {
   status(): RankerStatus
   /** Starts loading the model in the background, unless it is loaded, loading, closed or recently failed. */
   warm(): void
-  /** `result` with each entry's meanings in contextual order, or `result` itself on any problem, with what was done. Never rejects. */
+  /** `result` with each entry's meanings in contextual order (and the entry holding the best one first), or `result` itself on any problem, with what was done. Never rejects. */
   rank(result: DictionaryResult, selection: Selection, signal?: AbortSignal): Promise<{ result: DictionaryResult; details: OrderDetails }>
   /** `rank()`'s result alone. */
   order(result: DictionaryResult, selection: Selection, signal?: AbortSignal): Promise<DictionaryResult>

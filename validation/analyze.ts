@@ -14,7 +14,7 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { contextualOrder, type SenseRequest } from '@andrepaim/contextual-dictionary-core'
 import type { DictionaryResult } from '../src/shared/contracts'
-import { BUDGETS, ENTRY_BUCKETS, OFFERED_BUCKETS, VARIANTS, PATHS, bucketLabel, bucketOf, percentile, readFormat, readJsonl } from './common'
+import { BUDGETS, ENTRY_BUCKETS, OFFERED_BUCKETS, VARIANTS, PATHS, bucketLabel, bucketOf, pairedInterval, percentile, readFormat, readJsonl } from './common'
 
 const { values } = parseArgs({ options: { set: { type: 'string', default: 'wiktionary' }, threads: { type: 'string', default: '8' }, seed: { type: 'string', default: '1' } } })
 const format = readFormat()
@@ -59,20 +59,6 @@ const pct = (value: number) => `${(100 * value).toFixed(1)}%`
 const mean = (list: number[]) => list.reduce((sum, value) => sum + value, 0) / Math.max(1, list.length)
 function summary(ranks: number[]) {
   return { n: ranks.length, top1: mean(ranks.map(rank => (rank === 1 ? 1 : 0))), top3: mean(ranks.map(rank => (rank <= 3 ? 1 : 0))), meanRank: mean(ranks) }
-}
-
-/** A seeded bootstrap 95% interval of the paired difference model minus dictionary. */
-function pairedInterval(model: number[], dictionary: number[], seed: number): [number, number] {
-  let state = seed >>> 0 || 1
-  const random = () => { state ^= state << 13; state >>>= 0; state ^= state >>> 17; state ^= state << 5; state >>>= 0; return state / 2 ** 32 }
-  const n = model.length, diffs: number[] = []
-  for (let b = 0; b < 2000; b++) {
-    let sum = 0
-    for (let i = 0; i < n; i++) { const j = Math.floor(random() * n); sum += model[j]! - dictionary[j]! }
-    diffs.push(sum / n)
-  }
-  diffs.sort((a, b) => a - b)
-  return [percentile(diffs, 2.5), percentile(diffs, 97.5)]
 }
 
 const lines: string[] = []

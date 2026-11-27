@@ -39,6 +39,11 @@ describe('orderStatusText', () => {
     expect(orderStatusText({ status: 'timed-out' })).toBe('Dictionary order · model took too long, try again')
   })
 
+  test('an order that moved only an entry says it is ordered by context', () => {
+    expect(orderStatusText({ status: 'ordered', positions: [[0, 1], [0, 1, 2]], offered: [2, 3], entryPositions: [1, 0] })).toBe('Ordered by context')
+    expect(orderStatusText({ status: 'ordered', positions: [[0, 1, 2], [0, 1]], offered: [3, 2], entryPositions: [0, 1] })).toBe('Ordered by context · same as dictionary order')
+  })
+
   test('no status text holds a number, a percentage or a time', () => {
     for (const text of Object.values(ORDER_STATUS_TEXT)) expect(text).not.toMatch(/[\d%]|\bms\b|seconds?/)
   })
@@ -80,5 +85,15 @@ describe('usableDetails', () => {
       { ...ordered, offered: 5 },
     ]
     for (const details of broken) expect(usableDetails(result, details), JSON.stringify(details)).toBeUndefined()
+  })
+
+  test('entry positions are kept when they are a permutation of the entries, and may be missing', () => {
+    expect(usableDetails(result, { ...ordered, entryPositions: [1, 0] })).toEqual({ ...ordered, entryPositions: [1, 0] })
+    expect(usableDetails(result, { ...ordered, entryPositions: [0, 1] })).toEqual({ ...ordered, entryPositions: [0, 1] })
+    expect(usableDetails(result, ordered)).toEqual(ordered)
+    expect(usableDetails(result, { status: 'timed-out', entryPositions: [1, 0] })).toEqual({ status: 'timed-out' })
+    for (const entryPositions of [[0], [0, 0], [1, 2], [0, 1, 2], ['1', 0], [0.5, 1], 'first', null]) {
+      expect(usableDetails(result, { ...ordered, entryPositions }), JSON.stringify(entryPositions)).toBeUndefined()
+    }
   })
 })

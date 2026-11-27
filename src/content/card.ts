@@ -121,7 +121,7 @@ export class Card {
     let expanded = false
     const fill = () => {
       const preview = cardPreview(result.entries, expanded)
-      body.replaceChildren(...preview.entries.map((entry, index) => this.#entry(entry, order?.positions?.[index], order?.offered?.[index])))
+      body.replaceChildren(...preview.entries.map((entry, index) => this.#entry(entry, order?.positions?.[index], order?.offered?.[index], order?.entryPositions?.[index], index)))
       return preview.canExpand
     }
     const canExpand = fill()
@@ -189,8 +189,12 @@ export class Card {
     return element
   }
 
-  /** Renders one entry, with dictionary positions when the context model reordered it. */
-  #entry({ entry, senses }: CardPreviewEntry, positions?: number[], offered?: number): HTMLElement {
+  /**
+   * Renders the entry at `entryPlace` on the card, with dictionary positions when
+   * the context model reordered it, and the entry's dictionary position when the
+   * model moved it up.
+   */
+  #entry({ entry, senses }: CardPreviewEntry, positions?: number[], offered?: number, entryPosition?: number, entryPlace = 0): HTMLElement {
     const section = this.#element('section', 'dc-entry')
     const head = this.#element('div', 'dc-head')
     const lemma = this.#element('span', 'dc-lemma')
@@ -200,6 +204,13 @@ export class Card {
     pos.dataset.part = 'pos'
     pos.textContent = entry.partOfSpeech
     head.append(lemma, pos)
+    if (entryPosition !== undefined && entryPosition > entryPlace) {
+      // The entry holding the model's best meaning moved up; the entries it passed keep dictionary order and carry nothing.
+      const tag = this.#element('span', 'dc-was')
+      tag.dataset.part = 'entry-was'
+      tag.textContent = `was ${ordinal(entryPosition + 1)} entry`
+      head.append(tag)
+    }
     section.append(head)
     if (entry.note) {
       const note = this.#element('p', 'dc-note')

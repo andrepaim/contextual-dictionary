@@ -188,23 +188,59 @@ export function senseRequest(result: DictionaryResult, selection: Selection, for
 export type OrderOutcome =
   | {
     result: DictionaryResult; applied: true
-    /** positions[e][i]: the dictionary position of the meaning now at place i of entry e. */
+    /** positions[e][i]: the dictionary position of the meaning now at place i of the entry now at place e. */
     positions: number[][]
-    /** offered[e]: how many meanings of entry e were offered; they come first. */
+    /** offered[e]: how many meanings of the entry now at place e were offered; they come first. */
     offered: number[]
+    /** entryPositions[e]: the dictionary position of the entry now at place e (the identity unless an entry moved). */
+    entryPositions: number[]
   }
   | { result: DictionaryResult; applied: false; reason: 'NONE_FITS' | 'INVALID_SCORES' }
+
+export interface OrderOptions {
+  /**
+   * Move the entry that holds the best-scored meaning to the first place; the
+   * other entries keep dictionary order among themselves. Off by default:
+   * entries keep dictionary order.
+   */
+  bestEntryFirst?: boolean
+  /**
+   * With `bestEntryFirst`: the entry moves only when its best meaning's
+   * probability is at least this much above the best of the first entry's
+   * offered meanings (0 when it has none). Probabilities are the softmax over
+   * the offered meanings and "none of the above". Default 0.
+   */
+  entryMargin?: number
+}
+
+/**
+ * The dictionary positions of the entries in their new order: the identity,
+ * or with `bestEntryFirst` the best entry first when it beats the first
+ * entry by the margin. `best[e]` is entry e's highest probability, or
+ * undefined when none of its meanings was offered; ties go to the earlier entry.
+ */
+function entryOrder(best: Array<number | undefined>, options: OrderOptions): number[] {
+  const identity = best.map((_, e) => e)
+  if (!options.bestEntryFirst) return identity
+  let top = 0
+  best.forEach((p, e) => { if (p !== undefined && p > (best[top] ?? Number.NEGATIVE_INFINITY)) top = e })
+  const margin = typeof options.entryMargin === 'number' && options.entryMargin > 0 ? options.entryMargin : 0
+  if (top === 0 || best[top]! - (best[0] ?? 0) < margin) return identity
+  return [top, ...identity.filter(e => e !== top)]
+}
 
 /**
  * Sorts the scored meanings of each entry by the model's probability,
  * highest first; meanings that were not offered follow in dictionary order.
- * Entries keep their order and the sort is stable, so equal scores keep
- * dictionary order. When "none of the above" scores at least as high as
- * every meaning, or the scores are unusable, `result` itself is returned.
- * An applied order also gives each meaning's dictionary position and each
- * entry's number of offered meanings, for the card's order details.
+ * The sort is stable, so equal scores keep dictionary order. Entries keep
+ * their order, unless `options.bestEntryFirst` asks for the entry holding the
+ * best meaning to come first (`OrderOptions`). When "none of the above"
+ * scores at least as high as every meaning, or the scores are unusable,
+ * `result` itself is returned. An applied order also gives each meaning's
+ * and each entry's dictionary position and each entry's number of offered
+ * meanings, for the card's order details.
  */
-export function contextualOrder(result: DictionaryResult, request: SenseRequest, logits: ArrayLike<number>, format: SenseFormat): OrderOutcome {
+export function contextualOrder(result: DictionaryResult, request: SenseRequest, logits: ArrayLike<number>, format: SenseFormat, options: OrderOptions = {}): OrderOutcome {
   const count = request.candidates.length
   if (logits.length <= format.nota_index || count === 0 || count > format.nota_index) return { result, applied: false, reason: 'INVALID_SCORES' }
   const temperature = format.temperature > 0 ? format.temperature : 1
@@ -217,7 +253,7 @@ export function contextualOrder(result: DictionaryResult, request: SenseRequest,
   if (none >= Math.max(...probabilities)) return { result, applied: false, reason: 'NONE_FITS' }
 
   const probability = new Map(request.candidates.map((candidate, i) => [`${candidate.entry}:${candidate.sense}`, probabilities[i]!]))
-  const positions: number[][] = [], offered: number[] = []
+  const positions: number[][] = [], offered: number[] = [], best: Array<number | undefined> = []
   const entries = result.entries.map((entry, e) => {
     type Placed = { sense: (typeof entry.senses)[number]; s: number }
     const scored: Array<Placed & { p: number }> = []
@@ -231,7 +267,12 @@ export function contextualOrder(result: DictionaryResult, request: SenseRequest,
     const placed = [...scored, ...rest]
     positions.push(placed.map(({ s }) => s))
     offered.push(scored.length)
+    best.push(scored[0]?.p)
     return { ...entry, senses: placed.map(({ sense }) => sense) }
   })
-  return { result: { ...result, entries }, applied: true, positions, offered }
+  const order = entryOrder(best, options)
+  return {
+    result: { ...result, entries: order.map(e => entries[e]!) }, applied: true,
+    positions: order.map(e => positions[e]!), offered: order.map(e => offered[e]!), entryPositions: order,
+  }
 }

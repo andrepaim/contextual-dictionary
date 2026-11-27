@@ -53,7 +53,7 @@ npm run icons       # redraws src/icons/ (scripts/make-icons.mjs)
 - **Untrusted input.** Page text, dictionary text and messages from pages are untrusted. Render text with `textContent`, never as HTML. Validate messages with `isRequest`.
 - **Published assets never change.** A new model or dictionary payload gets a new release tag and new pins.
 - **Do not commit** models, packs, Kaikki extracts or anything under `.data/`, nor Wiktionary or pilot text from the evaluation sets: commit item identifiers only.
-- **Defaults come from measurements.** `DEFAULT_SETTINGS` and `RANKER_DEFAULTS.maxPromptChars` were chosen in `docs/validation.md`; change them only with new numbers there.
+- **Defaults come from measurements.** `DEFAULT_SETTINGS`, `RANKER_DEFAULTS.maxPromptChars` and `RANKER_DEFAULTS.entryMargin` were chosen in `docs/validation.md`; change them only with new numbers there.
 
 ## Working on a task
 

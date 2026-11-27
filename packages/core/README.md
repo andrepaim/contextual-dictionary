@@ -21,7 +21,16 @@ async function define(source: ByteSource, selection: Selection, format: SenseFor
 
 `ByteSource.read(start, end)` returns exactly `end - start` bytes, with `end` exclusive. Define and order use the same `Selection` shape. Context is optional and its whitespace marks word boundaries. Preserve whitespace when passing text from either side of the selection. Open the dictionary once and reuse it for lookups to benefit from the block cache.
 
-`isSenseFormat` validates prompt metadata. `contextualOrder` preserves the original result on unusable scores or when the model chooses “none of the above.” Applied orders include the original position of each sense and the number offered per entry. Callers handle storage, asset verification, inference, scheduling and UI.
+`isSenseFormat` validates prompt metadata. `contextualOrder` preserves the original result on unusable scores or when the model chooses “none of the above.” Applied orders include the original position of each sense, the number offered per entry and the original position of each entry (`entryPositions`). Callers handle storage, asset verification, inference, scheduling and UI.
+
+By default `contextualOrder` reorders the meanings inside each entry and leaves the entries in dictionary order. Its optional fifth argument, `{ bestEntryFirst: true, entryMargin }` (since 0.3.0), also moves the entry that holds the best-scored meaning to the first place; the other entries keep dictionary order among themselves. The entry moves only when that meaning's probability (the softmax over the offered meanings and “none of the above”) is at least `entryMargin` above the best probability among the first entry's offered meanings; the default margin is 0. Nothing moves when the model chooses “none of the above” or the scores are unusable. In an applied order, `positions`, `offered` and `entryPositions` all follow the result's entries in their new order:
+
+```ts
+const order = contextualOrder(result, request, logits, format, { bestEntryFirst: true, entryMargin: 0.1 })
+if (order.applied && order.entryPositions[0] !== 0) {
+  // order.result.entries[0] was entry number order.entryPositions[0] + 1 in dictionary order.
+}
+```
 
 `@andrepaim/contextual-dictionary-core/pack` exports `writePack`, `PackWriter` and the v1 pack record types. Supply records in `compareKeys` order when writing a pack for tests or tools.
 

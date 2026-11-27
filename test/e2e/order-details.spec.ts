@@ -8,7 +8,7 @@ import { install, launch, send, status, type Session } from './support/extension
 let session: Session | undefined
 test.afterEach(async () => { await session?.close(); session = undefined })
 
-const DETAIL_PARTS = ['was', 'unranked', 'order-status']
+const DETAIL_PARTS = ['was', 'unranked', 'order-status', 'entry-was']
 
 /** Dismisses any card, so the same word can be looked up again. */
 async function lookUp(page: Page, selector: string, word: string): Promise<void> {
@@ -69,6 +69,24 @@ test('switch on: a reordered card shows where each moved meaning was, and "Order
   await expect(card(page).locator('[data-part="unranked"]')).toHaveCount(0)
   // No score, percentage or timing anywhere in the card's own words.
   for (const part of ['was', 'order-status']) for (const text of await card(page).locator(`[data-part="${part}"]`).allTextContents()) expect(text).not.toMatch(/%|\bms\b|\d+\.\d|second/)
+})
+
+test('switch on: an entry moved first says where it was among the entries; switch off: nothing', async () => {
+  session = await orderedSession()
+  await setSwitch(session, 'showOrderDetails', true)
+  const page = await session.context.newPage()
+  await gotoReady(page, `${session.pages}/article.html`)
+  await lookUp(page, '#pilot', 'bank')
+  const heads = card(page).locator('section.dc-entry .dc-head')
+  await expect(heads.first().locator('[data-part="pos"]')).toHaveText('verb')
+  await expect(heads.first().locator('[data-part="entry-was"]')).toHaveText('was 2nd entry')
+  await expect(card(page).locator('[data-part="entry-was"]')).toHaveCount(1)
+  await expect(card(page).locator('[data-part="order-status"]')).toHaveText('Ordered by context')
+
+  await setSwitch(session, 'showOrderDetails', false)
+  await lookUp(page, '#pilot', 'bank')
+  await expect(heads.first().locator('[data-part="pos"]')).toHaveText('verb')
+  for (const part of DETAIL_PARTS) await expect(card(page).locator(`[data-part="${part}"]`), part).toHaveCount(0)
 })
 
 test('switch off: the reordered card has none of the details', async () => {
