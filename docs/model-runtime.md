@@ -1,5 +1,7 @@
 # Model runtime under WebAssembly: first measurements
 
+> **A record, not current numbers.** These are the stage 1 measurements, merged on 2026-11-23 (#3), of the checkpoint that `assets-v1` shipped as is (Ettin-150m-WSD, the 267 MB INT8 graph). The defaults this page mentions, a 350 ms budget and 48 candidates, were changed in stage 3 to 750 ms, 24 candidates and prompts of at most 1,600 characters. Since 0.4.0 the extension uses the fine-tuned model of `assets-v2`. `docs/validation.md` holds the current numbers.
+
 The first read on the project's biggest risk (plan section 9): how fast the
 real Ettin-150m-WSD INT8 checkpoint runs with `onnxruntime-web` 1.30.0 on
 WebAssembly in Chromium. These numbers are from one machine on one day. They
