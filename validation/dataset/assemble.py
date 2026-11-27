@@ -1,23 +1,26 @@
 """Assembles the dataset andrepaim/wiktionary-wsd from the files training round 1 of Contextual Dictionary wrote.
 
+The sequence, its inputs and the upload are in validation/dataset/README.md. In short, from the repository root:
+
   # 1. Entry headwords of every lookup (the extension's own lookup, rerun and checked against the stored prompts):
-  cd ~/src/contextual-dictionary && CD_VALIDATION_OUT=$WORK/tmp npx tsx $DATASET/scripts/entry_lemmas.mts $WORK/lemmas-all.jsonl \
+  CD_VALIDATION_OUT=$WORK/tmp npx tsx validation/dataset/entry_lemmas.mts $WORK/lemmas-all.jsonl \
     $V/train/data/train-items.jsonl $V/train/data/dev-items.jsonl $V/train/data/unlabelled-items.jsonl \
     $V/wiktionary-items.jsonl $V/written-items.jsonl
-  # 2. This script (Python 3.12 with pyarrow; it imports sense-model's wsd package and the extension's prepare_examples.py):
-  $V/teacher/venv/bin/python -I $DATASET/scripts/assemble.py --out $DATASET --lemmas $WORK/lemmas-all.jsonl
-  # where V=~/.cache/contextual-dictionary/validation, DATASET=~/.cache/contextual-dictionary/hf-upload/wiktionary-wsd,
-  # WORK=~/.cache/contextual-dictionary/hf-upload/wiktionary-wsd-work
+  # 2. This script (Python 3.12 with pyarrow; it imports sense-model's wsd package and prepare_examples.py beside it):
+  python -I validation/dataset/assemble.py --out $DATASET --lemmas $WORK/lemmas-all.jsonl
+  # where V is the evaluation folder (--validation: $CD_VALIDATION_OUT, default ~/.cache/contextual-dictionary/validation),
+  # DATASET a new folder for the dataset and WORK a scratch folder.
 
-Inputs (read only): the builders' outputs under ~/.cache/contextual-dictionary/validation/ (docs/validation.md of
-https://github.com/andrepaim/contextual-dictionary, "Training round 1 (assets-v2)"), the Kaikki.org English extract of
-2026-10-30 (quotation references), the Wikipedia shard the paragraphs were sampled from (article titles and URLs), the
-extension's repository (held-out lists, prepare_examples.py) and sense-model (wsd.schema, wsd.tokenizer.format_prompt,
-wsd.data.read_jsonl).
+Inputs (read only): the builders' outputs under --validation (docs/validation.md of
+https://github.com/andrepaim/contextual-dictionary, "Training round 1 (assets-v2)") and its train/ folder (--train),
+the Kaikki.org English extract of 2026-10-30 (quotation references), the Wikipedia shard the paragraphs were sampled
+from (article titles and URLs), this repository (held-out lists, prepare_examples.py) and sense-model (--sense-model:
+wsd.schema, wsd.tokenizer.format_prompt, wsd.data.read_jsonl).
 
 What it writes under --out:
-  data/, teacher/       the files the training runs read, copied byte for byte (same relative paths as under
-                        validation/train/, so a rerun of validation/training/stage2.sh can point at this folder)
+  data/, teacher/       the files the training runs read, copied byte for byte (same relative paths as under the
+                        train/ folder, so sense-model's configs/wiktionary_round1_*.json read this folder with
+                        `wsd train --data-dir`)
   eval/                 the three test sets as sense-model Examples in the two prompt forms that were scored, made from
                         the extension's prompts with prepare_examples.py's example_from_prompt (format_prompt must rebuild
                         each prompt byte for byte); the item files the scores were computed from; the held-out headwords
@@ -25,11 +28,13 @@ What it writes under --out:
                         definitions were offered (attribution side tables; the training files are not changed)
   reports/              the builders' and the leak check's reports, local paths replaced by ~
   manifest.json         every file with its size, SHA-256, rows, origin and description
+The counts it checks (expect) are those of the round's files; a new build changes them with docs/validation.md.
 """
 import argparse
 import gzip
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -39,20 +44,25 @@ from pathlib import Path
 from urllib.parse import quote
 
 HOME = Path.home()
-p = argparse.ArgumentParser()
-p.add_argument("--out", required=True)
+HERE = Path(__file__).resolve().parent
+p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+p.add_argument("--out", required=True, help="the dataset folder to write")
 p.add_argument("--lemmas", required=True, help="output of entry_lemmas.mts")
-p.add_argument("--validation", default=str(HOME / ".cache/contextual-dictionary/validation"))
-p.add_argument("--repo", default=str(HOME / "src/contextual-dictionary"))
-p.add_argument("--sense-model", default=str(HOME / "src/sense-model"))
-p.add_argument("--kaikki", default=str(HOME / ".cache/contextual-dictionary/kaikki/english-2026-10-30.jsonl.gz"))
+p.add_argument("--validation", default=os.environ.get("CD_VALIDATION_OUT") or str(HOME / ".cache/contextual-dictionary/validation"),
+               help="the evaluation folder (default $CD_VALIDATION_OUT, else ~/.cache/contextual-dictionary/validation)")
+p.add_argument("--train", help="the training round's working folder (default: train/ in --validation)")
+p.add_argument("--repo", default=str(HERE.parents[1]), help="this repository (default: the one holding this script)")
+p.add_argument("--sense-model", default=os.environ.get("SENSE_MODEL_DIR") or str(HOME / "src/sense-model"),
+               help="a sense-model checkout (default $SENSE_MODEL_DIR, else ~/src/sense-model)")
+p.add_argument("--kaikki", default=os.environ.get("CD_KAIKKI") or str(HOME / ".cache/contextual-dictionary/kaikki/english-2026-10-30.jsonl.gz"))
 a = p.parse_args()
-OUT, V, REPO, SM = Path(a.out), Path(a.validation), Path(a.repo), Path(a.sense_model)
-T = V / "train"
+OUT, V, REPO, SM = Path(a.out), Path(a.validation).expanduser(), Path(a.repo), Path(a.sense_model).expanduser()
+T = Path(a.train).expanduser() if a.train else V / "train"
 
+os.environ["SENSE_MODEL_DIR"] = str(SM)  # prepare_examples.py imports sense-model from there
 sys.path.insert(0, str(SM / "src"))
-sys.path.insert(0, str(REPO / "validation/training"))
-from prepare_examples import example_from_prompt  # noqa: E402  (also puts sense-model's src on the path)
+sys.path.insert(0, str(HERE))
+from prepare_examples import example_from_prompt  # noqa: E402
 from wsd.data import read_jsonl  # noqa: E402
 from wsd.schema import Example  # noqa: E402
 
@@ -98,7 +108,7 @@ COPIES = [
     ("data/dev-c1600.clean.jsonl", "Development examples at the extension's defaults (24|c1600), labelled meaning offered. Read by the runs (--dev)."),
     ("data/dev-127.clean.jsonl", "Development examples with every meaning (127), labelled meaning offered. Read by the runs (--dev127)."),
     ("data/dev-notoffered.clean.jsonl", "Development prompts at the defaults whose cap left the labelled meaning out (gold_ids null). Not read by the runs; counted as misses in the development tables."),
-    ("data/dev-items.jsonl", "Development items in the extension's item format (analyze.ts), the input of dev_eval.py with reports/excluded-overlap-ids.txt."),
+    ("data/dev-items.jsonl", "Development items in the extension's item format (analyze.ts), the input of the development tables (sense-model's wsd rank --items, with --exclude reports/excluded-overlap-ids.txt)."),
     ("teacher/cache-stage2-T2.jsonl", "The teacher's soft labels as the runs read them (--teacher-scores): example fingerprint, probabilities at T = 2 per candidate id and none of the above. sign/Ettin-1B-WSD, bf16."),
     ("teacher/teacher-bf16.jsonl", "The teacher's raw logits (offered meanings, then none of the above) per prompt SHA-256, bf16, for every training, unlabelled and development prompt."),
 ]
@@ -308,7 +318,7 @@ meta["sources/wikipedia.jsonl"] = ("made from validation/train/data/wiki-paragra
 for src, rel, desc in [
     (T / "data/build.json", "reports/build-train.json", "Report of validation/build-train-set.ts: counts of every rule (before the leak check)."),
     (T / "data/unlabelled-build.json", "reports/build-unlabelled.json", "Report of validation/build-unlabelled-set.ts."),
-    (T / "data/leak-report.json", "reports/leak-report.json", "Report of validation/training/check_leaks.py on the builders' items."),
+    (T / "data/leak-report.json", "reports/leak-report.json", "Report of validation/dataset/check_leaks.py on the builders' items."),
     (V / "wiktionary-build.json", "reports/build-wiktionary-test.json", "Report of validation/build-wiktionary-set.ts (the Wiktionary test set)."),
     (V / "simple-build.json", "reports/build-simple-test.json", "Report of validation/build-simple-set.ts (the Simple English Wiktionary test set)."),
     (T / "data/excluded-overlap-ids.txt", "reports/excluded-overlap-ids.txt", "The 605 item ids dropped because their passage equals or shares a run of ten words with a test passage (check_leaks.py)."),
@@ -321,7 +331,9 @@ for src, rel, desc in [
 meta["reports/assembly-checks.json"] = ("written by scripts/assemble.py", "The checks this script ran on the published files (leaks, held-out headwords, local paths) and the evaluation examples' counts.")
 
 # ---------------------------------------------------------------- 6. manifest
+(OUT / "scripts").mkdir(parents=True, exist_ok=True)
 for rel in ["scripts/assemble.py", "scripts/entry_lemmas.mts"]:
+    shutil.copyfile(HERE / Path(rel).name, OUT / rel)  # the scripts that made this folder, from validation/dataset/
     meta[rel] = ("this repository", "The assembly script (command at the top)." if rel.endswith(".py") else "Reruns the extension's lookup to recover each entry's headword (step 1 of assemble.py).")
 git = lambda repo: subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
 files = []

@@ -4,16 +4,27 @@ Checks: (1) no train, dev or unlabelled headword (and no looked-up lemma of the 
 (2) no training or development passage equals a test passage of the English, hand-written or Simple English sets after
 normalisation (case folded, non-alphanumerics removed, white space collapsed); also counts passages sharing any
 10-word shingle with a test passage; (3) train and dev headwords are disjoint (unlabelled lemmas vs dev too).
-  python3 -I check_leaks.py
+It does not compare training passages with development passages (validation/dataset/README.md, "Limits").
+  python3 -I validation/dataset/check_leaks.py [--out DIR]
+
+Reads the test sets from $CD_VALIDATION_OUT (default ~/.cache/contextual-dictionary/validation), the builders' items
+from $CD_TRAIN_OUT (default $CD_VALIDATION_OUT/train/data) and the held-out lists from validation/data/; writes
+leak-report.json and excluded-overlap-ids.txt into --out (default $CD_TRAIN_OUT).
 """
+import argparse
 import json
+import os
 import re
 from collections import Counter
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1] / "data"
-V = Path.home() / ".cache/contextual-dictionary/validation"
-D = V / "train/data"
+V = Path(os.environ.get("CD_VALIDATION_OUT") or Path.home() / ".cache/contextual-dictionary/validation").expanduser()
+D = Path(os.environ.get("CD_TRAIN_OUT") or V / "train/data").expanduser()
+parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+parser.add_argument("--out", type=Path, default=D)
+OUT = parser.parse_args().out
+OUT.mkdir(parents=True, exist_ok=True)
 
 
 def jsonl(p):
@@ -67,9 +78,9 @@ def table(items):
 
 report["train"], report["dev"] = table(train), table(dev)
 print(json.dumps(report, indent=1, ensure_ascii=False))
-(D / "leak-report.json").write_text(json.dumps(report, indent=1, ensure_ascii=False))
+(OUT / "leak-report.json").write_text(json.dumps(report, indent=1, ensure_ascii=False))
 
 # Exclusion list: every train/dev/unlabelled item whose passage equals or shares a 10-word shingle with a test passage.
 bad = [it["id"] for items in (train, dev, unl) for it in items if norm(passage(it["selection"])) in set().union(*test_norm.values()) or shingles(norm(passage(it["selection"]))) & test_sh]
-(D / "excluded-overlap-ids.txt").write_text("\n".join(bad) + "\n")
+(OUT / "excluded-overlap-ids.txt").write_text("\n".join(bad) + "\n")
 print(f"excluded for overlap with a test passage: {len(bad)} items")

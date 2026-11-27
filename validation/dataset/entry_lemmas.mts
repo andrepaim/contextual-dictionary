@@ -5,15 +5,17 @@
 // It repeats the lookup the builders made (the extension's WiktionaryDictionary.define on the stored selection, in the
 // same pack) and accepts a result only if it is the same lookup: the entries' sizes equal the stored `entrySenses`, and
 // the prompts rebuilt with the extension's senseRequest for the forms 24|c1600 and 127 have the stored SHA-256 hashes.
-// Run from the extension's repository (it imports its validation/common.ts and the core package; it changes nothing):
+// It imports the extension's validation/common.ts and the core package of the repository that holds it (it changes
+// nothing), and reads the pack at CD_PACK (validation/common.ts):
 //
-//   cd ~/src/contextual-dictionary && CD_VALIDATION_OUT=<scratch dir> npx tsx <dataset>/scripts/entry_lemmas.mts OUT.jsonl ITEMS.jsonl [ITEMS.jsonl ...]
+//   CD_VALIDATION_OUT=<scratch dir> npx tsx validation/dataset/entry_lemmas.mts OUT.jsonl ITEMS.jsonl [ITEMS.jsonl ...]
 //
 // Output: one line per item, {"file", "id", "entries": [{"lemma", "pos"}], "check": "ok" | reason}.
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const repo = process.cwd()
+const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const common = await import(path.join(repo, 'validation/common.ts'))
 const core = await import(path.join(repo, 'node_modules/@andrepaim/contextual-dictionary-core/dist/index.js'))
 const { PATHS, VARIANTS, fileSource, readFormat, readJsonl, sha256Hex, variantRequest } = common

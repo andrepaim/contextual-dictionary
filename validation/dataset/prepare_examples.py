@@ -7,19 +7,27 @@ extension's prompt string exactly, or the example is dropped and counted.
 Labels: gold_ids = [the labelled meaning] when it is offered. When the cap leaves it out, the prompt is NOT made a
 "none of the above" example; it is kept only as an unlabelled (teacher-only) example in the --unlabelled-out file.
 Identical prompts of one item (both variants the same) appear once.
-  venv/bin/python -I prepare_examples.py --items train-items.jsonl --prompts train-prompts.jsonl --out train-labelled.jsonl [--unlabelled-out FILE] [--kind labelled|unlabelled]
+  python -I validation/dataset/prepare_examples.py --items train-items.jsonl --prompts train-prompts.jsonl --out train-labelled.jsonl [--unlabelled-out FILE] [--kind labelled|unlabelled]
+
+Imports sense-model's wsd package from the checkout at $SENSE_MODEL_DIR (default ~/src/sense-model), and reads the
+answer letters from model_metadata.json of the model export at $CD_MODEL_DIR (default
+~/src/sense-model/artifacts/upstream-english, as validation/common.ts; any export of the compact-v1 contract has the
+same letters).
 """
 import argparse
 import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path.home() / "src/sense-model/src"))
+SENSE_MODEL = Path(os.environ.get("SENSE_MODEL_DIR") or Path.home() / "src/sense-model").expanduser()
+sys.path.insert(0, str(SENSE_MODEL / "src"))
 from wsd.schema import Candidate, Example, Target  # noqa: E402
 from wsd.tokenizer import format_prompt  # noqa: E402
 
-META = json.loads((Path.home() / "src/sense-model/artifacts/upstream-english/model_metadata.json").read_text())
+MODEL_DIR = Path(os.environ.get("CD_MODEL_DIR") or Path.home() / "src/sense-model/artifacts/upstream-english").expanduser()
+META = json.loads((MODEL_DIR / "model_metadata.json").read_text())
 
 
 class Tok:  # format_prompt needs only mask_token
@@ -47,7 +55,7 @@ def example_from_prompt(pid, prompt, target, cand_ids, gold, provenance):
 
 
 def main():
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--items", required=True)
     p.add_argument("--prompts", required=True)
     p.add_argument("--out", required=True)
