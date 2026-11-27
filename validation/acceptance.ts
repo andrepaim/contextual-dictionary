@@ -1,9 +1,12 @@
 // Release acceptance on a fresh Chromium profile with the packaged ZIP
-// (docs/plan.md section 10, docs/validation.md "Acceptance"). Uses the real
-// release assets-v1 over the network, so it is opt-in and never part of CI.
+// (docs/plan.md section 10, docs/validation.md "Acceptance"). Downloads the
+// release the build pins (src/assets/manifest.ts) over the network, so it is
+// opt-in and never part of CI.
 //
 //   npm run package
-//   npx tsx validation/acceptance.ts [--zip package/contextual-dictionary-0.1.0.zip] [--public]
+//   npx tsx validation/acceptance.ts [--zip package/contextual-dictionary-<version>.zip] [--public]
+//
+// --zip defaults to the ZIP of the version in package.json.
 //
 // 1. Unzips the package, loads it unpacked in a new profile, confirms both
 //    downloads in the extension's own window, as a reader does.
