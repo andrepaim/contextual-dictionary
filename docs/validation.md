@@ -1,5 +1,7 @@
 # Stage 3 validation
 
+**Which model each part describes.** From "Answers in brief" to "Recommendations (not done)", the numbers are those of `assets-v1`, the model of the extension's releases 0.1.0 to 0.3.1, except the bullet "Since `assets-v2`" and "2026-11-26: `assets-v2`" under "Acceptance". Release 0.4.0 uses `assets-v2`, the model of "Training round 1 (assets-v2)": its numbers are in that section, against `assets-v1` in "In the extension, against the shipped model (`assets-v1`)". The defaults (`budgetMs` 750, 24 meanings, 1,600 characters) were chosen with `assets-v1` and are unchanged.
+
 How fast the extension is in practice, how well the model orders Wiktionary's meanings, what defaults were chosen from those numbers, and what was fixed. Everything here was measured on 2026-11-23 with the real model (`assets-v1`), the real dictionary pack and production builds of the extension in Chromium. The Simple English Wiktionary set was added on 2026-11-25, with the same model, machine and scripts. The scripts are in `validation/`; how to rerun each measurement is at the end.
 
 ## Answers in brief
@@ -314,7 +316,7 @@ Training items: 69,789 nouns, 24,365 verbs, 25,837 adjectives, 3,462 adverbs, 1,
 
 Each prompt became a sense-model example (`validation/training/prepare_examples.py`), and sense-model's own `format_prompt` had to rebuild the extension's prompt byte for byte; every one did. The no-cap form differs from the defaults for 5.6% of the items (most entries are short). Where the cap leaves the labelled meaning out of the prompt (1,667 training items), the prompt is not turned into a "none of the above" label (sense-model's `gold_ids: []` means that no offered meaning fits, which is not true there); it is used with the teacher's answers only.
 
-**Leak checks** (`validation/training/check_leaks.py`, built into `build-train-set.ts`): no training or development headword, and no lemma the unlabelled stream looked up, is held out; training and development headwords are disjoint. The headword rule did not catch everything: the same quotation is often filed under several headwords, and 46 training passages and 2 development passages were equal to a Wiktionary test passage after normalisation (case folded, punctuation dropped); 557 more shared a run of ten words with a test passage. All 605 were dropped, and the same check on the final files found no equal passage and no shared run of ten words with any of the three test sets. 4 identifiers that appeared twice (the same example under the same meaning) are kept once. Final training examples: 129,093 labelled, 1,658 teacher-only.
+**Leak checks** (`validation/training/check_leaks.py`, built into `build-train-set.ts`): no training or development headword, and no lemma the unlabelled stream looked up, is held out; training and development headwords are disjoint. The headword rule did not catch everything: the same quotation is often filed under several headwords, and 46 training passages and 2 development passages were equal to a Wiktionary test passage after normalisation (case folded, punctuation dropped); 557 more shared a run of ten words with a test passage. All 605 were dropped, and the same check on the final files found no equal passage and no shared run of ten words with any of the three test sets. 4 identifiers that appeared twice (the same example under the same meaning) are kept once. Final training examples: 129,093 labelled, 1,658 teacher-only. The table above counts the items before this check: of the 4,951 development items, the 20 it dropped (2 equal to a test passage, 18 sharing a run of ten words with one) leave the 4,931 of the development results below, and the 125,031 training items become 124,442 (585 dropped, 4 repeated).
 
 **Unlabelled stream** (teacher only). One shard of English Wikipedia as published at `https://huggingface.co/datasets/wikimedia/wikipedia`, revision `b04c8d1ceb2f5cd4588862100d08de323dccfbaa`, file `20231101.en/train-00001-of-00041.parquet` (351 MB, SHA-256 `6cd57a5825312ca966313d4a1b614690b5c4fb53cee9b124bc0e999977eb36cf`, CC BY-SA 3.0 and GFDL as the dataset states), downloaded on 2026-11-25. `validation/training/wiki_paragraphs.py` took a seeded sample of 60,000 prose paragraphs of 120–700 characters; `build-unlabelled-set.ts` picked one lower-case word per paragraph whose lookup gives a prompt and whose looked-up lemmas are neither held out nor on the development side, at most 15 per lemma: 47,910 items, 55,138 examples.
 
@@ -322,7 +324,9 @@ Each prompt became a sense-model example (`validation/training/prepare_examples.
 
 The trainer (`validation/training/train_thin.py`) uses sense-model's own dataset, loss and trainer class (`wsd.train`) and its model class, with three differences from `wsd train`: candidates keep the extension's order (sense-model shuffles them), batches are grouped by length, and two defects found on the way are worked around in the script: under transformers 5 the loss and gradients came out multiplied by the number of accumulation steps (the model's `forward` takes `**kwargs`, so the trainer assumes the loss is already normalised), and a run resumed after a crash drew a new batch order (the length-grouped sampler shuffles from global random state; the script seeds it by epoch). Both belong fixed in sense-model.
 
-Recipe, as the upstream card describes its own: loss 0.3 × label cross-entropy (label smoothing 0.1) + 0.7 × T² × KL to the teacher at T = 2; learning rate 5e-5, cosine schedule, batch 64 (4 × 16 accumulation), seed 42, at most 3 epochs; evaluation every 300 steps on 2,000 development prompts of each form, the best checkpoint by "labelled meaning first" at the defaults, early stopping after 4 evaluations without improvement. Teacher: `sign/Ettin-1B-WSD` revision `e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc`, soft labels computed in bf16 (agreeing with fp32 on 99.4% of top choices, development accuracy identical; batched scores equal to one-at-a-time scores). Every accuracy below is fp32.
+A pilot run on 2026-11-25 (labels and teacher, 39,999 of the labelled training examples, one epoch of 625 steps of 64, about 2 seconds a step) tried the trainer, the teacher cache, the resume and the export before the three runs; the trainer's development score (labelled meaning first on 2,000 development prompts whose labelled meaning is offered) went from 69.5% to 74.8%. It showed the second defect: its first attempt, resumed from step 300, trained on a new batch order (training loss 0.772 against 0.834 at step 310 over the same steps), while the second attempt, with the sampler seeded by epoch, took 23 minutes with an interruption and a resume, and resumed onto the same batches (0.8531 against 0.8534). The workaround for the first defect was already in the script the pilot ran, so the kept logs do not show that one.
+
+Recipe, as the upstream card describes its own: loss 0.3 × label cross-entropy (label smoothing 0.1) + 0.7 × T² × KL to the teacher at T = 2; learning rate 5e-5, cosine schedule, batch 64 (4 × 16 accumulation), seed 42, at most 3 epochs; evaluation every 300 steps on 2,000 development prompts of each form, the best checkpoint by "labelled meaning first" at the defaults, early stopping after 4 evaluations without improvement. The rest, from `train_thin.py`, its arguments (`args.json` of each run) and the logged learning rate: AdamW as the trainer's default (PyTorch's fused AdamW, betas 0.9 and 0.999, ε 10⁻⁸), weight decay 0.01, gradients clipped to norm 1; a linear warm-up over the first 10% of the planned steps (606 for labels only, 872 for the other two) and then the cosine decay towards zero at the planned end, which early stopping never reached; bf16 mixed precision; batches grouped by length (transformers' length-grouped sampler, seeded by epoch), prompts of at most 2,048 tokens (no training prompt was longer); the 2,000 development prompts of each form drawn with seed 42 from those whose labelled meaning is offered. Teacher scores were computed in batches of at most 8,192 tokens. Teacher: `sign/Ettin-1B-WSD` revision `e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc`, soft labels computed in bf16 (agreeing with fp32 on 99.4% of top choices, development accuracy identical; batched scores equal to one-at-a-time scores). Every accuracy below is fp32.
 
 | Run | Data | Stopped at | Chosen checkpoint |
 | --- | --- | ---: | ---: |
@@ -353,13 +357,19 @@ Test sets, scored once per finished run, float PyTorch, labelled meaning first (
 
 ### Which run ships
 
-Development chose labels only (78.6% against 78.0%), and the export step of the round exported that one. The owner chose labels and teacher after the test results above were known. Against labels only, it is better on the hand-written and Simple English sets and one point worse on the Wiktionary set, and it still answers "none of the above" (labels only did on no test item). Because that choice looked at the test sets, the shipped model's test numbers are not an unbiased estimate of its accuracy; the difference between the two runs is within the noise of the hand-written set.
+Development chose labels only (78.6% against 78.0%), and the export step of the round exported that one. The owner chose labels and teacher after the test results above were known. Against labels only, it is better on the hand-written and Simple English sets and one point worse on the Wiktionary set, and it still answers "none of the above" (labels only did on no test item). Because that choice looked at the test sets, the test numbers of the run that ships (`assets-v2`) are not an unbiased estimate of its accuracy; the difference between the two runs is within the noise of the hand-written set.
 
 ### Export
 
 The same recipe as the quantization study of 2026-11-25, with the outlier layers measured again for this model (`validation/training/act_stats_model.py`, 200 development prompts): the input of the feed-forward output (`mlp.Wo`) peaks at 42.9 (layer 4), 1,089 (7), 24.8 (9), 1,663 (11) and 740 (15) times its 99.9th percentile; the next are 13.5 (12) and 13.1 (14), under the cut-off of 15. The ONNX export is sense-model's own (float parity with PyTorch: maximum logit error 4.3 × 10⁻⁶); then `quantize_dynamic` with INT8 weights per channel for the MatMuls except those five, and the token embedding stored in float16 with a cast to float (`validation/training/export_quant.py`). Graph: 203,516,610 bytes; 185,262,587 as the release compresses it (gzip level 9; `assets-v1`: 266,954,889 and 143,435,614). INT8 against float on 1,000 development prompts: the same top choice for 96.6%.
 
-### In the extension, against the shipped model
+### Where the weights and the raw results are
+
+The GitHub release `assets-v2` holds the INT8 graph only. The float weights it was exported from are `checkpoints/s2-labels-teacher/final/model.safetensors` under `~/.cache/contextual-dictionary/validation/train/` on the maintainer's machine (598,827,368 bytes, SHA-256 `49bc2634…5be3`, the model revision of `src/model/session.ts`). A copy of them, with the INT8 graph and a model card, is in the Hugging Face repository `andrepaim/Ettin-150m-WSD-wiktionary`, which was private when this was written. The rest of the round stays on that machine too: the items, prompts, examples and teacher caches hold Wiktionary or Wikipedia text; the score files hold only prompt hashes and numbers, of no use without the prompts; the checkpoints are 16 GB; and the training curves (`metrics.jsonl`, the TensorBoard events) hold numbers only and are small, and the numbers used here are quoted. `validation/training/README.md` lists every file and every step.
+
+### In the extension, against the shipped model (`assets-v1`)
+
+In this section "the shipped model" and "shipped" mean `assets-v1`, the model the extension shipped when it was written, and "the new model" `assets-v2`.
 
 `validation/score-prompts.ts` with the export, 8 threads, the `24|c1600` prompts of the three sets, the shipped model's answers being those of the measurements above (`scores-8.jsonl`, reproduced exactly by a rerun on 2026-11-25):
 
@@ -435,19 +445,21 @@ npx tsx validation/score-prompts.ts --threads 8       # about 75 minutes for the
 npx tsx validation/analyze.ts                         # Wiktionary set tables; --set written or --set simple for the others
 npx tsx validation/score-prompts.ts --threads 4 --only threads-subset.txt   # the subset file is written by hand, see analyze-threads.ts
 npx tsx validation/analyze-threads.ts
-npx tsx validation/extension-bench.ts --install       # once: downloads assets-v1 (214 MB) into a template profile
+npx tsx validation/extension-bench.ts --install       # once: downloads the release the build pins (now assets-v2, 255 MB) into a template profile
 npx tsx validation/extension-bench.ts --build dist --label after --cap 24 --budget 750 [--idle] [--start-on]
-npm run package && npx tsx validation/acceptance.ts --public   # downloads assets-v1 again into a fresh profile
+npm run package && npx tsx validation/acceptance.ts --public   # downloads that release again into a fresh profile
 ```
 
-Training round 1 (`validation/training/README.md`; a CUDA GPU, the sense-model repository for its model and loss, and the inputs above):
+Training round 1: every step, with its command, inputs, outputs and time, is in `validation/training/README.md`, "Steps". It needs a CUDA GPU, the Python environment of `validation/training/requirements.txt`, the sense-model checkout at `~/src/sense-model` (the scripts import it from there), the evaluation sets above, and the scripts copied into `~/.cache/contextual-dictionary/validation/train/scripts/`, from where they run. In outline (`T` that folder, `PY=../teacher/venv/bin/python`, commands with `scripts/` run from `T`):
 
 ```bash
-npx tsx validation/build-train-set.ts                                   # labelled training and development items (CD_TRAIN_OUT)
-python3 -I validation/training/wiki_paragraphs.py <shard.parquet> ~/.cache/contextual-dictionary/validation/train/data/wiki-paragraphs.jsonl --n 60000
+npx tsx validation/build-train-set.ts                                   # labelled training and development items (CD_TRAIN_OUT, default T/data)
+$PY -I scripts/wiki_paragraphs.py wiki/train-00001-of-00041.parquet data/wiki-paragraphs.jsonl --n 60000
 npx tsx validation/build-unlabelled-set.ts --input ~/.cache/contextual-dictionary/validation/train/data/wiki-paragraphs.jsonl
-python3 -I validation/training/prepare_examples.py ...                  # see validation/training/README.md for each step
-bash validation/training/stage2.sh                                      # teacher scores, the three runs, development and test scoring, export
+$PY -I scripts/prepare_examples.py --items data/train-items.jsonl --prompts data/train-prompts.jsonl --out data/train-labelled.clean.jsonl --unlabelled-out data/train-notoffered.clean.jsonl
+                                                                        # and four more (README steps 5 to 7)
+python3 -I scripts/check_leaks.py                                       # leak report; the list of passages to drop comes out empty
+setsid nohup scripts/stage2.sh > logs/stage2.nohup 2>&1 < /dev/null &   # teacher scores, the three runs, development and test scoring, export of the best run on development (README steps 8 to 12 list what it needs)
 python3 -I validation/training/release_model_dir.py --export <export> --weights <model.safetensors> --shipped ~/src/sense-model/artifacts/upstream-english --out <dir>
 node scripts/publish-assets.mjs --dry-run --model-dir=<dir>             # stages assets-v2 and prints its pins
 ```
