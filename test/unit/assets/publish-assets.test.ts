@@ -7,10 +7,12 @@ import os from 'node:os'
 import path from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { STORED_NAMES, assertManifest, publishedFiles, type AssetManifest } from '../../../src/assets/manifest'
+import { ASSET_MANIFEST } from '../../../src/assets/manifest'
 import {
-  NOTICE_NAMES, ReleaseError, digestFile, gunzipDigest, gzipFile, main, parseOptions, pinnedManifest, publishRelease, releaseExists,
-  releaseNotes, releaseTitle, releaseUrl, repoOf, stageRelease, traceRedirects, verifyDownload, formatPins,
-  type Run, type StagedFile,
+  MODEL_EXPORT_PATHS, MODEL_SOURCE, NOTICE_NAMES, ReleaseError, digestFile, downloadHubModel, gunzipDigest, gzipFile, hubFileUrl, hubSource, main,
+  parseOptions, pinnedManifest, publishRelease, releaseExists, releaseNotes, releaseTitle, releaseUrl, repoOf, stageRelease, traceRedirects,
+  verifyDownload, formatPins,
+  type HubSource, type Run, type StagedFile,
 } from '../../../scripts/assets-release'
 import { sha, text } from './helpers'
 
@@ -446,6 +448,112 @@ describe('verifyDownload and traceRedirects', () => {
   })
 })
 
+describe('the model from a pinned Hugging Face revision', () => {
+  const SOURCE: HubSource = { repo: 'owner/model', revision: '0123456789abcdef0123456789abcdef01234567' }
+  const urlOf = (source: HubSource, relative: string) => `https://huggingface.co/${source.repo}/resolve/${source.revision}/${relative}`
+
+  /** A fetch that serves the export's files at their resolve URLs of `source`; `change` can answer instead. */
+  function hubFetch(source: HubSource, change?: (relative: string) => Response | Promise<Response> | undefined) {
+    const calls: Array<{ url: string; init: RequestInit | undefined }> = []
+    const fetch = async (url: string, init?: RequestInit): Promise<Response> => {
+      calls.push({ url, init })
+      const relative = Object.keys(CONTENT).find(name => url === urlOf(source, name))
+      if (!relative) return new Response('Entry not found', { status: 404 })
+      return (await change?.(relative)) ?? new Response(CONTENT[relative]!)
+    }
+    return { fetch, calls }
+  }
+
+  test('the source of the current manifest is a full commit of the published model repository', () => {
+    expect(MODEL_SOURCE).toEqual({ tag: 'assets-v2', repo: 'andrepaim/Ettin-150m-WSD-wiktionary', revision: '0edcbab04bb30eadeeef6babb26e8055b173b8d7' })
+    expect(MODEL_SOURCE.tag).toBe(ASSET_MANIFEST.tag)
+    expect(hubSource(MODEL_SOURCE.repo, MODEL_SOURCE.revision)).toEqual({ repo: MODEL_SOURCE.repo, revision: MODEL_SOURCE.revision })
+  })
+
+  test('hubFileUrl is the resolve URL of a file at the revision', () => {
+    expect(hubFileUrl(SOURCE, 'onnx/model.int8.onnx')).toBe(urlOf(SOURCE, 'onnx/model.int8.onnx'))
+    expect(Object.values(MODEL_EXPORT_PATHS).sort()).toEqual(Object.keys(CONTENT).sort())
+  })
+
+  test('hubSource refuses moving references, short hashes and malformed repositories', () => {
+    for (const revision of ['main', 'affc67b9', 'refs/pr/1', `${'a'.repeat(39)}g`, 'A'.repeat(40), `${'a'.repeat(40)}\n`]) expect(() => hubSource('owner/model', revision)).toThrow(ReleaseError)
+    for (const repo of ['model', 'owner/model/extra', '../model', 'owner/../model', 'owner/model?x=1', 'https://huggingface.co/owner/model', '']) expect(() => hubSource(repo, SOURCE.revision)).toThrow(ReleaseError)
+  })
+
+  test('downloads the five files at the revision without credentials, checks them and returns an export folder that stages', async () => {
+    const setup = await inputs()
+    const cache = path.join(setup.dir, 'cache')
+    const network = hubFetch(SOURCE)
+    const log: string[] = []
+    const dir = await downloadHubModel(network.fetch, setup.manifest, SOURCE, cache, line => log.push(line))
+    expect(dir).toBe(path.join(cache, 'owner', 'model', SOURCE.revision))
+    expect(network.calls.map(call => call.url).sort()).toEqual(Object.keys(CONTENT).map(name => urlOf(SOURCE, name)).sort())
+    for (const call of network.calls) {
+      expect(call.init?.credentials).toBe('omit')
+      expect(new Headers(call.init?.headers).has('authorization')).toBe(false)
+    }
+    for (const [name, data] of Object.entries(CONTENT)) expect(new Uint8Array(await fsp.readFile(path.join(dir, name)))).toEqual(data)
+    expect(log.join('\n')).toContain(SOURCE.revision)
+    const files = await stageRelease(setup.manifest, { ...setup.release, modelDir: dir }, setup.out)
+    expect(files.map(file => file.name)).toEqual(RELEASE_NAMES)
+  })
+
+  test('reuses cached files that match their pins and downloads again one that does not', async () => {
+    const setup = await inputs()
+    const cache = path.join(setup.dir, 'cache')
+    const dir = await downloadHubModel(hubFetch(SOURCE).fetch, setup.manifest, SOURCE, cache, () => {})
+    await fsp.writeFile(path.join(dir, 'calibration.json'), 'damaged')
+    const again = hubFetch(SOURCE)
+    expect(await downloadHubModel(again.fetch, setup.manifest, SOURCE, cache, () => {})).toBe(dir)
+    expect(again.calls.map(call => call.url)).toEqual([urlOf(SOURCE, 'calibration.json')])
+    expect(new Uint8Array(await fsp.readFile(path.join(dir, 'calibration.json')))).toEqual(CONTENT['calibration.json'])
+  })
+
+  const refusal = async (change: (relative: string) => Response | Promise<Response> | undefined) => {
+    const setup = await inputs()
+    const cache = path.join(setup.dir, 'cache')
+    try {
+      await downloadHubModel(hubFetch(SOURCE, change).fetch, setup.manifest, SOURCE, cache, () => {})
+    } catch (error) {
+      expect(error).toBeInstanceOf(ReleaseError)
+      const dir = path.join(cache, 'owner', 'model', SOURCE.revision)
+      const left = fs.existsSync(dir) ? fs.readdirSync(dir, { recursive: true }).map(String) : []
+      return { message: (error as ReleaseError).message, left }
+    }
+    throw new Error('downloadHubModel did not refuse')
+  }
+
+  test('refuses a file whose bytes differ from the stored pins, and keeps nothing of it', async () => {
+    const { message, left } = await refusal(relative => relative === 'tokenizer.json' ? new Response(text(4_000, 'other ')) : undefined)
+    expect(message).toContain('tokenizer.json')
+    expect(message).toContain(sha(CONTENT['tokenizer.json']!))
+    expect(left).not.toContain('tokenizer.json')
+    expect(left.some(name => name.includes('partial'))).toBe(false)
+  })
+
+  test('refuses a file of another size, longer or shorter', async () => {
+    expect((await refusal(relative => relative === 'onnx/model.int8.onnx' ? new Response(text(60_000, 'weights ')) : undefined)).message).toContain('model.int8.onnx')
+    expect((await refusal(relative => relative === 'calibration.json' ? new Response('{}') : undefined)).message).toContain('calibration.json')
+  })
+
+  test('refuses an HTTP error and a network error, naming the URL', async () => {
+    const missing = await refusal(relative => relative === 'model_metadata.json' ? new Response('Entry not found', { status: 404 }) : undefined)
+    expect(missing.message).toContain('404')
+    expect(missing.message).toContain(urlOf(SOURCE, 'model_metadata.json'))
+    const offline = await refusal(relative => relative === 'tokenizer_config.json' ? Promise.reject(new TypeError('fetch failed')) : undefined)
+    expect(offline.message).toContain('fetch failed')
+    expect(offline.message).toContain(urlOf(SOURCE, 'tokenizer_config.json'))
+  })
+
+  test('refuses a manifest whose model files have no stored pins, before any download', async () => {
+    const setup = await inputs()
+    Object.assign(setup.manifest.bundles.model[1]!, { storedSize: null, storedSha256: null })
+    const network = hubFetch(SOURCE)
+    await expect(downloadHubModel(network.fetch, setup.manifest, SOURCE, path.join(setup.dir, 'cache'), () => {})).rejects.toThrow('model_metadata.json')
+    expect(network.calls).toHaveLength(0)
+  })
+})
+
 describe('parseOptions and main', () => {
   const ROOT = '/repo'
   const HOME = '/home/maintainer'
@@ -453,18 +561,29 @@ describe('parseOptions and main', () => {
   test('parseOptions has defaults for the maintainer machine and reads overrides', () => {
     expect(parseOptions([], { root: ROOT, home: HOME })).toEqual({
       dryRun: false, keep: false, out: undefined,
-      modelDir: '/home/maintainer/src/sense-model/artifacts/upstream-english',
+      model: undefined,
+      hubCache: '/home/maintainer/.cache/contextual-dictionary/hf-models',
       packPath: '/home/maintainer/.cache/contextual-dictionary/packs/wiktionary-en-v1.pack',
       packSha256: undefined, packSize: undefined, noticesDir: '/repo/notices', statsFile: '/repo/docs/dictionary-stats.json',
     })
     expect(parseOptions(['--dry-run', '--keep', '--out=/tmp/x', '--model-dir', '/m', '--pack=/p.pack', `--pack-sha256=${'a'.repeat(64)}`, '--pack-size=12'], { root: ROOT, home: HOME }))
-      .toMatchObject({ dryRun: true, keep: true, out: '/tmp/x', modelDir: '/m', packPath: '/p.pack', packSha256: 'a'.repeat(64), packSize: 12 })
+      .toMatchObject({ dryRun: true, keep: true, out: '/tmp/x', model: { dir: '/m' }, packPath: '/p.pack', packSha256: 'a'.repeat(64), packSize: 12 })
+    expect(parseOptions(['--hf-repo=owner/model', `--hf-revision=${'0'.repeat(40)}`, '--hf-cache=/c'], { root: ROOT, home: HOME }))
+      .toMatchObject({ model: { repo: 'owner/model', revision: '0'.repeat(40) }, hubCache: '/c' })
   })
 
   test('parseOptions refuses unknown options and malformed pins', () => {
     expect(() => parseOptions(['--publish-anyway'], { root: ROOT, home: HOME })).toThrow()
     expect(() => parseOptions(['--pack-sha256=xyz'], { root: ROOT, home: HOME })).toThrow('pack-sha256')
     expect(() => parseOptions(['--pack-size=-3'], { root: ROOT, home: HOME })).toThrow('pack-size')
+  })
+
+  test('parseOptions refuses a moving or short revision, half a Hugging Face source, and two sources at once', () => {
+    const parse = (argv: string[]) => () => parseOptions(argv, { root: ROOT, home: HOME })
+    for (const revision of ['main', 'affc67b9', 'v1.0', 'refs/pr/1', 'A'.repeat(40)]) expect(parse(['--hf-repo=owner/model', `--hf-revision=${revision}`])).toThrow(ReleaseError)
+    expect(parse([`--hf-revision=${'0'.repeat(40)}`])).toThrow('--hf-repo')
+    expect(parse(['--hf-repo=owner/model'])).toThrow('--hf-revision')
+    expect(parse(['--model-dir=/m', '--hf-repo=owner/model', `--hf-revision=${'0'.repeat(40)}`])).toThrow('--model-dir')
   })
 
   async function mainSetup() {
@@ -493,6 +612,58 @@ describe('parseOptions and main', () => {
     expect(printed).toContain('Dry run')
     expect(printed).toContain('2026-10-30')
     expect(fs.readdirSync(setup.out)).toEqual(expect.arrayContaining(RELEASE_NAMES))
+  })
+
+  /** A fetch serving the fixture export at the resolve URLs of `source`. */
+  const hubServer = (source: { repo: string; revision: string }) => {
+    const urls: string[] = []
+    const fetch = async (url: string) => {
+      urls.push(url)
+      const relative = Object.keys(CONTENT).find(name => url === `https://huggingface.co/${source.repo}/resolve/${source.revision}/${name}`)
+      return relative ? new Response(CONTENT[relative]!) : new Response('Entry not found', { status: 404 })
+    }
+    return { fetch, urls }
+  }
+
+  test('without --model-dir, a dry run stages the model from the pinned Hugging Face revision of the manifest', async () => {
+    const { setup, log, argv, deps } = await mainSetup()
+    const withoutDir = argv.filter(arg => !arg.startsWith('--model-dir='))
+    const hub = hubServer(MODEL_SOURCE)
+    const gh = fakeRun()
+    expect(await main(['--dry-run', ...withoutDir], { ...deps(gh.run, hub.fetch), manifest: { ...setup.manifest, tag: MODEL_SOURCE.tag } })).toBe(0)
+    expect(hub.urls).toHaveLength(5)
+    expect(hub.urls.every(url => url.startsWith(`https://huggingface.co/${MODEL_SOURCE.repo}/resolve/${MODEL_SOURCE.revision}/`))).toBe(true)
+    expect(gh.calls).toHaveLength(0)
+    expect(fs.existsSync(path.join(setup.dir, '.cache/contextual-dictionary/hf-models', MODEL_SOURCE.repo, MODEL_SOURCE.revision, 'onnx/model.int8.onnx'))).toBe(true)
+    expect(log.join('\n')).toContain('Dry run')
+    expect(fs.readdirSync(setup.out)).toEqual(expect.arrayContaining(RELEASE_NAMES))
+  })
+
+  test('stages from --hf-repo and --hf-revision when given, and stops on a download that differs', async () => {
+    const { setup, log, argv, deps } = await mainSetup()
+    const source = { repo: 'owner/model', revision: 'f'.repeat(40) }
+    const withoutDir = argv.filter(arg => !arg.startsWith('--model-dir='))
+    const hub = hubServer(source)
+    expect(await main(['--dry-run', ...withoutDir, `--hf-repo=${source.repo}`, `--hf-revision=${source.revision}`], deps(fakeRun().run, hub.fetch))).toBe(0)
+    expect(hub.urls).toHaveLength(5)
+    const other = hubServer({ ...source, revision: 'e'.repeat(40) })
+    const again = path.join(setup.dir, 'again')
+    await fsp.mkdir(again)
+    const args = ['--dry-run', ...withoutDir.filter(arg => !arg.startsWith('--out=')), `--out=${again}`, `--hf-repo=${source.repo}`, `--hf-revision=${'e'.repeat(40)}`]
+    Object.assign(setup.manifest.bundles.model[3]!, { storedSha256: 'd'.repeat(64) })
+    expect(await main(args, deps(fakeRun().run, other.fetch))).toBe(1)
+    expect(log.join('\n')).toMatch(/ERROR .*tokenizer\.json/)
+    expect(fs.readdirSync(again)).toEqual([])
+  })
+
+  test('without a model source, refuses a manifest that has no default one', async () => {
+    const { setup, log, argv, deps } = await mainSetup()
+    const withoutDir = argv.filter(arg => !arg.startsWith('--model-dir='))
+    const hub = hubServer(MODEL_SOURCE)
+    expect(await main(['--dry-run', ...withoutDir], { ...deps(fakeRun().run, hub.fetch), manifest: { ...setup.manifest, tag: 'assets-v9' } })).toBe(1)
+    expect(log.join('\n')).toMatch(/ERROR .*assets-v9.*--model-dir/)
+    expect(hub.urls).toHaveLength(0)
+    expect(fs.readdirSync(setup.out)).toEqual([])
   })
 
   test('takes the pack pins from the statistics file unless given, and refuses a pack that differs', async () => {
