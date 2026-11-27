@@ -18,7 +18,7 @@ This plan is the plan of record that version 0.1.0 (2026-11-23) was built from. 
 | 2026-11-25 | A Simple English Wiktionary evaluation set, and the rule for which headwords stay out of training | #25 | `docs/validation.md` |
 | 2026-11-26 | The extension is public in the Chrome Web Store; the site, the guide and the README lead to the listing | #26 | `store/listing.md`, `docs/user-guide.md` |
 | 2026-11-26, 0.4.0 | The model fine-tuned on English Wiktionary (training round 1), published as release `assets-v2` | #29, #30 | `docs/validation.md` ("Training round 1"), `docs/assets.md` |
-| 2026-11-27, on `main`, not released | The entry holding the model's best meaning moves to the top of the card, beyond a margin of 0.25 in probability; the other entries keep dictionary order. Core package 0.3.0 (`contextualOrder` option `bestEntryFirst`, off by default); order details tag the moved entry | this pull request | `docs/validation.md` ("The best entry first"), `packages/core/README.md`, `docs/order-details-plan.md` |
+| 2026-11-27, on `main`, not released | The entry holding the model's best meaning moves to the top of the card, beyond a margin of 0.25 in probability; the other entries keep dictionary order. Core package 0.3.0 (`contextualOrder` option `bestEntryFirst`, off by default); order details tag the moved entry | #36 | `docs/validation.md` ("The best entry first"), `packages/core/README.md`, `docs/order-details-plan.md` |
 
 Paths in sections 4 and 5 are those of 0.1.0; the notes beside them give where the code is now.
 
