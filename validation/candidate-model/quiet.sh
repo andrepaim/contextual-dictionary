@@ -1,7 +1,8 @@
 #!/bin/bash
 # quiet.sh LABEL LOGFILE: waits until the 1-minute load average is below 1.5 and all java processes (the other session's
 # Gradle daemons) together used under 5% of one core over 10 s, then appends one line with both to LOGFILE.
-label=$1; log=$2
+case "${1:-}" in ''|-h|--help) sed -n '2,3p' "$0" | sed 's/^# \{0,1\}//'; [ -n "${1:-}" ]; exit $? ;; esac
+label=$1; log=${2:?usage: quiet.sh LABEL LOGFILE}
 ticks() { local t=0; for p in $(pgrep -x java); do read -r -a s < /proc/$p/stat 2>/dev/null && t=$((t + s[13] + s[14])); done; echo $t; }
 while :; do
   a=$(ticks); sleep 10; b=$(ticks)

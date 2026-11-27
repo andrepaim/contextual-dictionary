@@ -15,3 +15,5 @@ playwright-report/
 .DS_Store
 dist-e2e/
 _site/
+__pycache__/
+*.pyc

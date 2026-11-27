@@ -10,7 +10,8 @@
 //   npx tsx validation/entry-order.ts --set dev [--half A|B|all] [--sweep] [--pack]
 //
 // --set dev reads training round 1's development items and the shipped run's float development scores
-// (validation/training/README.md), leaves out the items of excluded-overlap-ids.txt as dev_eval.py does, applies no
+// (docs/validation.md, "Training round 1"), leaves out the items of excluded-overlap-ids.txt as the round's development
+// table does (--exclude names another list, for example with validation/dataset/split_overlap.py's items), applies no
 // budget (the stored times are a GPU's) and resamples whole headwords in the bootstrap. --half splits the
 // development headwords in two by a hash (halfOf). --sweep prints the margins of MARGINS and the one the rule of
 // chooseMargin picks. --pack looks every item up again in the real pack, checks that its meaning counts are the

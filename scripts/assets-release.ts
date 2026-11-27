@@ -1,4 +1,5 @@
-// The logic of scripts/publish-assets.mjs: verify the local model export and
+// The logic of scripts/publish-assets.mjs: take the model files from a pinned
+// Hugging Face revision (or a local model export), verify them and the
 // dictionary pack against their pins, stage the release files, and publish
 // them once as a GitHub prerelease, then download them back anonymously.
 //
@@ -66,6 +67,12 @@ export const CHECKPOINT_REVISION = '8751b577199d1bb95b74fa2457da7065d57100ae'
 export const TRAINED_REVISION = 'sha256:49bc2634bcf696171f367b59cedb961fcd71bb7d825ad6680ef5ed1ed8d25be3'
 export const TEACHER = 'sign/Ettin-1B-WSD'
 export const TEACHER_REVISION = 'e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc'
+/**
+ * Where the model of the release `tag` is published: the Hugging Face
+ * repository that sense-model's `wsd publish` wrote, at a full commit. Its
+ * five files are byte for byte the model files the manifest stores.
+ */
+export const MODEL_SOURCE = { tag: 'assets-v2', repo: 'andrepaim/Ettin-150m-WSD-wiktionary', revision: '0edcbab04bb30eadeeef6babb26e8055b173b8d7' } as const
 
 // ------------------------------------------------------------------ digests
 
@@ -201,6 +208,110 @@ export async function stageRelease(manifest: AssetManifest, inputs: ReleaseInput
   problems.push(...transferPinProblems(manifest, staged))
   if (problems.length) throw new ReleaseError('The staged files are not what the manifest pins', problems)
   return staged
+}
+
+// ------------------------------------------------------------------ the model from Hugging Face
+
+/** A Hugging Face model repository at one commit. */
+export interface HubSource { repo: string; revision: string }
+
+const HUB_NAME = /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/
+
+/** `repo` and `revision` when `repo` is `owner/name` and `revision` a full commit hash; refuses branches, tags and short hashes. */
+export function hubSource(repo: string, revision: string): HubSource {
+  const parts = repo.split('/')
+  if (parts.length !== 2 || !parts.every(part => HUB_NAME.test(part) && !part.includes('..'))) throw new ReleaseError(`Not a Hugging Face repository id (owner/name): ${JSON.stringify(repo)}`)
+  if (!/^[0-9a-f]{40}$/.test(revision)) throw new ReleaseError(`The Hugging Face revision must be a full commit hash (40 lower-case hex digits), not a branch, a tag or a short hash: ${JSON.stringify(revision)}`)
+  return { repo, revision }
+}
+
+/** Where the release script keeps Hugging Face downloads unless told otherwise. */
+export const defaultHubCache = (home: string) => path.join(home, '.cache/contextual-dictionary/hf-models')
+
+/** The folder of `source` in `cacheDir`: `<cacheDir>/<owner>/<name>/<revision>`, in the layout of a model export. */
+export const hubModelDir = (cacheDir: string, source: HubSource) => path.join(cacheDir, ...source.repo.split('/'), source.revision)
+
+export const hubFileUrl = (source: HubSource, relative: string) => `https://huggingface.co/${source.repo}/resolve/${source.revision}/${relative}`
+
+/** The model source of `manifest` when none is given: MODEL_SOURCE for its tag, or a refusal. */
+export function defaultModelSource(manifest: AssetManifest): HubSource {
+  if (manifest.tag === MODEL_SOURCE.tag) return { repo: MODEL_SOURCE.repo, revision: MODEL_SOURCE.revision }
+  throw new ReleaseError(`No default model source for ${manifest.tag} (MODEL_SOURCE is for ${MODEL_SOURCE.tag}): pass --hf-repo with --hf-revision (a full commit hash), or --model-dir`)
+}
+
+/** Downloads `url` into `target` through a `.partial` file, keeping it only when it has the `expected` size and SHA-256. Returns the problem, if any. */
+async function downloadChecked(fetch: Fetch, url: string, target: string, expected: Digest): Promise<string | undefined> {
+  let response: Response
+  try {
+    response = await fetch(url, { redirect: 'follow', credentials: 'omit', cache: 'no-store' })
+  } catch (error) {
+    return `${url}: network error (${(error as Error).message})`
+  }
+  if (!response.ok || !response.body) {
+    await response.body?.cancel()
+    return `${url}: HTTP ${response.status}`
+  }
+  await fsp.mkdir(path.dirname(target), { recursive: true })
+  const partial = `${target}.partial`
+  const hash = createHash('sha256')
+  let size = 0
+  const handle = await fsp.open(partial, 'w')
+  try {
+    for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+      size += chunk.length
+      if (size > expected.size) break // stops the transfer
+      hash.update(chunk)
+      await handle.write(chunk)
+    }
+  } catch (error) {
+    await handle.close()
+    await fsp.rm(partial, { force: true })
+    return `${url}: the download failed (${(error as Error).message})`
+  }
+  await handle.close()
+  if (size > expected.size) {
+    await fsp.rm(partial, { force: true })
+    return `${url}: longer than the pinned ${expected.size} bytes`
+  }
+  const actual = { size, sha256: hash.digest('hex') }
+  if (!sameDigest(actual, expected)) {
+    await fsp.rm(partial, { force: true })
+    return `${url}: ${describeDigest(actual)}; pinned ${describeDigest(expected)}`
+  }
+  await fsp.rename(partial, target)
+  return undefined
+}
+
+/**
+ * Puts the model files of `manifest` from `source` into
+ * `<cacheDir>/<owner>/<name>/<revision>/` in the layout of a model export,
+ * checking each against its stored size and SHA-256, and returns that folder.
+ * A cached file that matches is not downloaded again. Throws a ReleaseError
+ * listing every file that could not be downloaded or does not match.
+ */
+export async function downloadHubModel(fetch: Fetch, manifest: AssetManifest, source: HubSource, cacheDir: string, log: (line: string) => void): Promise<string> {
+  hubSource(source.repo, source.revision)
+  const problems: string[] = []
+  const wanted: Array<{ relative: string; expected: Digest }> = []
+  for (const file of manifest.bundles.model) {
+    const relative = MODEL_EXPORT_PATHS[file.storedName]
+    if (!relative) problems.push(`${file.name}: no known source for the stored file ${file.storedName}`)
+    else if (file.storedSize === null || file.storedSha256 === null) problems.push(`${file.name}: the manifest has no stored pins for ${file.storedName}`)
+    else wanted.push({ relative, expected: { size: file.storedSize, sha256: file.storedSha256 } })
+  }
+  if (problems.length) throw new ReleaseError('Cannot take the model from Hugging Face', problems)
+  const dir = hubModelDir(cacheDir, source)
+  log(`Model files of ${source.repo} at revision ${source.revision}, into ${dir}:`)
+  for (const { relative, expected } of wanted) {
+    const target = path.join(dir, relative)
+    const cached = await digestFile(target).catch(() => undefined)
+    if (cached && sameDigest(cached, expected)) { log(`  cached      ${relative}`); continue }
+    const problem = await downloadChecked(fetch, hubFileUrl(source, relative), target, expected)
+    if (problem) problems.push(problem)
+    else log(`  downloaded  ${relative} (${expected.size} bytes, SHA-256 ${expected.sha256})`)
+  }
+  if (problems.length) throw new ReleaseError(`The model files of ${source.repo} at ${source.revision} do not match the stored pins of the manifest; nothing was staged`, problems)
+  return dir
 }
 
 /** Transfer pins already in the manifest that differ from the staged files. */
@@ -438,9 +549,14 @@ export async function publishRelease(options: PublishOptions): Promise<DownloadC
 
 export interface Options {
   dryRun: boolean
+  /** Only download and check the model files into the cache; stage and publish nothing. */
+  fetchModel: boolean
   keep: boolean
   out: string | undefined
-  modelDir: string
+  /** A local model export, a Hugging Face revision, or undefined for the default source of the manifest. */
+  model: { dir: string } | HubSource | undefined
+  /** Where Hugging Face downloads are kept, under `<owner>/<name>/<revision>/`. */
+  hubCache: string
   packPath: string
   packSha256: string | undefined
   packSize: number | undefined
@@ -455,9 +571,13 @@ export function parseOptions(argv: string[], where: { root: string; home: string
     allowPositionals: false,
     options: {
       'dry-run': { type: 'boolean', default: false },
+      'fetch-model': { type: 'boolean', default: false },
       keep: { type: 'boolean', default: false },
       out: { type: 'string' },
       'model-dir': { type: 'string' },
+      'hf-repo': { type: 'string' },
+      'hf-revision': { type: 'string' },
+      'hf-cache': { type: 'string' },
       pack: { type: 'string' },
       'pack-sha256': { type: 'string' },
       'pack-size': { type: 'string' },
@@ -470,11 +590,20 @@ export function parseOptions(argv: string[], where: { root: string; home: string
   const sizeText = values['pack-size']
   const size = sizeText === undefined ? undefined : Number(sizeText)
   if (size !== undefined && !(Number.isSafeInteger(size) && size > 0)) throw new ReleaseError('--pack-size must be a positive integer')
+  const repo = values['hf-repo']
+  const revision = values['hf-revision']
+  if (repo === undefined && revision !== undefined) throw new ReleaseError('--hf-revision needs --hf-repo')
+  if (repo !== undefined && revision === undefined) throw new ReleaseError('--hf-repo needs --hf-revision (a full commit hash)')
+  if (repo !== undefined && values['model-dir'] !== undefined) throw new ReleaseError('Give either --model-dir or --hf-repo with --hf-revision, not both')
+  if (values['fetch-model'] && values['model-dir'] !== undefined) throw new ReleaseError('--fetch-model downloads from Hugging Face; it does not take --model-dir')
+  const model = values['model-dir'] !== undefined ? { dir: values['model-dir'] } : repo !== undefined ? hubSource(repo, revision!) : undefined
   return {
     dryRun: values['dry-run'] ?? false,
+    fetchModel: values['fetch-model'] ?? false,
     keep: values.keep ?? false,
     out: values.out,
-    modelDir: values['model-dir'] ?? path.join(where.home, 'src/sense-model/artifacts/upstream-english'),
+    model,
+    hubCache: values['hf-cache'] ?? defaultHubCache(where.home),
     packPath: values.pack ?? path.join(where.home, '.cache/contextual-dictionary/packs/wiktionary-en-v1.pack'),
     packSha256: sha256,
     packSize: size,
@@ -504,6 +633,12 @@ export async function main(argv: string[], deps: MainDeps): Promise<number> {
   try {
     const options = parseOptions(argv, deps)
     const title = releaseTitle(deps.manifest.tag)
+    const model = options.model ?? defaultModelSource(deps.manifest)
+    if (options.fetchModel && !('dir' in model)) {
+      const dir = await downloadHubModel(deps.fetch, deps.manifest, model, options.hubCache, deps.log)
+      deps.log(`The model files of ${deps.manifest.tag} are in ${dir}; nothing was staged.`)
+      return 0
+    }
     const stats = JSON.parse(await fsp.readFile(options.statsFile, 'utf8')) as { snapshot: string; pack: { bytes: number; sha256: string } }
     const pack = { size: options.packSize ?? stats.pack.bytes, sha256: options.packSha256 ?? stats.pack.sha256 }
     if (options.out) outDir = options.out
@@ -515,8 +650,9 @@ export async function main(argv: string[], deps: MainDeps): Promise<number> {
       remove = !options.keep
     }
     await fsp.mkdir(outDir, { recursive: true })
+    const modelDir = 'dir' in model ? model.dir : await downloadHubModel(deps.fetch, deps.manifest, model, options.hubCache, deps.log)
     deps.log(`Verifying the inputs and staging ${deps.manifest.tag}…`)
-    const files = await stageRelease(deps.manifest, { modelDir: options.modelDir, packPath: options.packPath, pack, noticesDir: options.noticesDir }, outDir)
+    const files = await stageRelease(deps.manifest, { modelDir, packPath: options.packPath, pack, noticesDir: options.noticesDir }, outDir)
     deps.log(`Staged in ${outDir}\n\n${formatPins(files)}\n`)
     const notes = releaseNotes(deps.manifest, files, { snapshot: stats.snapshot })
     const notesFile = path.join(outDir, `${deps.manifest.tag}-notes.md`)

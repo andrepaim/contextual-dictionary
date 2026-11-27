@@ -11,6 +11,7 @@ import path from 'node:path'
 import { Tokenizer } from '@huggingface/tokenizers'
 import { senseRequest } from '@andrepaim/contextual-dictionary-core'
 import { SELECTION_LIMITS, type ByteSource, type DictionaryResult, type Selection, type SenseFormat } from '../src/shared/contracts'
+import { MODEL_SOURCE, defaultHubCache, hubModelDir } from '../scripts/assets-release'
 
 const home = os.homedir()
 const expand = (value: string) => value.replace(/^~(?=\/|$)/, home)
@@ -19,7 +20,8 @@ export const PATHS = {
   kaikki: expand(process.env.CD_KAIKKI ?? '~/.cache/contextual-dictionary/kaikki/english-2026-10-30.jsonl.gz'),
   simple: expand(process.env.CD_KAIKKI_SIMPLE ?? '~/.cache/contextual-dictionary/kaikki/simple-english-2026-10-30.jsonl.gz'),
   pack: expand(process.env.CD_PACK ?? '~/.cache/contextual-dictionary/packs/wiktionary-en-v1.pack'),
-  model: expand(process.env.CD_MODEL_DIR ?? '~/src/sense-model/artifacts/upstream-english'),
+  // The model the build pins, as `node scripts/publish-assets.mjs --fetch-model` downloads it, unless CD_MODEL_DIR names another export.
+  model: process.env.CD_MODEL_DIR ? expand(process.env.CD_MODEL_DIR) : hubModelDir(defaultHubCache(home), MODEL_SOURCE),
   out: expand(process.env.CD_VALIDATION_OUT ?? '~/.cache/contextual-dictionary/validation'),
 }
 fs.mkdirSync(PATHS.out, { recursive: true })
@@ -116,8 +118,18 @@ export async function fileSource(file: string): Promise<ByteSource & { close(): 
   }
 }
 
+/** Throws, saying how to get it, when `directory` is not a model export. */
+export function requireModel(directory = PATHS.model): string {
+  if (fs.existsSync(path.join(directory, 'model_metadata.json'))) return directory
+  const how = process.env.CD_MODEL_DIR
+    ? 'CD_MODEL_DIR names it: point it at a folder with onnx/model.int8.onnx and the four JSON files, or unset it to use the model the build pins.'
+    : `It is the default, the model the build pins (${MODEL_SOURCE.repo} at ${MODEL_SOURCE.revision}): fetch it with \`node scripts/publish-assets.mjs --fetch-model\` (about 207 MB, checked against the pins), or set CD_MODEL_DIR to another model export.`
+  throw new Error(`No model export at ${directory}. ${how}`)
+}
+
 /** The compact-v1 format as the model worker reports it (src/model/session.ts readFormat). */
 export function readFormat(directory = PATHS.model): SenseFormat {
+  requireModel(directory)
   const metadata = JSON.parse(fs.readFileSync(path.join(directory, 'model_metadata.json'), 'utf8'))
   const calibration = JSON.parse(fs.readFileSync(path.join(directory, 'calibration.json'), 'utf8'))
   const config = JSON.parse(fs.readFileSync(path.join(directory, 'tokenizer_config.json'), 'utf8'))
@@ -128,6 +140,7 @@ export function readFormat(directory = PATHS.model): SenseFormat {
 }
 
 export function tokenCounter(directory = PATHS.model): (text: string) => number {
+  requireModel(directory)
   const tokenizer = new Tokenizer(
     JSON.parse(fs.readFileSync(path.join(directory, 'tokenizer.json'), 'utf8')),
     JSON.parse(fs.readFileSync(path.join(directory, 'tokenizer_config.json'), 'utf8')),

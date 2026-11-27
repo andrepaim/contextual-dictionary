@@ -3,10 +3,17 @@
 // src/assets/manifest.ts, once. Run from a maintainer machine
 // that holds the inputs, after `npm ci`, with `gh` signed in:
 //
+//   node scripts/publish-assets.mjs --fetch-model # only download and check the model files into the cache
 //   node scripts/publish-assets.mjs --dry-run     # verify, stage, print pins and notes
 //   node scripts/publish-assets.mjs               # the same, then publish and verify
 //
-// Options: --model-dir=<export>   (default ~/src/sense-model/artifacts/upstream-english)
+// The model files come from the Hugging Face repository and full commit of
+// MODEL_SOURCE in scripts/assets-release.ts (the one for the manifest's tag),
+// downloaded into a cache and checked against the manifest's stored pins.
+//
+// Options: --hf-repo=<owner/name> --hf-revision=<40-hex commit>   another Hugging Face source
+//          --hf-cache=<directory> (default ~/.cache/contextual-dictionary/hf-models)
+//          --model-dir=<export>   a local model export instead (onnx/model.int8.onnx and the JSON files)
 //          --pack=<file>          (default ~/.cache/contextual-dictionary/packs/wiktionary-en-v1.pack)
 //          --pack-sha256=<hex> --pack-size=<bytes>   (default: docs/dictionary-stats.json)
 //          --out=<directory>      stage there instead of a new ~/.cache/contextual-dictionary/publish-<tag>-*

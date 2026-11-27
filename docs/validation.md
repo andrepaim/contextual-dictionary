@@ -1,6 +1,6 @@
 # Stage 3 validation
 
-**Which model each part describes.** From "Answers in brief" to "Recommendations (not done)", the numbers are those of `assets-v1`, the model of the extension's releases 0.1.0 to 0.3.1, except the bullet "Since `assets-v2`" and "2026-11-26: `assets-v2`" under "Acceptance". Release 0.4.0 uses `assets-v2`, the model of "Training round 1 (assets-v2)": its numbers are in that section, against `assets-v1` in "In the extension, against the shipped model (`assets-v1`)". The defaults (`budgetMs` 750, 24 meanings, 1,600 characters) were chosen with `assets-v1` and are unchanged. "The best entry first (2026-11-27)" is on `main` and not yet released: with `assets-v2` it moves the entry holding the best meaning to the top of the card, with a margin chosen on training round 1's development set, and measures what the reader sees first on the card rather than first within the entry, which is what "labelled meaning first" counts elsewhere in this document.
+**Which model each part describes.** From "Answers in brief" to "Recommendations (not done)", the numbers are those of `assets-v1`, the model of the extension's releases 0.1.0 to 0.3.1, except the bullet "Since `assets-v2`" and "2026-11-26: `assets-v2`" under "Acceptance". Release 0.4.0 uses `assets-v2`, the model of "Training round 1 (assets-v2)": that section summarises its model-level numbers, which are kept in full in sense-model's `docs/wiktionary-round1.md` (where training now lives), and gives in full what it does in the extension, against `assets-v1`, in "In the extension, against the shipped model (`assets-v1`)". The defaults (`budgetMs` 750, 24 meanings, 1,600 characters) were chosen with `assets-v1` and are unchanged. "The best entry first (2026-11-27)" is on `main` and not yet released: with `assets-v2` it moves the entry holding the best meaning to the top of the card, with a margin chosen on training round 1's development set, and measures what the reader sees first on the card rather than first within the entry, which is what "labelled meaning first" counts elsewhere in this document.
 
 How fast the extension is in practice, how well the model orders Wiktionary's meanings, what defaults were chosen from those numbers, and what was fixed. Everything here was measured on 2026-11-23 with the real model (`assets-v1`), the real dictionary pack and production builds of the extension in Chromium. The Simple English Wiktionary set was added on 2026-11-25, with the same model, machine and scripts. The scripts are in `validation/`; how to rerun each measurement is at the end.
 
@@ -10,7 +10,7 @@ How fast the extension is in practice, how well the model orders Wiktionary's me
 - **Accuracy.** Yes, the model's order beats Wiktionary's order, clearly. On 2,300 items labelled by Wiktionary's own editors, with the shipped defaults, the labelled meaning is first in its entry 55.4% of the time with model order against 28.2% with dictionary order (paired 95% interval of the difference 24.8 to 29.7 points), and among the first three meanings in its entry 77.9% against 60.1%. On 104 hand-written web-style sentences: 64.4% against 26.9% first. On 4,167 items from a second dictionary, Simple English Wiktionary, whose entries are short: 84.6% against 48.8% first. It is better in every stratum and every part of speech. It is far from perfect: for entries with 17 or more meanings, the labelled meaning is first in under a third of cases.
 - **Defaults.** "Order by context" is now on by default (the model still downloads only after the reader confirms it), `budgetMs` 750, `maxCandidates` 24, and a new prompt length limit of 1,600 characters.
 
-- **Since `assets-v2`** (training round 1, below): the model is fine-tuned from Ettin-150m-WSD on English Wiktionary's own examples. In the extension at the shipped defaults it puts the labelled meaning first 64.3% of the time on the Wiktionary set (55.4% before; paired 95% interval of the difference +7.3 to +10.6 points), 69.2% on the hand-written set (64.4%; +0.0 to +9.6) and 88.0% on the Simple English Wiktionary set (84.6%; +2.5 to +4.3). It answers within the 750 ms budget as often on 8 and 2 threads and in two of three runs on 4 threads (94% in the third), uses about 110 MB less memory while loaded, and downloads 188.8 MB instead of 147.0 MB. Development data chose another run (labels only) as best; this one was chosen after the test results were known, so its test numbers are not an unbiased estimate (see "Which run ships").
+- **Since `assets-v2`** (training round 1, below): the model is fine-tuned from Ettin-150m-WSD on English Wiktionary's own examples. In the extension at the shipped defaults it puts the labelled meaning first 64.3% of the time on the Wiktionary set (55.4% before; paired 95% interval of the difference +7.3 to +10.6 points), 69.2% on the hand-written set (64.4%; +0.0 to +9.6) and 88.0% on the Simple English Wiktionary set (84.6%; +2.5 to +4.3). It answers within the 750 ms budget as often on 8 and 2 threads and in two of three runs on 4 threads (94% in the third), uses about 110 MB less memory while loaded, and downloads 188.8 MB instead of 147.0 MB. Development data chose another run (labels only) as best; this one was chosen after the test results were known, so its test numbers are not an unbiased estimate (see "Training round 1 (assets-v2)", "Caveats").
 
 ## Method
 
@@ -288,6 +288,7 @@ The release `assets-v2` was published on 2026-11-26 with `scripts/publish-assets
   - "bank" in both sentences: 412 and 426 ms; the first entry is still the financial one in both (entries keep dictionary order).
   - Offline: "bank" in 440 ms with 3 entries, "mouse" still ordered. After a browser restart on the same profile: files and settings kept, first lookup 280 ms, second 161 ms, "mouse" ordered once the model was ready.
   - Public pages: `en.wikipedia.org` answered HTTP 429 again; MDN ("fires" 438 ms, "element" 317, "pointing" 462, "event" 246), `blog.mozilla.org` ("web" 399 ms) and `docs.python.org` ("interpreter" 372 ms, "string" 417, "slice" 378, "list" 429).
+- 2026-11-27, once training had moved to sense-model: `node scripts/publish-assets.mjs --dry-run`, which now takes the model files from the pinned Hugging Face revision `0edcbab0` of `andrepaim/Ettin-150m-WSD-wiktionary`, downloaded the five files (207 MB in about 20 s), found each equal to its stored pin, and staged `assets-v2` with every file equal to its published transfer pin, the gzip of the graph included. `CD_TEST_REAL_ASSETS=1 npx vitest run test/unit/assets/real-hf-model.test.ts`: the five files at that revision equal their stored pins (the graph in 19.3 s).
 
 ## Recommendations (not done)
 
@@ -301,75 +302,33 @@ The release `assets-v2` was published on 2026-11-26 with `scripts/publish-assets
 
 ## Training round 1 (assets-v2)
 
-On 2026-11-25 and 26 the small model was fine-tuned on English Wiktionary's own examples, with the larger model of its family as a teacher, and the result replaced the checkpoint in the release `assets-v2` (`docs/assets.md`). Same machine as above, with an NVIDIA GeForce RTX 3060 (12 GB) for training and scoring in PyTorch. The scripts are `validation/build-train-set.ts`, `validation/build-unlabelled-set.ts` and `validation/training/` (`README.md` there); everything they write is under `~/.cache/contextual-dictionary/validation/train/` and holds Wiktionary or Wikipedia text, so none of it is committed.
+On 2026-11-25 and 26 the small model was fine-tuned on English Wiktionary's own examples, with the larger model of its family as a teacher, and the result replaced the checkpoint in the release `assets-v2` (`docs/assets.md`). Training, model-level validation and publishing a model now live in [sense-model](https://github.com/andrepaim/sense-model): the round's model-level method, numbers and rerun are its [`docs/wiktionary-round1.md`](https://github.com/andrepaim/sense-model/blob/8975259/docs/wiktionary-round1.md) at commit `8975259`. The data is the dataset [`andrepaim/wiktionary-wsd`](https://huggingface.co/datasets/andrepaim/wiktionary-wsd/tree/84b6444e83219aaa76c29a517a64a640c1df9a46) (revision `84b6444e83219aaa76c29a517a64a640c1df9a46`), built here with the extension's own lookup and prompts (`validation/dataset/README.md`), and the model is [`andrepaim/Ettin-150m-WSD-wiktionary`](https://huggingface.co/andrepaim/Ettin-150m-WSD-wiktionary/tree/0edcbab04bb30eadeeef6babb26e8055b173b8d7) (revision `0edcbab04bb30eadeeef6babb26e8055b173b8d7`), whose five model files are those `assets-v2` stores. This section keeps a summary of the model and, in full, what it does in the extension.
 
-### Data
+### The model in brief
 
-**Labelled examples.** `build-train-set.ts` reads the same Kaikki extract as the evaluation builders and applies their rules (one lower-case word, at least two meanings in one part of speech after the pack's rules, `judgeExample`, the context cut of `selectionAt`, the lookup in the real pack, `senseRequest` through `variantRequest`), but keeps every usable example, at most 12 per entry (seeded), in two prompt forms: the shipped defaults (`24|c1600`) and no cap (`127`). The rule of "Held out of training" above is applied: the 2,197 headwords of `wiktionary-items.tsv` and `written-labels.tsv` are skipped (3,754 entries), and an item is also dropped when the lookup returns an entry of a held-out lemma (2,274). The other headwords are split by `sha256("cd-train-r1\n" + headword)`: the first 4% of the hash space is the development side (`validation/training-items.ts`).
+- **Data.** From the same Kaikki extract as the evaluation sets, with the extension's lookup and prompt code (`validation/build-train-set.ts`, `validation/build-unlabelled-set.ts`, `validation/training-items.ts`): every usable example of the headwords that are not held out ("Held out of training" above), at most 12 per entry, in two prompt forms, the shipped defaults (`24|c1600`) and no cap (`127`). The other headwords are split by `sha256("cd-train-r1\n" + headword)`, the first 4% of the hash space being development: 124,442 training items (129,093 labelled examples and 1,658 used with the teacher only) and 4,931 development items, after 605 passages equal to or sharing a run of ten words with a test passage were dropped. The unlabelled stream, for the teacher only: 47,910 items (55,138 examples) from 60,000 paragraphs of one English Wikipedia shard. The held-out headwords take nearly all entries with many meanings: development has none with more than 16, training 279 items with 17–32 and none with more.
+- **Training.** Three runs from `sign/Ettin-150m-WSD` (revision `8751b577199d1bb95b74fa2457da7065d57100ae`): labels only, teacher only, and labels and teacher, the teacher being `sign/Ettin-1B-WSD` (revision `e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc`, soft labels at T = 2). Loss 0.3 × label cross-entropy + 0.7 × T² × KL, learning rate 5e-5, batch 64, at most 3 epochs, early stopping on development; each run stopped at step 4,200 and kept step 3,000.
+- **Accuracy, float PyTorch, no budget.** Labelled meaning first at the defaults (development: dictionary order 38.1%, the teacher 79.3%):
 
-| | Items | Headwords | 2 meanings | 3–4 | 5–8 | 9–16 | 17–32 | 33+ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Training | 125,031 | 34,993 | 48,394 | 41,108 | 25,404 | 9,846 | 279 | 0 |
-| Development | 4,951 | 1,378 | 1,863 | 1,756 | 952 | 380 | 0 | 0 |
-
-Training items: 69,789 nouns, 24,365 verbs, 25,837 adjectives, 3,462 adverbs, 1,578 others; 96,528 quotations and 28,503 usage examples. **The held-out headwords take nearly all entries with many meanings**: 464 entries with 17–32 meanings and all 63 with 33+ are held out, so 45 such entries (279 items) remain for training and none for development. Training cannot learn much about long entries, and development cannot see them.
-
-Each prompt became a sense-model example (`validation/training/prepare_examples.py`), and sense-model's own `format_prompt` had to rebuild the extension's prompt byte for byte; every one did. The no-cap form differs from the defaults for 5.6% of the items (most entries are short). Where the cap leaves the labelled meaning out of the prompt (1,667 training items), the prompt is not turned into a "none of the above" label (sense-model's `gold_ids: []` means that no offered meaning fits, which is not true there); it is used with the teacher's answers only.
-
-**Leak checks** (`validation/training/check_leaks.py`, built into `build-train-set.ts`): no training or development headword, and no lemma the unlabelled stream looked up, is held out; training and development headwords are disjoint. The headword rule did not catch everything: the same quotation is often filed under several headwords, and 46 training passages and 2 development passages were equal to a Wiktionary test passage after normalisation (case folded, punctuation dropped); 557 more shared a run of ten words with a test passage. All 605 were dropped, and the same check on the final files found no equal passage and no shared run of ten words with any of the three test sets. 4 identifiers that appeared twice (the same example under the same meaning) are kept once. Final training examples: 129,093 labelled, 1,658 teacher-only. The table above counts the items before this check: of the 4,951 development items, the 20 it dropped (2 equal to a test passage, 18 sharing a run of ten words with one) leave the 4,931 of the development results below, and the 125,031 training items become 124,442 (585 dropped, 4 repeated).
-
-**Unlabelled stream** (teacher only). One shard of English Wikipedia as published at `https://huggingface.co/datasets/wikimedia/wikipedia`, revision `b04c8d1ceb2f5cd4588862100d08de323dccfbaa`, file `20231101.en/train-00001-of-00041.parquet` (351 MB, SHA-256 `6cd57a5825312ca966313d4a1b614690b5c4fb53cee9b124bc0e999977eb36cf`, CC BY-SA 3.0 and GFDL as the dataset states), downloaded on 2026-11-25. `validation/training/wiki_paragraphs.py` took a seeded sample of 60,000 prose paragraphs of 120–700 characters; `build-unlabelled-set.ts` picked one lower-case word per paragraph whose lookup gives a prompt and whose looked-up lemmas are neither held out nor on the development side, at most 15 per lemma: 47,910 items, 55,138 examples.
-
-### Training
-
-The trainer (`validation/training/train_thin.py`) uses sense-model's own dataset, loss and trainer class (`wsd.train`) and its model class, with three differences from `wsd train`: candidates keep the extension's order (sense-model shuffles them), batches are grouped by length, and two defects found on the way are worked around in the script: under transformers 5 the loss and gradients came out multiplied by the number of accumulation steps (the model's `forward` takes `**kwargs`, so the trainer assumes the loss is already normalised), and a run resumed after a crash drew a new batch order (the length-grouped sampler shuffles from global random state; the script seeds it by epoch). Both belong fixed in sense-model.
-
-A pilot run on 2026-11-25 (labels and teacher, 39,999 of the labelled training examples, one epoch of 625 steps of 64, about 2 seconds a step) tried the trainer, the teacher cache, the resume and the export before the three runs; the trainer's development score (labelled meaning first on 2,000 development prompts whose labelled meaning is offered) went from 69.5% to 74.8%. It showed the second defect: its first attempt, resumed from step 300, trained on a new batch order (training loss 0.772 against 0.834 at step 310 over the same steps), while the second attempt, with the sampler seeded by epoch, took 23 minutes with an interruption and a resume, and resumed onto the same batches (0.8531 against 0.8534). The workaround for the first defect was already in the script the pilot ran, so the kept logs do not show that one.
-
-Recipe, as the upstream card describes its own: loss 0.3 × label cross-entropy (label smoothing 0.1) + 0.7 × T² × KL to the teacher at T = 2; learning rate 5e-5, cosine schedule, batch 64 (4 × 16 accumulation), seed 42, at most 3 epochs; evaluation every 300 steps on 2,000 development prompts of each form, the best checkpoint by "labelled meaning first" at the defaults, early stopping after 4 evaluations without improvement. The rest, from `train_thin.py`, its arguments (`args.json` of each run) and the logged learning rate: AdamW as the trainer's default (PyTorch's fused AdamW, betas 0.9 and 0.999, ε 10⁻⁸), weight decay 0.01, gradients clipped to norm 1; a linear warm-up over the first 10% of the planned steps (606 for labels only, 872 for the other two) and then the cosine decay towards zero at the planned end, which early stopping never reached; bf16 mixed precision; batches grouped by length (transformers' length-grouped sampler, seeded by epoch), prompts of at most 2,048 tokens (no training prompt was longer); the 2,000 development prompts of each form drawn with seed 42 from those whose labelled meaning is offered. Teacher scores were computed in batches of at most 8,192 tokens. Teacher: `sign/Ettin-1B-WSD` revision `e6fc37a7e11fee91a600a0cd8e7423bcc639a1cc`, soft labels computed in bf16 (agreeing with fp32 on 99.4% of top choices, development accuracy identical; batched scores equal to one-at-a-time scores). Every accuracy below is fp32.
-
-| Run | Data | Stopped at | Chosen checkpoint |
-| --- | --- | ---: | ---: |
-| Labels only | 129,093 labelled | step 4,200 of 6,054 | 3,000 |
-| Teacher only | the labelled prompts without their labels, the teacher-only ones and the unlabelled stream (185,889) | step 4,200 of 8,715 | 3,000 |
-| Labels and teacher | the same 185,889, labels where there are | step 4,200 of 8,715 | 3,000 (1.03 epochs) |
-
-Development, all 4,931 items, labelled meaning first / top three at the defaults (and with no cap):
-
-| Model | First | Top 3 | First, no cap |
-| --- | ---: | ---: | ---: |
-| Dictionary order | 38.1% | 84.3% | 38.1% |
-| Untrained (float) | 72.1% | 96.6% | 72.8% |
-| Teacher (Ettin-1B-WSD, float) | 79.3% | 97.3% | 80.1% |
-| Labels only | **78.6%** | 97.5% | 79.5% |
-| Teacher only | 76.7% | 97.3% | 77.7% |
-| Labels and teacher | 78.0% | 97.5% | 79.0% |
-
-Test sets, scored once per finished run, float PyTorch, labelled meaning first (paired bootstrap 95% interval of the difference from the untrained float model, 2,000 resamples, seed 1):
-
-| Set, form | Untrained | Labels only | Teacher only | Labels and teacher |
+| Model | Development (4,931 items) | Wiktionary test | Hand-written | Simple English |
 | --- | ---: | ---: | ---: | ---: |
-| Wiktionary, defaults | 59.0% | 66.1% (+5.5 to +8.6) | 62.7% (+2.4 to +5.1) | 64.2% (+3.8 to +6.7) |
-| Wiktionary, no cap | 66.0% | 75.1% (+7.3 to +10.9) | 71.3% (+3.9 to +6.8) | 73.3% (+5.8 to +8.9) |
-| Hand-written, defaults | 65.4% | 69.2% (−1.9 to +9.6) | 67.3% (−2.9 to +6.7) | 70.2% (+0.0 to +9.6) |
-| Hand-written, no cap | 75.0% | 80.8% (−1.0 to +12.5) | 79.8% (−1.0 to +10.6) | 83.7% (+3.8 to +14.4) |
-| Simple English, defaults | 86.6% | 87.0% (−0.4 to +1.3) | 87.6% (+0.3 to +1.8) | 88.5% (+1.1 to +2.7) |
+| Untrained | 72.1% | 59.0% | 65.4% | 86.6% |
+| Labels only | **78.6%** | 66.1% | 69.2% | 87.0% |
+| Teacher only | 76.7% | 62.7% | 67.3% | 87.6% |
+| Labels and teacher (ships) | 78.0% | 64.2% | 70.2% | 88.5% |
 
-### Which run ships
+- **Export.** sense-model's ONNX export (float parity with PyTorch 4.3 × 10⁻⁶), then INT8 weights per channel for the MatMuls except the feed-forward output of the five layers whose activations have outliers (4, 7, 9, 11 and 15), and the token embedding in float16: 203,516,610 bytes, 185,262,587 as the release compresses it (`assets-v1`: 266,954,889 and 143,435,614). INT8 and float agree on the top choice for 96.6% of 1,000 development prompts.
+- **Weights.** The float checkpoint (`model.safetensors`, 598,827,368 bytes, SHA-256 `49bc2634…5be3`, the model revision of `src/model/session.ts`) and both ONNX exports are in the Hugging Face repository. The round's working files stay on the maintainer's machine: they hold Wiktionary or Wikipedia text, or are 16 GB of checkpoints.
 
-Development chose labels only (78.6% against 78.0%), and the export step of the round exported that one. The owner chose labels and teacher after the test results above were known. Against labels only, it is better on the hand-written and Simple English sets and one point worse on the Wiktionary set, and it still answers "none of the above" (labels only did on no test item). Because that choice looked at the test sets, the test numbers of the run that ships (`assets-v2`) are not an unbiased estimate of its accuracy; the difference between the two runs is within the noise of the hand-written set.
+**Caveats.**
 
-### Export
-
-The same recipe as the quantization study of 2026-11-25, with the outlier layers measured again for this model (`validation/training/act_stats_model.py`, 200 development prompts): the input of the feed-forward output (`mlp.Wo`) peaks at 42.9 (layer 4), 1,089 (7), 24.8 (9), 1,663 (11) and 740 (15) times its 99.9th percentile; the next are 13.5 (12) and 13.1 (14), under the cut-off of 15. The ONNX export is sense-model's own (float parity with PyTorch: maximum logit error 4.3 × 10⁻⁶); then `quantize_dynamic` with INT8 weights per channel for the MatMuls except those five, and the token embedding stored in float16 with a cast to float (`validation/training/export_quant.py`). Graph: 203,516,610 bytes; 185,262,587 as the release compresses it (gzip level 9; `assets-v1`: 266,954,889 and 143,435,614). INT8 against float on 1,000 development prompts: the same top choice for 96.6%.
-
-### Where the weights and the raw results are
-
-The GitHub release `assets-v2` holds the INT8 graph only. The float weights it was exported from are `checkpoints/s2-labels-teacher/final/model.safetensors` under `~/.cache/contextual-dictionary/validation/train/` on the maintainer's machine (598,827,368 bytes, SHA-256 `49bc2634…5be3`, the model revision of `src/model/session.ts`). They are also public, with the float ONNX export, the INT8 graph and a model card, in the Hugging Face repository [`andrepaim/Ettin-150m-WSD-wiktionary`](https://huggingface.co/andrepaim/Ettin-150m-WSD-wiktionary/tree/affc67b9a87c51a07ce642726cee993c593ad744) (revision `affc67b9`; its `model.safetensors` has the same SHA-256). The rest of the round stays on that machine too: the items, prompts, examples and teacher caches hold Wiktionary or Wikipedia text; the score files hold only prompt hashes and numbers, of no use without the prompts; the checkpoints are 16 GB; and the training curves (`metrics.jsonl`, the TensorBoard events) hold numbers only and are small, and the numbers used here are quoted. `validation/training/README.md` lists every file and every step.
+- **The run that ships was chosen after the test results were known.** Development chose labels only (78.6% against 78.0%); the owner chose labels and teacher after seeing the test sets. Its test numbers, here and below, are therefore not an unbiased estimate of its accuracy, and the difference between the two runs is within the noise of the hand-written set.
+- **The hand-written set was written and labelled by a model**, with no human review, and it is small (its intervals are about ±10 points).
+- **Training and development passages overlap** (found on 2026-11-27). Headwords are disjoint, but the build checked passages against the test sets only, and the same quotation is often filed under several headwords. sense-model's split check (`validate_splits`: equal passages after normalisation, and a five-word-shingle Jaccard of at least 0.8 for passages of 15 words or more) finds 90 equal and 668 near-duplicate passages between the training files and the two development forms. They involve 232 of the 4,931 development items, or 451 development examples of the two forms, and 341 training examples (`validation/dataset/split_overlap.py` lists the development items; sense-model's page counts 438 development items, which is the number of development examples in its near-duplicate findings). The development numbers, and the choices made on them, may be somewhat optimistic; the test sets are not affected.
 
 ### In the extension, against the shipped model (`assets-v1`)
 
-In this section "the shipped model" and "shipped" mean `assets-v1`, the model the extension shipped when it was written, and "the new model" `assets-v2`.
+In this section "the shipped model" and "shipped" mean `assets-v1`, the model the extension shipped when it was written, and "the new model" `assets-v2`. The scripts that took these measurements are in `validation/candidate-model/`, whose `README.md` gives the sequence for the next model.
 
 `validation/score-prompts.ts` with the export, 8 threads, the `24|c1600` prompts of the three sets, the shipped model's answers being those of the measurements above (`scores-8.jsonl`, reproduced exactly by a rerun on 2026-11-25):
 
@@ -429,6 +388,7 @@ So two clear losses among about twelve captures the shipped model got right. At 
 - The development set has no entry with more than 16 meanings, and training has 279 items with 17–32 and none with more: what was learnt about long entries comes from the teacher and from short entries.
 - The run that ships was chosen after the test results were known (above).
 - The hand-written set is small and was written and labelled by a model.
+- Training and development passages overlap (above), so development numbers may be somewhat optimistic.
 - One machine; the latency on 4 and 2 threads is that of fast cores.
 - The Wikipedia shard is one of 41, and the unlabelled stream avoids the held-out headwords, which are many of the commonest words.
 
@@ -457,7 +417,7 @@ Of the 352 not offered, 19 also got "none of the above" or a late answer. The th
 
 The rule was fixed before any development number was looked at (`chooseMargin` in the script): among the margins 0, 0.05, …, 0.50 in probability, the one with the most items gained minus twice the items made worse (labelled meaning first on the card, against today's order), the smaller on a tie. An item made worse loses a right first meaning the card showed before, so it counts twice: a larger margin is worth it when it saves one loss for fewer than two gains.
 
-The 4,931 development items of training round 1 (the 20 that overlap a test passage left out, as `dev_eval.py` does) are split by headword: `sha256("entry-order-r1\n" + headword)` below half its range is half A (2,640 items, 677 headwords), the rest half B (2,291 items, 698 headwords). Each item's labelled entry and the entries' positions are those of the real pack lookup made by `build-train-set.ts`; a fresh lookup of every changed item gave the same meaning counts. The development set has no entry with more than 16 meanings. Bootstrap intervals resample whole headwords (2,000 resamples, seed 1).
+The 4,931 development items of training round 1 (the 20 that overlap a test passage left out, as in training round 1's development table) are split by headword: `sha256("entry-order-r1\n" + headword)` below half its range is half A (2,640 items, 677 headwords), the rest half B (2,291 items, 698 headwords). Each item's labelled entry and the entries' positions are those of the real pack lookup made by `build-train-set.ts`; a fresh lookup of every changed item gave the same meaning counts. The development set has no entry with more than 16 meanings. Bootstrap intervals resample whole headwords (2,000 resamples, seed 1).
 
 Half A, against today's order (67.5% first on the card):
 
@@ -500,6 +460,7 @@ The showcases of the site and the store (`site/_examples.json` and the demonstra
 ### Limits
 
 - The decision to move entries was made from the test sets' simulation; only the margin was chosen on development data, and the development set confirms the effect independently.
+- 232 of the 4,931 development items (451 development examples) have a passage equal to or nearly the same as a training passage ("Training round 1", "Caveats"), so the development gain may be somewhat optimistic; the test-set result does not depend on it. Measured again on 2026-11-27 with those items left out as well (4,699 items): today 67.7% first on the card, with the margin 75.5%, +7.8 points (6.5 to 9.3), 396 gained and 30 made worse, against +7.7 (6.4 to 9.1) with them. The rule would then have chosen 0.30 on half A (213 for 0.25 against 214 for 0.30 in gained − 2 × worse, a difference of one item), and 0.25 on half B.
 - Each Wiktionary label is the entry the example is filed under. Most gains and most losses cross a part-of-speech boundary (a noun entry before an adjective entry of the same word, for instance), where the filing can be arbitrary, so some gains and some losses are artifacts of filing rather than better or worse cards.
 - The hand-written set is small (104 items) and was written and labelled by a model.
 - The development scores are float PyTorch and have no budget; the test scores are the INT8 extension at 750 ms.
@@ -508,10 +469,11 @@ The showcases of the site and the store (`site/_examples.json` and the demonstra
 
 ## How to rerun
 
-All scripts read local inputs (the Kaikki extracts, the pack, the model export; defaults as in `CLAUDE.md`, overridden by `CD_KAIKKI`, `CD_KAIKKI_SIMPLE`, `CD_PACK`, `CD_MODEL_DIR`) and write under `~/.cache/contextual-dictionary/validation/` (`CD_VALIDATION_OUT`). None runs in CI.
+All scripts read local inputs (the Kaikki extracts, the pack, the model export; defaults as in `CLAUDE.md`, overridden by `CD_KAIKKI`, `CD_KAIKKI_SIMPLE`, `CD_PACK`, `CD_MODEL_DIR`) and write under `~/.cache/contextual-dictionary/validation/` (`CD_VALIDATION_OUT`). None runs in CI. The model export is by default the model the build pins, in `~/.cache/contextual-dictionary/hf-models/andrepaim/Ettin-150m-WSD-wiktionary/<revision>/`: fetch it once with `node scripts/publish-assets.mjs --fetch-model` (207 MB, checked against the stored pins). The measurements of `assets-v1` above ran with `CD_MODEL_DIR` at its export (`~/src/sense-model/artifacts/upstream-english`); the evaluation builders give the same prompts with either, whose format, calibration and tokenizer files are the same.
 
 ```bash
 npm ci && npm run build
+node scripts/publish-assets.mjs --fetch-model         # once: the pinned model, the default CD_MODEL_DIR
 npx tsx validation/build-wiktionary-set.ts            # 40 s; regenerates validation/data/wiktionary-items.tsv (git diff should be empty)
 npx tsx validation/build-written-set.ts               # --list prints each sentence's meanings for labelling
 npx tsx validation/build-simple-set.ts                # 30 s; reads CD_KAIKKI_SIMPLE too; regenerates validation/data/simple-items.tsv (git diff should be empty)
@@ -534,18 +496,15 @@ S=~/.cache/contextual-dictionary/validation/train/browser-out/scores-s2-labels-t
 npx tsx validation/entry-order.ts --set wiktionary --scores $S --pack              # and --set written --pack, --set simple
 ```
 
-Training round 1: every step, with its command, inputs, outputs and time, is in `validation/training/README.md`, "Steps". It needs a CUDA GPU, the Python environment of `validation/training/requirements.txt`, the sense-model checkout at `~/src/sense-model` (the scripts import it from there), the evaluation sets above, and the scripts copied into `~/.cache/contextual-dictionary/validation/train/scripts/`, from where they run. In outline (`T` that folder, `PY=../teacher/venv/bin/python`, commands with `scripts/` run from `T`):
+Without the development items that share a passage with training data (`split_overlap.py` imports sense-model's `validate_splits` from `SENSE_MODEL_DIR`, default `~/src/sense-model`; seconds):
 
 ```bash
-npx tsx validation/build-train-set.ts                                   # labelled training and development items (CD_TRAIN_OUT, default T/data)
-$PY -I scripts/wiki_paragraphs.py wiki/train-00001-of-00041.parquet data/wiki-paragraphs.jsonl --n 60000
-npx tsx validation/build-unlabelled-set.ts --input ~/.cache/contextual-dictionary/validation/train/data/wiki-paragraphs.jsonl
-$PY -I scripts/prepare_examples.py --items data/train-items.jsonl --prompts data/train-prompts.jsonl --out data/train-labelled.clean.jsonl --unlabelled-out data/train-notoffered.clean.jsonl
-                                                                        # and four more (README steps 5 to 7)
-python3 -I scripts/check_leaks.py                                       # leak report; the list of passages to drop comes out empty
-setsid nohup scripts/stage2.sh > logs/stage2.nohup 2>&1 < /dev/null &   # teacher scores, the three runs, development and test scoring, export of the best run on development (README steps 8 to 12 list what it needs)
-python3 -I validation/training/release_model_dir.py --export <export> --weights <model.safetensors> --shipped ~/src/sense-model/artifacts/upstream-english --out <dir>
-node scripts/publish-assets.mjs --dry-run --model-dir=<dir>             # stages assets-v2 and prints its pins
+R=~/.cache/contextual-dictionary/validation/reorg; mkdir -p $R
+python3 -I validation/dataset/split_overlap.py $R/dev-train-overlap-items.txt
+sort -u ~/.cache/contextual-dictionary/validation/train/data/excluded-overlap-ids.txt $R/dev-train-overlap-items.txt > $R/dev-exclude.txt
+npx tsx validation/entry-order.ts --set dev --exclude $R/dev-exclude.txt           # and --half A --sweep --margin 0, --half B --sweep
 ```
+
+Training round 1: the model-level steps (teacher scores, the three runs, development and test scoring, the export and publishing the model) are sense-model's, with `wsd` commands, in its `docs/wiktionary-round1.md`, "Rerun"; the data they read is the dataset, rebuilt here as `validation/dataset/README.md` says; a new model export is measured in the extension as `validation/candidate-model/README.md` says; and `node scripts/publish-assets.mjs --dry-run` stages the release from the model's pinned Hugging Face revision (`docs/assets.md`, "Publish a new release").
 
 `threads-subset.txt` holds the prompt hashes of variants `48`, `48|c1200` and `48|c1600` of the first 300 items taken every fifth in id order (the snippet that wrote it is the selection in `analyze-threads.ts`).

@@ -11,7 +11,8 @@ Every document of the project, with one line each. The first group describes the
 - [`pack-format.md`](pack-format.md): the dictionary pack's file format, version 1.
 - [`dictionary-build.md`](dictionary-build.md): building the pack from the Kaikki.org extract, with its statistics (`dictionary-stats.json`).
 - [`development.md`](development.md): building, testing and releasing; the shared core package, the site and its captures.
-- [`validation/training/README.md`](../validation/training/README.md): the Python and shell scripts of training round 1, as run.
+- [`validation/candidate-model/README.md`](../validation/candidate-model/README.md): measuring a new model export in the extension against the shipped one, before a release.
+- [`validation/dataset/README.md`](../validation/dataset/README.md): rebuilding and republishing the training round's dataset, `andrepaim/wiktionary-wsd`, with the extension's own lookup and prompts.
 - [`packages/core/README.md`](../packages/core/README.md): the API of the shared dictionary core package.
 - [`store/listing.md`](../store/listing.md): the Chrome Web Store listing text and images.
 - [`NOTICE.md`](../NOTICE.md): third-party works and their licences.
