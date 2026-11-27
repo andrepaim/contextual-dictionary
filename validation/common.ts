@@ -163,6 +163,37 @@ export const percentile = (sorted: number[], p: number) => {
   return sorted[index]!
 }
 
+/**
+ * A seeded bootstrap 95% interval of the paired difference `a` minus `b` (2,000 resamples). With `groups`
+ * (one key per item), whole groups are resampled together, for items that are not independent (several
+ * passages of one headword).
+ */
+export function pairedInterval(a: number[], b: number[], seed: number, groups?: readonly string[]): [number, number] {
+  let state = seed >>> 0 || 1
+  const random = () => { state ^= state << 13; state >>>= 0; state ^= state >>> 17; state ^= state << 5; state >>>= 0; return state / 2 ** 32 }
+  const n = a.length, diffs: number[] = []
+  if (!groups) {
+    for (let r = 0; r < 2000; r++) {
+      let sum = 0
+      for (let i = 0; i < n; i++) { const j = Math.floor(random() * n); sum += a[j]! - b[j]! }
+      diffs.push(sum / n)
+    }
+  } else {
+    const members = new Map<string, number[]>()
+    groups.forEach((key, i) => members.set(key, [...(members.get(key) ?? []), i]))
+    const clusters = [...members.values()]
+    for (let r = 0; r < 2000; r++) {
+      let sum = 0, count = 0
+      for (let c = 0; c < clusters.length; c++) {
+        for (const i of clusters[Math.floor(random() * clusters.length)]!) { sum += a[i]! - b[i]!; count++ }
+      }
+      diffs.push(sum / count)
+    }
+  }
+  diffs.sort((x, y) => x - y)
+  return [percentile(diffs, 2.5), percentile(diffs, 97.5)]
+}
+
 /** Buckets of meanings offered, as docs/validation.md reports them. */
 export const OFFERED_BUCKETS = [[1, 4], [5, 8], [9, 16], [17, 32], [33, Infinity]] as const
 /** Strata of meanings in the labelled entry. */
