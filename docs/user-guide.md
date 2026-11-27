@@ -30,13 +30,13 @@ Double-click a word, or select up to four words, on any ordinary web page. A sma
 ## The switches
 
 - **Show definitions:** the card on or off everywhere.
-- **Order by context:** on by default; it needs the context model, which downloads only when you confirm it. The meanings inside each entry are then listed by how well they fit the sentence you are reading, using the local model. Entries keep their dictionary order and no meaning is dropped. When the model cannot answer within three quarters of a second, or none of the meanings fits, the card keeps the dictionary's order (when the answer was only late, looking the same passage up again shows the model's order). The model loads in the background at the first lookup (about three seconds in a new browser session) and unloads after ten idle minutes; while it is loading, cards use dictionary order. Switch it off to keep the dictionary's order and the memory the model uses.
+- **Order by context:** on by default; it needs the context model, which downloads only when you confirm it. The meanings inside each entry are then listed by how well they fit the sentence you are reading, using the local model. Entries keep their dictionary order and no meaning is dropped. When the model cannot answer within three quarters of a second, or none of the meanings fits, the card keeps the dictionary's order (when the answer was only late, looking the same passage up again shows the model's order). The model loads in the background at the first lookup (two to three seconds in a new browser session) and unloads after ten idle minutes; while it is loading, cards use dictionary order. Switch it off to keep the dictionary's order and the memory the model uses.
 - **Show order details:** off by default. The card then also says what the context model did to the order (see below). It works with **Order by context** on or off.
 - **On <this site>:** turns the extension off for the current site only.
 
 ## Order details
 
-With **Show order details** on, each meaning the model moved carries a small "was 3rd": its place in the dictionary's own order. Meanings in their dictionary place carry nothing. When a word has more meanings than the model was offered, a line "Not seen by the model" stands before the ones it did not see (usually after **Show all meanings**); they keep the dictionary's order. The card shows positions only, never a score: the model's first meaning is the right one about half the time.
+With **Show order details** on, each meaning the model moved carries a small "was 3rd": its place in the dictionary's own order. Meanings in their dictionary place carry nothing. When a word has more meanings than the model was offered, a line "Not seen by the model" stands before the ones it did not see (usually after **Show all meanings**); they keep the dictionary's order. The card shows positions only, never a score: on a test set of Wiktionary's own examples, the model's first meaning is the right one about two times in three.
 
 One line at the bottom of the card says how the meanings are ordered:
 

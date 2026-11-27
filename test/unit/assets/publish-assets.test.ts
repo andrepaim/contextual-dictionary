@@ -9,7 +9,7 @@ import { gunzipSync } from 'node:zlib'
 import { STORED_NAMES, assertManifest, publishedFiles, type AssetManifest } from '../../../src/assets/manifest'
 import {
   NOTICE_NAMES, ReleaseError, digestFile, gunzipDigest, gzipFile, main, parseOptions, pinnedManifest, publishRelease, releaseExists,
-  releaseNotes, releaseUrl, repoOf, stageRelease, traceRedirects, verifyDownload, formatPins,
+  releaseNotes, releaseTitle, releaseUrl, repoOf, stageRelease, traceRedirects, verifyDownload, formatPins,
   type Run, type StagedFile,
 } from '../../../scripts/assets-release'
 import { sha, text } from './helpers'
@@ -263,6 +263,13 @@ describe('pins and notes', () => {
     const manifest = { tag: 'assets-v1', baseUrl: BASE } as AssetManifest
     expect(releaseUrl(manifest, 'NOTICES-model.txt')).toBe(`${BASE}/assets-v1/NOTICES-model.txt`)
   })
+
+  test('releaseTitle follows the tag, and refuses a tag that is not assets-v<n>', () => {
+    expect(releaseTitle('assets-v1')).toBe('Dictionary pack and model files v1')
+    expect(releaseTitle('assets-v2')).toBe('Dictionary pack and model files v2')
+    expect(releaseTitle('assets-v12')).toBe('Dictionary pack and model files v12')
+    for (const tag of ['v0.4.0', 'assets-v0', 'assets-v02', 'assets-v2-rc1', 'assets-2']) expect(() => releaseTitle(tag)).toThrow(ReleaseError)
+  })
 })
 
 type Call = { command: string; args: string[] }
@@ -514,10 +521,36 @@ describe('parseOptions and main', () => {
       return new Response(new Uint8Array(fs.readFileSync(path.join(setup.out, name))))
     }
     expect(await main(argv, deps(gh.run, fetch))).toBe(0)
+    const create = gh.calls.find(call => call.args[0] === 'release' && call.args[1] === 'create')!.args
+    expect(create[create.indexOf('--title') + 1]).toBe('Dictionary pack and model files v1')
     const printed = log.join('\n')
     expect(printed).toContain('Published')
     expect(printed).toContain('release-assets.example')
     expect(printed).not.toContain('sig=1')
+  })
+
+  test('titles the release after the manifest tag', async () => {
+    const { setup, argv, deps } = await mainSetup()
+    const manifest = { ...setup.manifest, tag: 'assets-v2' }
+    const gh = fakeRun(call => {
+      if (isRefCheck(call)) return NOT_FOUND
+      if (isReleaseList(call) && call.args.includes('.[].tag_name')) return { stdout: '' }
+      return undefined
+    })
+    // The draft is not found, so publishing stops after the create call.
+    expect(await main(argv, { ...deps(gh.run, fakeFetch([]).fetch), manifest })).toBe(1)
+    const create = gh.calls.find(call => call.args[0] === 'release' && call.args[1] === 'create')!.args
+    expect(create[2]).toBe('assets-v2')
+    expect(create[create.indexOf('--title') + 1]).toBe('Dictionary pack and model files v2')
+  })
+
+  test('refuses a manifest tag it cannot title before staging anything', async () => {
+    const { setup, log, argv, deps } = await mainSetup()
+    const gh = fakeRun()
+    expect(await main(['--dry-run', ...argv], { ...deps(gh.run, fakeFetch([]).fetch), manifest: { ...setup.manifest, tag: 'v0.4.0' } })).toBe(1)
+    expect(log.join('\n')).toMatch(/ERROR .*v0\.4\.0/)
+    expect(fs.readdirSync(setup.out)).toEqual([])
+    expect(gh.calls).toHaveLength(0)
   })
 
   test('returns 1 and explains when publishing is refused', async () => {

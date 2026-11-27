@@ -1,5 +1,7 @@
 # Plan: order details (version 0.2.0)
 
+> **Status:** shipped in 0.2.0 (#17, merged on 2026-11-24). The switch, its default and the status lines are as described here (`src/content/order-details.ts`, `src/popup/popup.ts`). One statement has not held since 0.3.0: with the switch off, the card is no longer the 0.1.0 card, because 0.3.0 (#21) moved it to the shared card stylesheet and preview of `packages/core/`.
+
 A fourth switch in the extension's window, **Show order details**, off by default. When it is on, the card says what the context model did to the order of the meanings: which meanings moved and from where, which ones the model never saw, and, when the card shows dictionary order, why.
 
 ## 1. Why

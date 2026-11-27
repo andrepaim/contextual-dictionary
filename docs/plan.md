@@ -4,6 +4,23 @@ A Chrome extension that defines a word you select on any web page and lists the 
 
 This is a port of pdfpal's "Order by context" feature (`~/src/pdfpal-ettin-definition-order`, guide `docs/contextual-definitions.md` there) to a standalone extension with a larger dictionary.
 
+**Since 0.4.0:** the model is Ettin-150m-WSD fine-tuned by this project on English Wiktionary's own examples, still INT8 ONNX (`docs/validation.md`, "Training round 1"; release `assets-v2`, `docs/assets.md`).
+
+## Since version 0.1.0
+
+This plan is the plan of record that version 0.1.0 (2026-11-23) was built from. Its history is kept as written; statements that no longer hold carry a "Since 0.x:" or "Superseded:" note beside them. What changed since, and where each change is documented:
+
+| Merged | Change | Pull requests | Documented in |
+| --- | --- | --- | --- |
+| 2026-11-23, after 0.1.0 | The Chrome Web Store listing text and images (publishing was a non-goal of section 1), and the project site on GitHub Pages | #15, #16; the site was remade in #23 and #24 (2026-11-24) | `store/listing.md`, `docs/development.md` ("Site"), `CLAUDE.md` |
+| 2026-11-24, 0.2.0 | "Show order details": a fourth switch, off by default | #17 | `docs/order-details-plan.md`, `docs/user-guide.md` |
+| 2026-11-24, 0.3.0 and 0.3.1 | The shared core package `@andrepaim/contextual-dictionary-core` in `packages/core/`, also used by PDFPal: the dictionary and selection contracts, prompt building and contextual ordering (from `src/sense/prompt.ts`), the pack format, writer and reader, key normalisation and lookup (from `src/dict/`), and the card's preview policy and stylesheet, which the extension's card uses from 0.3.0. The extension installs the package's checked-in tarball (`artifacts/`). 0.3.1 restyles the card's scrollbar | #19, #20, #21, #22 | `packages/core/README.md`, `docs/development.md` ("Shared dictionary core") |
+| 2026-11-25 | A Simple English Wiktionary evaluation set, and the rule for which headwords stay out of training | #25 | `docs/validation.md` |
+| 2026-11-26 | The extension is public in the Chrome Web Store; the site, the guide and the README lead to the listing | #26 | `store/listing.md`, `docs/user-guide.md` |
+| 2026-11-26, 0.4.0 | The model fine-tuned on English Wiktionary (training round 1), published as release `assets-v2` | #29, #30 | `docs/validation.md` ("Training round 1"), `docs/assets.md` |
+
+Paths in sections 4 and 5 are those of 0.1.0; the notes beside them give where the code is now.
+
 ## 1. Goals and non-goals
 
 **Goals**
@@ -19,14 +36,14 @@ This is a port of pdfpal's "Order by context" feature (`~/src/pdfpal-ettin-defin
 - Languages other than English, for definitions or passages.
 - Chrome's built-in PDF viewer, `chrome://` pages and the Web Store (content scripts cannot run there).
 - Firefox and Safari.
-- Publishing to the Chrome Web Store (needs the owner's developer account; the release ZIP is prepared for it).
+- Publishing to the Chrome Web Store (needs the owner's developer account; the release ZIP is prepared for it). **Superseded:** the extension is public in the Chrome Web Store (#26; `store/listing.md`).
 - Accounts, sync, telemetry, AI explanations.
 
 ## 2. Measured facts this plan rests on
 
 | Fact | Value | Source |
 | --- | --- | --- |
-| Model on disk / compressed | 267 MB / about 150 MB | pdfpal pins, `onnx/model.int8.onnx` |
+| Model on disk / compressed | 267 MB / about 150 MB | pdfpal pins, `onnx/model.int8.onnx`. **Since 0.4.0:** 203.5 MB / 185.3 MB (`assets-v2`, `docs/assets.md`) |
 | Native warm latency | 35–55 ms for 6–11 meanings, 135–150 ms for 21–22, about 240 ms for 40 | pdfpal guide, 8 threads |
 | Model limits | 127 candidates, 2,048 tokens | `model_metadata.json` |
 | English Wiktionary (Kaikki extract, 2026-10-30) | 1,497,828 entries, 1,793,713 meanings | measured |
@@ -39,6 +56,8 @@ This is a port of pdfpal's "Order by context" feature (`~/src/pdfpal-ettin-defin
 **Unproven, validated in stage 3:** inference speed under WebAssembly, and ranking accuracy on Wiktionary definitions (the model was trained on WordNet glosses).
 
 **Stage 3 results** (`docs/validation.md`): with 8 threads a prompt of up to 1,600 characters is scored in 0.28 s at the median and at most 0.69 s; on 2,300 Wiktionary-labelled items model order puts the labelled meaning first 55.4% of the time against 28.2% for dictionary order (top three 77.9% against 60.1%). The model costs about 1 GB of memory while loaded.
+
+**Since 0.4.0** (`docs/validation.md`, "Training round 1"): with the fine-tuned model of `assets-v2`, the labelled meaning is first 64.3% of the time on the same 2,300 items (top three 81.2%), and the extension uses about 110 MB less memory while it is loaded.
 
 ## 3. Product decisions
 
@@ -54,7 +73,7 @@ This is a port of pdfpal's "Order by context" feature (`~/src/pdfpal-ettin-defin
 | Ordering policy | Same as pdfpal: stable sort inside each entry; dictionary order on "none of the above" win or tie, single-meaning entries, non-English passage, unsafe text (`*`, control tokens), failure or timeout. |
 | Opt-in | Definitions work as soon as the dictionary is installed. "Order by context" is a separate switch. Each download shows its size and starts only after confirmation. **Stage 3:** the switch is on by default, because model order clearly beat dictionary order; the model still downloads only after confirmation. |
 | Sites | Works on all sites by default with a per-site off switch in the popup. |
-| Assets | Published as a GitHub release `assets-v1` of this repository: `ettin-150m-wsd-int8.onnx.gz`, the small model files, `wiktionary-en-v1.pack`, and notices. Every file is pinned by size and SHA-256 in `src/assets/manifest.ts`. Published assets are never changed; a new payload gets a new tag. |
+| Assets | Published as a GitHub release `assets-v1` of this repository: `ettin-150m-wsd-int8.onnx.gz`, the small model files, `wiktionary-en-v1.pack`, and notices. Every file is pinned by size and SHA-256 in `src/assets/manifest.ts`. Published assets are never changed; a new payload gets a new tag. **Since 0.4.0:** release `assets-v2`, with the same file names, the fine-tuned model and the same pack (`docs/assets.md`). |
 | Licenses | Code MIT. Dictionary pack CC BY-SA 4.0 (Wiktionary). Model Apache-2.0 (base MIT). ONNX Runtime MIT. Notices ship in the extension and next to the assets. |
 | Privacy | No telemetry. Lookups, selections and context never leave the extension. The answer cache holds prompt hashes and numbers only. |
 | Order details (0.2.0) | A fourth switch, "Show order details", off by default: the card shows each moved meaning's dictionary position and why it shows dictionary order, never a score. See `docs/order-details-plan.md`. |
@@ -86,11 +105,12 @@ popup ───────────────────────┤  
 | Path | Contents | Stage 1 owner |
 | --- | --- | --- |
 | `src/shared/contracts.ts` | Types and message protocol shared by every module | coordinator (change by small PR, never silently) |
-| `src/sense/` | Prompt building, offsets, English check, reorder, ranker (budget, queue, cache) | task A |
-| `src/dict/`, `scripts/build-dictionary.ts` | Pack format, writer, reader, lookup, builder CLI | task B |
+| `src/sense/` | Prompt building, offsets, English check, reorder, ranker (budget, queue, cache). **Since 0.3.0:** the ranker only; the rest is in `packages/core/src/prompt.ts` | task A |
+| `src/dict/`, `scripts/build-dictionary.ts` | Pack format, writer, reader, lookup, builder CLI. **Since 0.3.0:** the Kaikki transformation (`src/dict/kaikki.ts`) and the builder CLI; the pack format, writer, reader, keys and lookup are in `packages/core/src/` | task B |
 | `src/model/` | Inference session, Web Worker, worker client | task C |
 | `src/assets/` | Pins, OPFS file store, download and verification, asset service | task D |
-| `src/content/`, `src/popup/` | Selection, card, controller, popup view | task E |
+| `src/content/`, `src/popup/` | Selection, card, controller, popup view. **Since 0.3.0:** the card's preview policy and stylesheet come from `packages/core/src/card.ts` and `card.css` | task E |
+| `packages/core/` (since 0.3.0) | The shared core package: contracts, prompt building and contextual ordering, pack format, writer and reader, lookup, card presentation | coordinator |
 | `src/background/`, `src/offscreen/`, `test/e2e/`, release | Wiring, end-to-end tests, packaging | task F |
 
 Files named `*.entry.ts` contain wiring only and are excluded from coverage. Everything else is unit-tested.
@@ -99,10 +119,12 @@ Files named `*.entry.ts` contain wiring only and are excluded from coverage. Eve
 
 ### 5.1 Sense (`src/sense/`), ported from pdfpal
 
-- `prompt.ts`: `codePointSpan`, `looksEnglish`, `senseRequest`, `contextualOrder` ported from `src/core/sense-order.ts` with its tests. Adds the candidate cap (decision above): the request records which meanings were scored; unscored meanings keep their relative order after the scored ones of the same entry.
+- `prompt.ts` (**since 0.3.0** `packages/core/src/prompt.ts`): `codePointSpan`, `looksEnglish`, `senseRequest`, `contextualOrder` ported from `src/core/sense-order.ts` with its tests. Adds the candidate cap (decision above): the request records which meanings were scored; unscored meanings keep their relative order after the scored ones of the same entry.
 - `ranker.ts`: port of `src/core/contextual-definitions.ts` on top of the `WorkerLike` contract: states `idle | loading | ready | failed | closed`, background warm-up, latest-wins queue with one prompt in flight, per-lookup budget, abort signal, late-answer LRU cache keyed by the SHA-256 of the prompt, load and run watchdogs, retry pause after failure, `close()`.
 
 ### 5.2 Dictionary (`src/dict/`)
+
+**Since 0.3.0:** the pack format, writer, reader and lookup are in `packages/core/src/` (`pack-format.ts`, `pack-writer.ts`, `pack-reader.ts`, `keys.ts`, `lookup.ts`); `src/dict/kaikki.ts` keeps the Kaikki transformation. `docs/pack-format.md` is the format as built: it refines the sketch below (inflection pointers `{ l, n }` sit inside the entries, not in a top-level `f`).
 
 **Pack format v1** (single file, little-endian):
 
@@ -121,12 +143,12 @@ The header holds `{ version, language, source, license, createdFrom, snapshot, e
 ### 5.3 Model (`src/model/`)
 
 - `session.ts`: given the model bytes, tokenizer JSON and metadata, creates the ONNX session and answers `logits(prompt)`: tokenise, refuse more than `max_length` tokens (`TOO_LONG`) or a mask count other than one (`MASK`), run with `input_ids`, `attention_mask`, `prediction_positions` (int64), return the first 128 logits. Takes the ONNX and tokenizer modules by injection so tests use fakes.
-- `worker.entry.ts`: the Web Worker. Protocol (same as pdfpal): in `{type:'load', ...}`, `{type:'score', id, prompt}`, `{type:'close'}`; out `{type:'ready', format}`, `{type:'failed', code}`, `{type:'scored', id, logits}`, `{type:'rejected', id, code}`. Verifies metadata (`template_version` `compact-v1`, pinned revision), runs two warm-up prompts before `ready`.
+- `worker.entry.ts`: the Web Worker (its message handling is in `worker-handler.ts`). Protocol (same as pdfpal): in `{type:'load', ...}`, `{type:'score', id, prompt}`, `{type:'close'}`; out `{type:'ready', format}`, `{type:'failed', code}`, `{type:'scored', id, logits}`, `{type:'rejected', id, code}`. Verifies metadata (`template_version` `compact-v1`, pinned revision), runs two warm-up prompts before `ready`. **Since 0.4.0:** the pinned revision is the fine-tuned checkpoint's (`MODEL_REVISION` in `session.ts`).
 - Runtime: `onnxruntime-web` 1.30.0, WASM execution provider, SIMD, threads = half the logical cores, at most 8. The `.wasm` and `.mjs` runtime files are copied into the extension by the build. `@huggingface/tokenizers` 0.2.0.
 
 ### 5.4 Assets (`src/assets/`)
 
-- `manifest.ts`: release tag and, per file, `{ name, url, size, sha256, storedName, storedSize, storedSha256, encoding: 'identity' | 'gzip' }`, grouped into the bundles `dictionary` and `model`.
+- `manifest.ts`: release tag and, per file, `{ name, url, size, sha256, storedName, storedSize, storedSha256, encoding: 'identity' | 'gzip' }`, grouped into the bundles `dictionary` and `model`. (As built, a file has no `url`: it is the manifest's `baseUrl`, tag and file name, `fileUrl()`.)
 - `file-store.ts`: `FileStore` over the origin private file system, plus an in-memory implementation for tests. Writes go to a temporary name and are moved into place only after verification.
 - `download.ts`: streaming fetch with progress, a stall timer, an abort signal, incremental SHA-256 of the transferred bytes (`@noble/hashes`), size limit enforcement, optional gunzip, incremental SHA-256 of the stored bytes. Coded errors: `DOWNLOAD_FAILED`, `DOWNLOAD_STALLED`, `DOWNLOAD_CANCELLED`, `ASSET_CORRUPT`, `ASSET_MISMATCH`, `DISK_FULL`, `INSTALL_FAILED`.
 - `service.ts`: per bundle `missing | downloading | installing | ready | failed`, `startDownload(bundle, acceptBytes)` (refused with `DOWNLOAD_SIZE_CHANGED` when the size differs from what was shown), `cancel`, verification of stored files on first use in a session (stage 3: in the background, one file at a time, so a lookup never waits for a full hash), repair of a file that no longer matches.
@@ -134,9 +156,9 @@ The header holds `{ version, language, source, license, createdFrom, snapshot, e
 ### 5.5 Content script and popup (`src/content/`, `src/popup/`)
 
 - `selection.ts`: `isDefinable`, and `selectionContext(range)`: up to 120 characters before and after within the nearest block-level ancestor, with whitespace collapsed, ignoring hidden nodes, scripts and styles.
-- `card.ts`: renders the placeholder, the card and the error-free empty state (no card for unknown words). Uses the shared core stylesheet and preview policy inside a shadow root. The preview shows up to three entries, three meanings per entry and one example per meaning. The toggle and attribution stay visible while the body scrolls. Accessible names, focus management, light and dark themes, no page CSS leaks in or out.
+- `card.ts` (the preview policy and stylesheet **since 0.3.0** in `packages/core/src/card.ts` and `card.css`): renders the placeholder, the card and the error-free empty state (no card for unknown words). Uses the shared core stylesheet and preview policy inside a shadow root. The preview shows up to three entries, three meanings per entry and one example per meaning. The toggle and attribution stay visible while the body scrolls. Accessible names, focus management, light and dark themes, no page CSS leaks in or out.
 - `controller.ts`: listens for `mouseup`/`dblclick`/`selectionchange`, de-duplicates the two clicks of a double-click, cancels a superseded lookup, drops late answers, honours the per-site switch.
-- `popup.ts`: definitions on/off, order by context on/off, this-site on/off, download consent with the exact size, progress bar, cancel, retry, coded error messages, storage used, "Remove downloaded files".
+- `popup.ts`: definitions on/off, order by context on/off, this-site on/off (**since 0.2.0** also "Show order details"), download consent with the exact size, progress bar, cancel, retry, coded error messages, storage used, "Remove downloaded files".
 
 ### 5.6 Wiring (`src/background/`, `src/offscreen/`)
 
@@ -176,6 +198,8 @@ Repository, this plan, `CLAUDE.md`, shared contracts, build, unit and end-to-end
 
 **Status (2026-11-23):** task H is done except the `v0.1.0` tag and release, which the coordinator makes: measurements and decisions in `docs/validation.md` (#9, #10, #11, #12 and the documentation pull request), acceptance on a fresh profile and on public pages recorded there. Model order was better than dictionary order, so "Order by context" now defaults to on. Tasks A–G were merged in #1–#8.
 
+**Since then:** `v0.1.0` was released on 2026-11-23, then 0.2.0, 0.3.0 and 0.3.1 on 2026-11-24 and 0.4.0 on 2026-11-26, each a GitHub release with its ZIP; "Since version 0.1.0" above says what each brought. The extension is public in the Chrome Web Store.
+
 ## 7. Validation matrix
 
 | Layer | Tool | Runs in CI | What it proves |
@@ -197,6 +221,7 @@ Tests never touch the network or a real model unless an opt-in variable is set.
 - `ci.yml`, on pull requests and pushes to `main`: install, secret scan, typecheck, unit tests with coverage, build, package check, Playwright end-to-end. Uploads the built ZIP as a workflow artefact.
 - `release.yml`, on a `v*` tag: the same checks, then a GitHub release with `contextual-dictionary-<version>.zip` and `SHA256SUMS.txt`. The tag must equal the manifest version.
 - Assets are published by `scripts/publish-assets.mjs` from a maintainer machine (the model export and the Kaikki extract are local inputs), not by CI.
+- **Since 0.1.0:** `pages.yml` builds and publishes the project site with GitHub Pages; `npm run check` and the release workflow also check the core package (`npm run core:check`).
 
 ## 9. Risks
 
@@ -207,8 +232,8 @@ Tests never touch the network or a real model unless an opt-in variable is set.
 | Words with 100+ meanings | Candidate cap in dictionary order; measured in stage 3. |
 | Release download blocked by CORS or redirects | Host permissions for the release hosts; opt-in real download test in Chromium in stage 2. |
 | Storage eviction or quota | `unlimitedStorage`; verification on first use each session (in the background since stage 3); repair path. |
-| Memory of a 267 MB model in a hidden page | Measured in stage 3; the model unloads after an idle period (default 10 minutes) and reloads on demand. |
-| Web Store review of `<all_urls>` | Out of scope for v1; the privacy statement and single-purpose description are written in stage 3. |
+| Memory of a 267 MB model in a hidden page | Measured in stage 3; the model unloads after an idle period (default 10 minutes) and reloads on demand. **Since 0.4.0:** the graph is 203.5 MB, and the extension's process uses some 110 MB less while it is loaded (resident 1,183–1,188 MB against 1,294–1,302 MB, `docs/validation.md`). |
+| Web Store review of `<all_urls>` | Out of scope for v1; the privacy statement and single-purpose description are written in stage 3. **Superseded:** the extension is public in the Chrome Web Store (`store/listing.md`). |
 | Wiktionary markup or odd entries | Builder strips markup and has fixture tests for templates, empty glosses and form-of chains. |
 
 ## 10. Definition of done for v0.1.0

@@ -122,6 +122,12 @@ describe('buildSite', () => {
     for (const order of ['context', 'dictionary']) for (const variant of ['', '-dark', '-narrow', '-narrow-dark']) expect(page).toContain(`images/lookup-${order}${variant}.png`)
   })
 
+  test('the opening picture says it was captured in Chromium (validation/site-assets.ts launches Playwright\'s), with the extension\'s version', () => {
+    const page = read('index.html')
+    expect(page).toContain(`<p>Captured in Chromium, extension version ${escaped(examples.extension)}</p>`)
+    expect(page).not.toContain('Captured in Chrome,')
+  })
+
   test('pictures are given at the size they were captured, at two pixels to one', () => {
     const page = read('index.html')
     const sized = [...page.matchAll(/<(?:img src|source [^>]*srcset)="(images\/(?:lookup|window)[^"]+)" width="([\d.]+)" height="([\d.]+)"/g)]

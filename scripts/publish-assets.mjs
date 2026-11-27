@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Publishes the model and dictionary files as the GitHub release named by
-// src/assets/manifest.ts (assets-v1), once. Run from a maintainer machine
+// src/assets/manifest.ts, once. Run from a maintainer machine
 // that holds the inputs, after `npm ci`, with `gh` signed in:
 //
 //   node scripts/publish-assets.mjs --dry-run     # verify, stage, print pins and notes

@@ -18,7 +18,7 @@ Contextual Dictionary shows dictionary meanings for a word you select on a web p
 
 - **Only the two downloads, and only after you confirm each one.** They come from this project's GitHub release `assets-v2` (`github.com/andrepaim/contextual-dictionary/releases/download/…`, which redirects to `release-assets.githubusercontent.com`). These are ordinary file downloads: they contain nothing about you, your pages or your selections. GitHub, as the host, sees the request as it would for any download (for example your IP address).
 - **Nothing else.** The extension has no telemetry, no analytics, no error reporting, no accounts and no remote code. It does not send the words you select, the page text, the addresses of the pages you visit, or your settings anywhere. It works offline once the files are downloaded.
-- The card links to the word's page on Wiktionary, and the extension window links to Wiktionary and the model's page. They open only when you click them, like any link.
+- The card links to the word's page on Wiktionary, and the extension window links to Wiktionary, the CC BY-SA licence, the model's page and ONNX Runtime. They open only when you click them, like any link.
 
 ## Permissions and why
 
