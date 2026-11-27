@@ -1,6 +1,7 @@
-"""Samples the largest Chromium renderer's RSS and PSS (smaps_rollup) every second until killed; prints the peak at exit.
+"""Samples the largest Chromium renderer's RSS and PSS (smaps_rollup) every second until killed; writes the peak and the last samples to OUT.json at exit.
 
-Run alongside validation/score-prompts.ts (its headless Chromium holds the model worker in the extension's renderer).
+Run alongside validation/score-prompts.ts (its headless Chromium holds the model worker in the extension's renderer);
+run_browser.sh starts and stops it. Linux only (/proc).
   python3 -I memsample.py OUT.json
 """
 import json
@@ -9,6 +10,9 @@ import signal
 import sys
 import time
 
+if len(sys.argv) != 2 or sys.argv[1] in ("-h", "--help"):
+    print(__doc__.strip())
+    sys.exit(0 if sys.argv[1:] in (["-h"], ["--help"]) else 2)
 out = sys.argv[1]
 peak = {"rss_mb": 0, "pss_mb": 0, "pid": None, "samples": 0}
 series = []

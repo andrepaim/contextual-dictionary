@@ -1,19 +1,26 @@
-"""Teacher versus student tables and paired bootstrap intervals.
+"""Several score files on one test set, item by item: tables and paired bootstrap intervals.
 
 Reimplements validation/analyze.ts `outcome` (contextualOrder on the stored logits; a skipped,
-missing or rejected prompt or a "none of the above" answer leaves dictionary order) so that several
-score files can be compared item by item. Its single-file numbers are checked against analyze.ts.
+missing or rejected prompt or a "none of the above" answer leaves dictionary order; no budget) so that
+several score files can be compared item by item. Its single-file numbers are checked against analyze.ts.
+The intervals are of --teacher (any one of the score files: the candidate, for example) minus each other.
 
-  python3 -I compare.py --set wiktionary --variant '24|c1600' --scores int8=scores-8.jsonl pt=scores-student-pt.jsonl teacher=scores-teacher.jsonl
+  python3 -I compare.py --set wiktionary --variant '24|c1600' --teacher candidate --scores shipped=FILE candidate=FILE
+  python3 -I compare.py --list-prompts --set wiktionary,written,simple --variant '24|c1600' > only.txt
+
+Items are read from $CD_VALIDATION_OUT (default ~/.cache/contextual-dictionary/validation), as are score files
+given by a relative path. --list-prompts prints the distinct prompt hashes of the variant for the sets (the
+ONLY_FILE of run_browser.sh) and nothing else. threads_accuracy.py imports this file's rule.
 """
 
 import argparse
 import json
 import math
+import os
 import random
 from pathlib import Path
 
-V = Path.home() / ".cache/contextual-dictionary/validation"
+V = Path(os.environ.get("CD_VALIDATION_OUT") or Path.home() / ".cache/contextual-dictionary/validation").expanduser()
 NOTA = 127
 STRATA = [(2, 2), (3, 4), (5, 8), (9, 16), (17, 32), (33, math.inf)]
 
@@ -71,14 +78,21 @@ def bootstrap(a, b, seed, resamples=2000):
 
 
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--set", required=True)
+    p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    p.add_argument("--set", required=True, help="wiktionary, written or simple (comma-separated with --list-prompts)")
     p.add_argument("--variant", default="24|c1600")
-    p.add_argument("--scores", nargs="+", required=True, help="name=file pairs; the first is the baseline of the intervals")
-    p.add_argument("--teacher", default="teacher")
+    p.add_argument("--scores", nargs="+", help="NAME=FILE pairs")
+    p.add_argument("--teacher", default="teacher", help="the NAME the intervals are computed for (it minus each other)")
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--ignore-nota", action="store_true")
+    p.add_argument("--list-prompts", action="store_true", help="print the variant's prompt hashes of the sets and stop")
     a = p.parse_args()
+    if a.list_prompts:
+        hashes = {it["perCap"][a.variant]["prompt"] for s in a.set.split(",") for it in jsonl(V / f"{s}-items.jsonl") if "prompt" in it["perCap"].get(a.variant, {})}
+        print("\n".join(sorted(hashes)))
+        return
+    if not a.scores:
+        p.error("--scores is required")
     global IGNORE_NOTA
     IGNORE_NOTA = a.ignore_nota
     items = jsonl(V / f"{a.set}-items.jsonl")
