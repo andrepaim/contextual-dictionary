@@ -292,6 +292,13 @@ export function repoOf(baseUrl: string): string {
   return `${match[1]}/${match[2]}`
 }
 
+/** The release title for a tag `assets-v<n>`: "Dictionary pack and model files v<n>". */
+export function releaseTitle(tag: string): string {
+  const match = /^assets-v([1-9][0-9]*)$/.exec(tag)
+  if (!match) throw new ReleaseError(`Cannot title the release ${tag}: assets tags are assets-v<n>`)
+  return `Dictionary pack and model files v${match[1]}`
+}
+
 export const releaseUrl = (manifest: AssetManifest, name: string) => `${manifest.baseUrl}/${manifest.tag}/${encodeURIComponent(name)}`
 
 // ------------------------------------------------------------------ publishing
@@ -487,7 +494,6 @@ export interface MainDeps {
   retryMs?: number
 }
 
-export const RELEASE_TITLE = 'Dictionary pack and model files v1'
 /** The Origin an extension page sends, for observing CORS answers. */
 const EXTENSION_ORIGIN = 'chrome-extension://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 
@@ -497,6 +503,7 @@ export async function main(argv: string[], deps: MainDeps): Promise<number> {
   let remove = false
   try {
     const options = parseOptions(argv, deps)
+    const title = releaseTitle(deps.manifest.tag)
     const stats = JSON.parse(await fsp.readFile(options.statsFile, 'utf8')) as { snapshot: string; pack: { bytes: number; sha256: string } }
     const pack = { size: options.packSize ?? stats.pack.bytes, sha256: options.packSha256 ?? stats.pack.sha256 }
     if (options.out) outDir = options.out
@@ -520,7 +527,7 @@ export async function main(argv: string[], deps: MainDeps): Promise<number> {
       deps.log('Dry run: nothing was published.')
       return 0
     }
-    await publishRelease({ run: deps.run, fetch: deps.fetch, manifest: deps.manifest, files, title: RELEASE_TITLE, notesFile, log: deps.log, ...(deps.retryMs !== undefined ? { retryMs: deps.retryMs } : {}) })
+    await publishRelease({ run: deps.run, fetch: deps.fetch, manifest: deps.manifest, files, title, notesFile, log: deps.log, ...(deps.retryMs !== undefined ? { retryMs: deps.retryMs } : {}) })
     deps.log('Every file downloads anonymously and matches. Redirects, as an extension page would see them:')
     for (const file of files) {
       const hops = await traceRedirects(deps.fetch, releaseUrl(deps.manifest, file.name), { origin: EXTENSION_ORIGIN })
