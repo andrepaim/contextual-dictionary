@@ -459,7 +459,7 @@ describe('the model from a pinned Hugging Face revision', () => {
       calls.push({ url, init })
       const relative = Object.keys(CONTENT).find(name => url === urlOf(source, name))
       if (!relative) return new Response('Entry not found', { status: 404 })
-      return (await change?.(relative)) ?? new Response(CONTENT[relative]!)
+      return (await change?.(relative)) ?? new Response(new Uint8Array(CONTENT[relative]!))
     }
     return { fetch, calls }
   }
@@ -620,7 +620,7 @@ describe('parseOptions and main', () => {
     const fetch = async (url: string) => {
       urls.push(url)
       const relative = Object.keys(CONTENT).find(name => url === `https://huggingface.co/${source.repo}/resolve/${source.revision}/${name}`)
-      return relative ? new Response(CONTENT[relative]!) : new Response('Entry not found', { status: 404 })
+      return relative ? new Response(new Uint8Array(CONTENT[relative]!)) : new Response('Entry not found', { status: 404 })
     }
     return { fetch, urls }
   }
@@ -652,7 +652,7 @@ describe('parseOptions and main', () => {
     const args = ['--dry-run', ...withoutDir.filter(arg => !arg.startsWith('--out=')), `--out=${again}`, `--hf-repo=${source.repo}`, `--hf-revision=${'e'.repeat(40)}`]
     Object.assign(setup.manifest.bundles.model[3]!, { storedSha256: 'd'.repeat(64) })
     expect(await main(args, deps(fakeRun().run, other.fetch))).toBe(1)
-    expect(log.join('\n')).toMatch(/ERROR .*tokenizer\.json/)
+    expect(log.join('\n')).toMatch(/ERROR [^\n]*do not match[\s\S]*tokenizer\.json/)
     expect(fs.readdirSync(again)).toEqual([])
   })
 
