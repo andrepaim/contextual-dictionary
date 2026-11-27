@@ -18,6 +18,10 @@ Site: https://andrepaim.github.io/contextual-dictionary/
 
 Both are screenshots of version 0.1.0 on that page, with the switch off and on.
 
+Three lookups on the site's [practice page](https://andrepaim.github.io/contextual-dictionary/try.html), recorded in Chrome with version 0.4.0 (37 seconds, no sound):
+
+https://github.com/user-attachments/assets/ee1b35a2-eaa6-4413-a128-ab0d616fbfcb
+
 ## Install
 
 1. Add it to Chrome (124 or later) from the [Chrome Web Store](https://chromewebstore.google.com/detail/contextual-dictionary/jdjkhefpmejijkjdknchpnghijibnali).
