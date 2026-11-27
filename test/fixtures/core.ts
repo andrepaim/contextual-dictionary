@@ -11,6 +11,8 @@ export const expected = {
   total: 4,
   positions: [[1, 0, 2], [0]],
   offered: [2, 1],
+  entryPositions: [0, 1],
+  bestEntryFirst: { entryPositions: [1, 0], partOfSpeech: 'verb' },
   firstSense: { definition: 'The land next to a river.', examples: ['We sat on the bank.'] },
   inflection: { lemma: 'bank', note: 'plural of bank' },
   malformedUrl: 'https://en.wiktionary.org/wiki/ba%EF%BF%BDnk',
@@ -37,11 +39,14 @@ export async function exerciseCore() {
   const order = contextualOrder(result, request, new Float32Array([1, 8, 2, 0, -2]), format)
   if (!order.applied) throw new Error(order.reason)
   const none = contextualOrder(result, request, [1, 8, 2, 0, 8], format)
+  const moved = contextualOrder(result, request, new Float32Array([1, 2, 8, 0, -2]), format, { bestEntryFirst: true, entryMargin: 0.3 })
+  if (!moved.applied) throw new Error(moved.reason)
   const inflection = (await dictionary.define({ text: 'banks' })).entries[0]
   return {
     formatValid: isSenseFormat(format), source: result.source,
     target: request.target, prompt: request.prompt, total: request.total,
-    positions: order.positions, offered: order.offered,
+    positions: order.positions, offered: order.offered, entryPositions: order.entryPositions,
+    bestEntryFirst: { entryPositions: moved.entryPositions, partOfSpeech: moved.result.entries[0]?.partOfSpeech },
     firstSense: order.result.entries[0]?.senses[0],
     inflection: { lemma: inflection?.lemma, note: inflection?.note },
     malformedUrl: (await dictionary.define({ text: 'ba\uD800nk' })).source.url,

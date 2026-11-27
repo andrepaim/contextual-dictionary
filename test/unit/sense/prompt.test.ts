@@ -344,6 +344,106 @@ describe('contextualOrder: positions and offered counts (order details)', () => 
     const outcome = contextualOrder(bank, request(), logits([1, 5, 1, -2, 3, 0], 6), format)
     expect(outcome).toEqual({ result: bank, applied: false, reason: 'NONE_FITS' })
   })
+
+  test('by default every entry keeps its place, so the entry positions are the identity', () => {
+    const outcome = contextualOrder(bank, request(), logits([1, 5, 1, -2, 3, 0]), format)
+    if (!outcome.applied) throw new Error(outcome.reason)
+    expect(outcome.entryPositions).toEqual([0, 1, 2])
+  })
+})
+
+describe('contextualOrder: the best entry first (option)', () => {
+  // Four entries of two meanings each: every meaning is offered, in dictionary order.
+  const four = run(entry('noun', 2), entry('verb', 2), entry('adj', 2), entry('adv', 2))
+  /** Probabilities in candidate order; "none of the above" gets almost nothing. */
+  const probabilities = (values: number[]) => logits(values.map(Math.log), -50)
+  const applied = (outcome: ReturnType<typeof contextualOrder>) => {
+    if (!outcome.applied) throw new Error(`expected an applied order, got ${outcome.reason}`)
+    return outcome
+  }
+  const heads = (outcome: ReturnType<typeof contextualOrder>) => outcome.result.entries.map(item => item.partOfSpeech)
+  // The best meaning, adj meaning 1 (0.4), beats the first entry's best (noun meaning 0, 0.2) by 0.2.
+  const adjBest = probabilities([0.2, 0.1, 0.05, 0.05, 0.1, 0.4, 0.05, 0.05])
+
+  test('without the option the entries keep dictionary order, whatever the scores', () => {
+    const outcome = applied(contextualOrder(four, request(four), adjBest, format))
+    expect(heads(outcome)).toEqual(['noun', 'verb', 'adj', 'adv'])
+    expect(outcome.entryPositions).toEqual([0, 1, 2, 3])
+    expect(applied(contextualOrder(four, request(four), adjBest, format, {})).entryPositions).toEqual([0, 1, 2, 3])
+    expect(applied(contextualOrder(four, request(four), adjBest, format, { bestEntryFirst: false, entryMargin: 0 })).entryPositions).toEqual([0, 1, 2, 3])
+  })
+
+  test('the entry holding the best meaning moves first; the others keep dictionary order among themselves', () => {
+    const outcome = applied(contextualOrder(four, request(four), adjBest, format, { bestEntryFirst: true }))
+    expect(heads(outcome)).toEqual(['adj', 'noun', 'verb', 'adv'])
+    expect(outcome.entryPositions).toEqual([2, 0, 1, 3])
+    // Inside each entry the meanings are still ordered by the model.
+    expect(outcome.result.entries[0]!.senses.map(sense => sense.definition)).toEqual(['adj meaning 1', 'adj meaning 0'])
+    // The meaning positions and offered counts follow their entries.
+    expect(outcome.positions).toEqual([[1, 0], [0, 1], [0, 1], [0, 1]])
+    expect(outcome.offered).toEqual([2, 2, 2, 2])
+    outcome.result.entries.forEach((item, place) => expect(item).toEqual({ ...four.entries[outcome.entryPositions[place]!]!, senses: item.senses }))
+    expect(outcome.result.query).toBe(four.query)
+    expect(outcome.result.source).toEqual(four.source)
+    // The original result is not modified.
+    expect(four.entries.map(item => item.partOfSpeech)).toEqual(['noun', 'verb', 'adj', 'adv'])
+  })
+
+  test('the entry moves only when its best meaning beats the first entry\'s best by at least the margin', () => {
+    expect(applied(contextualOrder(four, request(four), adjBest, format, { bestEntryFirst: true, entryMargin: 0.15 })).entryPositions).toEqual([2, 0, 1, 3])
+    const below = applied(contextualOrder(four, request(four), adjBest, format, { bestEntryFirst: true, entryMargin: 0.25 }))
+    expect(below.entryPositions).toEqual([0, 1, 2, 3])
+    expect(heads(below)).toEqual(['noun', 'verb', 'adj', 'adv'])
+    // The meanings inside each entry are ordered all the same.
+    expect(below.result.entries[2]!.senses.map(sense => sense.definition)).toEqual(['adj meaning 1', 'adj meaning 0'])
+  })
+
+  test('a margin that is not a positive number counts as no margin', () => {
+    for (const entryMargin of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const expected = entryMargin === Number.POSITIVE_INFINITY ? [0, 1, 2, 3] : [2, 0, 1, 3]
+      expect(applied(contextualOrder(four, request(four), adjBest, format, { bestEntryFirst: true, entryMargin })).entryPositions).toEqual(expected)
+    }
+  })
+
+  test('nothing moves when the first entry holds the best meaning, or the best entries tie', () => {
+    const first = probabilities([0.4, 0.1, 0.05, 0.05, 0.1, 0.2, 0.05, 0.05])
+    expect(applied(contextualOrder(four, request(four), first, format, { bestEntryFirst: true })).entryPositions).toEqual([0, 1, 2, 3])
+    const tie = probabilities([0.3, 0.05, 0.05, 0.05, 0.05, 0.3, 0.1, 0.1])
+    expect(applied(contextualOrder(four, request(four), tie, format, { bestEntryFirst: true })).entryPositions).toEqual([0, 1, 2, 3])
+    // Of two later entries that tie, the earlier one moves.
+    const later = probabilities([0.1, 0.05, 0.3, 0.05, 0.05, 0.3, 0.1, 0.05])
+    expect(applied(contextualOrder(four, request(four), later, format, { bestEntryFirst: true })).entryPositions).toEqual([1, 0, 2, 3])
+  })
+
+  test('a single entry has nowhere to move', () => {
+    const one = run(entry('noun', 3))
+    const outcome = applied(contextualOrder(one, request(one), probabilities([0.1, 0.8, 0.1]), format, { bestEntryFirst: true }))
+    expect(outcome.entryPositions).toEqual([0])
+    expect(outcome.positions).toEqual([[1, 0, 2]])
+  })
+
+  test('dictionary order is kept, entries included, when "none of the above" wins or the scores are unusable', () => {
+    const built = request(four)
+    const none = logits([0.2, 0.1, 0.05, 0.05, 0.1, 0.4, 0.05, 0.05].map(Math.log), Math.log(0.5))
+    for (const [scores, reason] of [[none, 'NONE_FITS'], [new Float32Array(12), 'INVALID_SCORES']] as const) {
+      const outcome = contextualOrder(four, built, scores, format, { bestEntryFirst: true })
+      expect(outcome).toEqual({ result: four, applied: false, reason })
+      expect(outcome.result).toBe(four)
+    }
+  })
+
+  test('an entry offered nothing never moves first, and a first entry offered nothing counts as scoring 0', () => {
+    const built = request(four)
+    const withoutAdj = { ...built, candidates: built.candidates.filter(c => c.entry !== 2) }
+    // noun 0.2, 0.1; verb 0.3, 0.1; adv 0.2, 0.1: the verb entry is best; the adjective entry was not offered.
+    const outcome = applied(contextualOrder(four, withoutAdj, probabilities([0.2, 0.1, 0.3, 0.1, 0.2, 0.1]), format, { bestEntryFirst: true }))
+    expect(outcome.entryPositions).toEqual([1, 0, 2, 3])
+    expect(outcome.offered).toEqual([2, 2, 0, 2])
+    const withoutNoun = { ...built, candidates: built.candidates.filter(c => c.entry !== 0) }
+    const moved = applied(contextualOrder(four, withoutNoun, probabilities([0.15, 0.05, 0.15, 0.4, 0.15, 0.1]), format, { bestEntryFirst: true, entryMargin: 0.25 }))
+    expect(moved.entryPositions).toEqual([2, 0, 1, 3])
+    expect(moved.offered).toEqual([2, 0, 2, 2])
+  })
 })
 
 describe('looksEnglish', () => {
