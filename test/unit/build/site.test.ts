@@ -192,13 +192,24 @@ describe('buildSite', () => {
     }
   })
 
-  test('the README plays the film below the two screenshots: its GitHub attachment address on a line of its own', () => {
+  test('the README opens with the film: its GitHub attachment address on a line of its own, after the title block and before the first section', () => {
     const lines = fs.readFileSync(new URL('../../../README.md', import.meta.url), 'utf8').split('\n')
     const film = lines.findIndex(line => /^https:\/\/github\.com\/user-attachments\/assets\/[0-9a-f-]{36}$/.test(line))
-    expect(film).toBeGreaterThan(lines.findIndex(line => line.includes('docs/images/hamlet-moment-context.png')))
-    expect(film).toBeLessThan(lines.indexOf('## Install'))
+    expect(film).toBeGreaterThan(-1)
+    // GitHub shows a player only for an address outside HTML, alone in its paragraph.
+    expect(lines.indexOf('</div>')).toBeGreaterThan(-1)
+    expect(film).toBeGreaterThan(lines.indexOf('</div>'))
+    expect(film).toBeLessThan(lines.findIndex(line => line.startsWith('## ')))
     expect(lines[film - 1]).toBe('')
     expect(lines[film + 1]).toBe('')
+  })
+
+  test('every file the README shows or links to is in the repository', () => {
+    const readme = fs.readFileSync(new URL('../../../README.md', import.meta.url), 'utf8')
+    const addresses = [...readme.matchAll(/\]\(([^)\s]+)\)|\s(?:src|href)="([^"]+)"/g)].map(match => (match[1] ?? match[2])!.split('#')[0]!)
+    const local = addresses.filter(address => address && !/^(https?:|mailto:)/.test(address))
+    expect(local).toContain('docs/development.md')
+    for (const address of local) expect(fs.existsSync(new URL(`../../../${address}`, import.meta.url)), address).toBe(true)
   })
 
   test('the home page says that an update with a new context model asks for that download again', () => {
