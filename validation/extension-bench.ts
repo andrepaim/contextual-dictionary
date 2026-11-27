@@ -4,7 +4,7 @@
 // worker -> offscreen document -> pack and model worker).
 //
 //   npm run build
-//   npx tsx validation/extension-bench.ts --install                 # once: downloads assets-v1 into a template profile (214 MB)
+//   npx tsx validation/extension-bench.ts --install                 # once: downloads the release the build pins into a template profile (assets-v2: 255 MB)
 //   npx tsx validation/extension-bench.ts --build dist --label after [--lookups 400] [--cap 48] [--idle]
 //
 // The template profile and the extension directory live under

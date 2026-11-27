@@ -6,7 +6,7 @@ The Python and shell scripts that made the model of `assets-v2` from the data th
 
 Everything the round wrote is under `~/.cache/contextual-dictionary/validation/` and stays on the maintainer's machine:
 the training data, prompts, teacher caches and examples hold Wiktionary and Wikipedia text, and the checkpoints alone
-are 16 GB (see "What stays on the maintainer's machine").
+are 16 GB. The float weights of the model are public on Hugging Face (see "Where the weights and the working files are").
 
 ## Scripts
 
@@ -22,6 +22,7 @@ are 16 GB (see "What stays on the maintainer's machine").
 | `stage2.sh`, `test_analysis.sh`, `stage2_export.sh` | The driver of the three runs and their test analysis and export (watchdog-aware, resumable). |
 | `act_stats_model.py`, `export_quant.py`, `screen.py` | Activation outliers per layer, ONNX export through sense-model's exporter with the quantization recipe, and INT8 against float on development prompts. |
 | `release_model_dir.py` | Assembles the model export that `scripts/publish-assets.mjs` stages (the graph, metadata with revision and provenance, the unchanged small files). |
+| `run_browser.sh`, `memsample.py`, `latency_train.py` | A run of `validation/score-prompts.ts` in the built extension with a given model export, while `memsample.py` samples the renderer's memory; `latency_train.py` makes the latency tables of those runs. |
 | `quiet.sh`, `threads_accuracy.py`, `bench_build.sh`, `release_server.mjs`, `mem_probe.py` | Measurement helpers: wait for a quiet machine, accuracy within the budget by threads, a measurement-only build that downloads from a loopback server (for `validation/extension-bench.ts` on an unpublished release), GPU memory of the longest batches. |
 | `requirements.txt` | The Python environment the scripts ran in, frozen. |
 
@@ -31,8 +32,8 @@ are 16 GB (see "What stays on the maintainer's machine").
   own index, transformers 5.23.0, onnx 1.23.2, onnxruntime 1.32.0, tokenizers 0.23.3, pyarrow 26.0.1, tensorboard
   2.21.0); its header gives the install command. On the machine used it is the virtual environment
   `~/.cache/contextual-dictionary/validation/teacher/venv`, which the scripts call as `../teacher/venv/bin/python`
-  (written `$PY` below). `dev_eval.py`, `compare.py`, `check_leaks.py` and `threads_accuracy.py` need only the standard
-  library and ran with the system `python3`.
+  (written `$PY` below). `dev_eval.py`, `compare.py`, `check_leaks.py`, `threads_accuracy.py`, `latency_train.py` and
+  `memsample.py` need only the standard library and ran with the system `python3`.
 - **GPU.** NVIDIA GeForce RTX 3060 (12 GB), driver 610.88. Training, teacher scoring, the activation statistics and the
   ONNX export use CUDA; `screen.py` scores ONNX graphs on the CPU.
 - **Node.js** and a checkout of this repository with `npm ci` and `npm run build`, for the builders, `analyze.ts` and
@@ -99,10 +100,11 @@ The repository steps ran in two worktrees that no longer exist: `~/src/contextua
 and `~/src/contextual-dictionary-worktrees/model-r1` (the build with the new pins, for the thread and memory
 measurements). Any checkout of this repository with a production build does the same work, but the committed scripts
 name these paths: `test_analysis.sh` and `stage2_export.sh` `cd` to the `train-data` worktree and call `compare.py` and
-`screen.py` in a checkout at `~/src/contextual-dictionary`, and the last part of `stage2_export.sh` calls
-`scripts/run_browser.sh` and `scripts/latency_train.py`, which are not committed. As committed, then, `test_analysis.sh`
-runs only where a checkout sits at the `train-data` path, and `stage2_export.sh` stops after its INT8 check; steps 13
-and 15 give what they ran in full.
+`screen.py` in a checkout at `~/src/contextual-dictionary`; the last part of `stage2_export.sh` calls
+`scripts/run_browser.sh` and `scripts/latency_train.py`, and `run_browser.sh` also `cd`s to the `train-data` worktree and
+runs `memsample.py` from `~/.cache/contextual-dictionary/validation/quant/scripts/`. As committed, then,
+`test_analysis.sh`, `run_browser.sh` and the last part of `stage2_export.sh` run only where a checkout sits at the
+`train-data` path; steps 13 and 15 give what they ran.
 
 ### The committed scripts against the copies that ran
 
@@ -110,8 +112,9 @@ Compared byte for byte with `T/scripts/` on 2026-11-27:
 
 - **Identical:** `act_stats_model.py`, `bench_build.sh`, `export_quant.py`, `make_teacher_cache.py`, `mem_probe.py`,
   `prepare_examples.py`, `quiet.sh`, `release_server.mjs`, `score_batch.py`, `stage2.sh`, `train_thin.py`,
-  `wiki_paragraphs.py`. `compare.py` and `screen.py` are identical to the copies that ran from `../teacher/scripts/`
-  and `../quant/scripts/`.
+  `wiki_paragraphs.py`, and `run_browser.sh` and `latency_train.py` (committed on 2026-11-27). `compare.py`,
+  `screen.py` and `memsample.py` are identical to the copies that ran from `../teacher/scripts/` and
+  `../quant/scripts/`.
 - **Paths only:** `check_leaks.py` reads `validation/data/` next to itself (the copy read
   `~/src/contextual-dictionary/validation/data`); `dev_eval.py` and `threads_accuracy.py` import `compare.py` from
   their own folder (the copies, from `../teacher/scripts/`); `stage2_export.sh` and `test_analysis.sh` call `screen.py`
@@ -130,8 +133,7 @@ The one-off scripts in `T/scripts/` that are not committed, and what each did (t
 `pilot.sh` (the pilot run); `train_thin.pilot.py` (a copy of the trainer from the afternoon of 2026-11-25, before the
 resume support and the epoch-seeded sampler); `teacher_check.sh` (batched against one-at-a-time teacher scores, and
 throughput); `export_labels_teacher.sh` (the export steps of `stage2_export.sh` for the run that ships);
-`run_browser.sh` (`score-prompts.ts` with an export, and a memory sampler); `latency_train.py` (latency tables of those
-runs); `browser_labels_teacher.sh` (the browser runs of the run that ships); `threads_runs.sh` and `threads_repeat4.sh`
+`browser_labels_teacher.sh` (the browser runs of the run that ships); `threads_runs.sh` and `threads_repeat4.sh`
 (the thread-count runs); `bench_runs.sh` (the `extension-bench.ts` runs).
 
 ## Steps
@@ -328,15 +330,17 @@ $PY -I ../quant/scripts/screen.py compare export/$R-model-dev.jsonl export/$R-mo
 `recipe.json`. The two `screen.py` scorings took 2.0 and 1.4 minutes. The committed `stage2_export.sh` calls the
 repository's `screen.py` instead, which is the same file.
 
-**15. In the extension.** `run_browser.sh EXPORT ONLY OUT` was, in a checkout with a production build:
+**15. In the extension.** `bash scripts/run_browser.sh EXPORT ONLY OUT` runs, in the `train-data` checkout with a
+production build:
 
 ```bash
 CD_MODEL_DIR=<export> CD_VALIDATION_OUT=$T/browser-out npx tsx validation/score-prompts.ts --threads 8 --prompts $T/browser-out/prompts.jsonl --only <hash list> --out <scores file>
 ```
 
-while `../quant/scripts/memsample.py` sampled the renderer's memory into `browser-out/mem-<scores file>.json`; then
-`analyze.ts --set <set> --threads <name>` with `CD_VALIDATION_OUT=$T/browser-out`, and `latency_train.py` for the
-latency tables. For the run that ships, `browser_labels_teacher.sh` (2026-11-26 15:30 to 16:28) scored the 6,548
+while `python3 -I ~/.cache/contextual-dictionary/validation/quant/scripts/memsample.py
+$T/browser-out/mem-<scores file>.json` samples the renderer's memory, and writes its log to `logs/browser-<scores
+file>.log`. Then `analyze.ts --set <set> --threads <name>` with `CD_VALIDATION_OUT=$T/browser-out`, and `python3 -I
+scripts/latency_train.py <name>=<scores file> ...` for the latency tables (it reads `browser-out/`). For the run that ships, `browser_labels_teacher.sh` (2026-11-26 15:30 to 16:28) scored the 6,548
 `24|c1600` test prompts (21 minutes), then the 600 prompts of `browser-out/latency-subset-600.txt` with three exports
 (the untrained model with the same recipe, labels only, labels and teacher) twice, in reverse order the second time
 (about 3 minutes a run), each run started once the 1-minute load average was below 1.5 (`browser-out/latency-loads.txt`).
@@ -359,15 +363,19 @@ node scripts/publish-assets.mjs --dry-run --model-dir=$HOME/.cache/contextual-di
 `release-staging/assets-v2-model/`. The dry run verifies the inputs, stages the release and prints its pins; the staged
 folder `release-staging/assets-v2-final/` holds the files of the release. Publishing is in `docs/assets.md`.
 
-## What stays on the maintainer's machine
+## Where the weights and the working files are
 
 - **The float weights.** The trained checkpoint is `T/checkpoints/s2-labels-teacher/final/model.safetensors`
   (598,827,368 bytes, SHA-256 `49bc2634bcf696171f367b59cedb961fcd71bb7d825ad6680ef5ed1ed8d25be3`; the step-3,000
   checkpoint). `MODEL_REVISION` in `src/model/session.ts` is `sha256:` followed by this hash. The GitHub release
-  `assets-v2` holds only the INT8 graph. A copy of these weights, with the INT8 graph and a model card, is in the
-  Hugging Face repository `andrepaim/Ettin-150m-WSD-wiktionary`, which was private when this was written.
-- **Data, scores and checkpoints.** The items, prompts, examples, teacher caches and paragraphs hold Wiktionary or
-  Wikipedia text, which is never committed. The score files hold only prompt hashes, logits and times, and mean nothing
-  without the prompt files. The working folder is about 32 GB, 16 GB of it checkpoints (with their optimiser states).
-- **Training curves.** `metrics.jsonl` and the TensorBoard events under `runs/` hold numbers only and are small; they
-  stay with the rest of the round's working files, and `docs/validation.md` quotes the numbers it uses from them.
+  `assets-v2` holds only the INT8 graph. The Hugging Face repository [`andrepaim/Ettin-150m-WSD-wiktionary`](https://huggingface.co/andrepaim/Ettin-150m-WSD-wiktionary/tree/affc67b9a87c51a07ce642726cee993c593ad744)
+  (public, revision `affc67b9`) holds these weights (`model.safetensors`, the same SHA-256), the float ONNX export
+  (`onnx/model.onnx`, equal to `export/s2-labels-teacher/onnx/model.onnx`), the INT8 graph (`onnx/model.int8.onnx`, equal to the release's graph once unpacked),
+  `onnx/recipe.json`, `config.json`, `calibration.json`, `model_metadata.json`, the tokenizer files, `LICENSE`, `NOTICE`
+  and a model card. Its `tokenizer.json` is the checkpoint's copy (3,583,387 bytes), not the release's (3,583,228).
+- **Everything else stays on the maintainer's machine.** The items, prompts, examples, teacher caches and paragraphs
+  hold Wiktionary or Wikipedia text, which is never committed. The score files hold only prompt hashes, logits and
+  times, and mean nothing without the prompt files. The working folder is about 32 GB, 16 GB of it checkpoints (with
+  their optimiser states). The training curves (`metrics.jsonl` and the TensorBoard events under `runs/`) hold numbers
+  only and are small; they stay with the rest of the round's working files, and `docs/validation.md` quotes the numbers
+  it uses from them.

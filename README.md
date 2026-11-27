@@ -80,4 +80,4 @@ Load `dist/` as an unpacked extension from `chrome://extensions` (Developer mode
 
 ## Licences
 
-Code: MIT ([LICENSE](LICENSE)). The dictionary pack is CC BY-SA 4.0 (Wiktionary contributors, via Kaikki.org); the model is Apache-2.0, fine-tuned from Ettin-150m-WSD (Apache-2.0, its base model MIT) on English Wiktionary and Wikipedia text (CC BY-SA); ONNX Runtime is MIT. Details in [NOTICE.md](NOTICE.md).
+Code: MIT ([LICENSE](LICENSE)). The dictionary pack is CC BY-SA 4.0 (Wiktionary contributors, via Kaikki.org); the model is Apache-2.0, fine-tuned from Ettin-150m-WSD (Apache-2.0, its base model MIT) on English Wiktionary and Wikipedia text (CC BY-SA), and its float weights are on Hugging Face as [andrepaim/Ettin-150m-WSD-wiktionary](https://huggingface.co/andrepaim/Ettin-150m-WSD-wiktionary/tree/affc67b9a87c51a07ce642726cee993c593ad744); ONNX Runtime is MIT. Details in [NOTICE.md](NOTICE.md).

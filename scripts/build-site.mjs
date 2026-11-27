@@ -163,7 +163,7 @@ function picture(name, alt, size, { narrow = false, scale = 2 } = {}) {
 export function heroHtml(data, size) {
   const example = data.examples.find(example => example.show === 'hero')
   const { dictionary, context } = example.result
-  const scene = `Chrome showing ${example.source}, with the word “${example.word}” selected and the Contextual Dictionary card open below it.`
+  const scene = `The practice page: ${example.source}, with the word “${example.word}” selected and the Contextual Dictionary card open below it.`
   return `<div class="shot">
 <div class="bar"><div class="segmented" role="radiogroup" aria-label="Order of the meanings"><label><input type="radio" name="order" value="context" checked><span>Order by context</span></label><label><input type="radio" name="order" value="dictionary"><span>Dictionary order</span></label></div><p>Captured in Chromium, extension version ${escapeText(data.extension)}</p></div>
 <figure class="capture in-context">${picture('lookup-context', `${scene} The first meaning is “${context.first}”`, size, { narrow: true })}</figure>
