@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { card, cardHost, doubleClickWord, meanings, gotoReady } from './support/card'
+import { card, cardHost, doubleClickWord, meanings, gotoReady, shownEntries } from './support/card'
 import { MOUSE_CONTEXT_ORDER, MOUSE_DICTIONARY_ORDER } from './support/assets'
 import { install, launch, send, status, type Session } from './support/extension'
 
@@ -42,6 +42,29 @@ test('the order follows the context when "Order by context" is on, and returns w
   await lookUp(page, '#mouse', 'mouse')
   expect(await meanings(page, 'mouse', 'noun')).toEqual(MOUSE_DICTIONARY_ORDER)
   expect((await status(session.control)).ranker.state).toBe('idle')
+})
+
+test('the entry holding the best meaning comes first when "Order by context" is on, and the entries keep dictionary order when it is off', async () => {
+  const page = await session.context.newPage()
+  await gotoReady(page, `${session.pages}/article.html`)
+  const heads = async () => (await shownEntries(page)).map(entry => `${entry.lemma} ${entry.pos}`)
+  await lookUp(page, '#pilot', 'bank')
+  expect(await heads()).toEqual(['bank noun', 'bank verb'])
+
+  await setOrdering(session, true)
+  await expect.poll(async () => (await status(session.control)).ranker.state).toBe('ready')
+  await lookUp(page, '#pilot', 'bank')
+  // The fake model puts the aircraft meaning of the verb first, far above every meaning of the noun.
+  expect(await heads()).toEqual(['bank verb', 'bank noun'])
+  expect(await meanings(page, 'bank', 'verb')).toEqual(['To tilt an aircraft to one side when turning.', 'To put money in a bank.'])
+  // Where no other entry beats it, the first entry stays first.
+  await lookUp(page, '#bank', 'bank')
+  expect(await heads()).toEqual(['bank noun', 'bank verb'])
+
+  await setOrdering(session, false)
+  await lookUp(page, '#pilot', 'bank')
+  expect(await heads()).toEqual(['bank noun', 'bank verb'])
+  expect(await meanings(page, 'bank', 'verb')).toEqual(['To put money in a bank.', 'To tilt an aircraft to one side when turning.'])
 })
 
 test('a model answer later than the budget leaves dictionary order, and orders the next lookup of the same passage', async () => {

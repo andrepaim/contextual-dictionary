@@ -26,7 +26,7 @@ export const RECORDS: PackRecord[] = [
   { k: 'mice', e: [{ w: 'mice', p: 'noun', f: [{ l: 'mouse', n: 'plural of mouse' }] }] },
   { k: 'bank', e: [
     { w: 'bank', p: 'noun', s: ['An institution where money is kept, lent and borrowed.', 'The sloping ground beside a river or lake.'] },
-    { w: 'bank', p: 'verb', s: ['To put money in a bank.'] },
+    { w: 'bank', p: 'verb', s: ['To put money in a bank.', 'To tilt an aircraft to one side when turning.'] },
   ] },
   { k: 'leaf', e: [{ w: 'leaf', p: 'noun', s: ['A single sheet of paper in a book.', 'The flat green part of a plant that grows from a stem.'] }] },
   { k: 'neural network', e: [{ w: 'neural network', p: 'noun', s: ['A computer system of connected units, loosely modelled on the brain, that learns from examples.'] }] },

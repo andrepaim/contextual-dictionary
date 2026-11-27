@@ -493,7 +493,7 @@ describe('SenseRanker, idle unload', () => {
 })
 
 describe('SenseRanker.rank: order details', () => {
-  const ORDERED = { status: 'ordered', positions: [[1, 0], [0]], offered: [2, 1] }
+  const ORDERED = { status: 'ordered', positions: [[1, 0], [0]], offered: [2, 1], entryPositions: [0, 1] }
 
   test('an applied order gives the dictionary positions and offered counts; a cached answer gives the same', async () => {
     const { ranker } = setup({ prefer: 'financial' })
@@ -512,7 +512,7 @@ describe('SenseRanker.rank: order details', () => {
   test('an order the model leaves as it is still counts as ordered, with the identity positions', async () => {
     const { ranker } = setup({ prefer: 'sloping' })
     await ready(ranker)
-    expect((await after(1, ranker.rank(bank, passage()))).value.details).toEqual({ status: 'ordered', positions: [[0, 1], [0]], offered: [2, 1] })
+    expect((await after(1, ranker.rank(bank, passage()))).value.details).toEqual({ status: 'ordered', positions: [[0, 1], [0]], offered: [2, 1], entryPositions: [0, 1] })
     await ranker.close()
   })
 
@@ -520,7 +520,7 @@ describe('SenseRanker.rank: order details', () => {
     const { ranker } = setup({ prefer: 'meaning 3' }, { maxCandidates: 4 })
     await ready(ranker)
     const { details } = (await after(1, ranker.rank(many(6), passage()))).value
-    expect(details).toEqual({ status: 'ordered', positions: [[3, 0, 1, 2, 4, 5]], offered: [4] })
+    expect(details).toEqual({ status: 'ordered', positions: [[3, 0, 1, 2, 4, 5]], offered: [4], entryPositions: [0] })
     await ranker.close()
   })
 
@@ -658,6 +658,71 @@ describe('SenseRanker.rank: order details', () => {
     await ready(ranker)
     const ranked = (await after(1, ranker.rank(bank, passage()))).value
     expect(await ranker.order(bank, passage())).toEqual(ranked.result)
+    await ranker.close()
+  })
+})
+
+describe('SenseRanker.rank: the entry holding the best meaning first', () => {
+  const verbFirst = { status: 'ordered', positions: [[0], [0, 1]], offered: [1, 2], entryPositions: [1, 0] }
+
+  test('the entry holding the best meaning moves first; the details give its dictionary position; a cached answer does the same', async () => {
+    const { ranker } = setup({ prefer: 'tip laterally' })
+    await ready(ranker)
+    const fresh = (await after(1, ranker.rank(bank, passage()))).value
+    expect(fresh.result.entries.map(entry => entry.partOfSpeech)).toEqual(['verb', 'noun'])
+    expect(fresh.result.entries[1]).toEqual(bank.entries[0])
+    expect(fresh.details).toEqual(verbFirst)
+    expect(await ranker.rank(bank, passage())).toEqual(fresh)
+    expect(ranker.stats.cached).toBe(1)
+    await ranker.close()
+  })
+
+  test('the default margin is the one measured on the development set (docs/validation.md)', () => {
+    expect(RANKER_DEFAULTS.entryMargin).toBe(0.25)
+  })
+
+  test('below the margin the entries keep dictionary order, and the meanings are still ordered', async () => {
+    // The verb's meaning has a probability of about 0.99 against the noun's best of about 0.007.
+    const { ranker } = setup({ prefer: 'tip laterally' }, { entryMargin: 0.99 })
+    await ready(ranker)
+    const { value } = await after(1, ranker.rank(bank, passage()))
+    expect(value.result.entries.map(entry => entry.partOfSpeech)).toEqual(['noun', 'verb'])
+    expect(value.details).toEqual({ status: 'ordered', positions: [[0, 1], [0]], offered: [2, 1], entryPositions: [0, 1] })
+    await ranker.close()
+  })
+
+  test('equal scores move nothing', async () => {
+    const { ranker } = setup({ prefer: 'no such definition' })
+    await ready(ranker)
+    expect((await after(1, ranker.rank(bank, passage()))).value.result).toEqual(bank)
+    await ranker.close()
+  })
+
+  test('"none of the above", a late answer and a passage that is not scored keep the entries in dictionary order', async () => {
+    const none = setup({ prefer: 'tip laterally', none: 9 }).ranker
+    await ready(none)
+    expect((await after(1, none.rank(bank, passage()))).value).toEqual({ result: bank, details: { status: 'none-fits' } })
+    await none.close()
+
+    const slow = setup({ scoreMs: 300, prefer: 'tip laterally' }, { budgetMs: 80 }).ranker
+    await ready(slow)
+    const late = await after(80, slow.rank(bank, passage()))
+    expect(late.value.result).toBe(bank)
+    expect(late.value.details).toEqual({ status: 'timed-out' })
+    await slow.close()
+
+    const skipped = setup({ prefer: 'tip laterally' }).ranker
+    await ready(skipped)
+    const portuguese = { before: 'Ele depositou o dinheiro no ', text: 'bank', after: ' antes de fechar para o dia.' }
+    expect(await skipped.rank(bank, portuguese)).toEqual({ result: bank, details: { status: 'not-english' } })
+    await skipped.close()
+  })
+
+  test('a lookup with one entry has nothing to move', async () => {
+    const { ranker } = setup({ prefer: 'meaning 2' })
+    await ready(ranker)
+    const { value } = await after(1, ranker.rank(many(3), passage()))
+    expect(value.details).toEqual({ status: 'ordered', positions: [[2, 0, 1]], offered: [3], entryPositions: [0] })
     await ranker.close()
   })
 })

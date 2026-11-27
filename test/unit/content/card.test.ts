@@ -320,10 +320,10 @@ describe('Card: order details', () => {
     const { card } = makeCard()
     card.showResult(result(), anchor)
     expect(statusLine(card)).toBeNull()
-    expect(texts(card, '[data-part="was"], [data-part="unranked"]')).toEqual([])
+    expect(texts(card, '[data-part="was"], [data-part="unranked"], [data-part="entry-was"]')).toEqual([])
     toggle(card).click()
     expect(statusLine(card)).toBeNull()
-    expect(texts(card, '[data-part="was"], [data-part="unranked"]')).toEqual([])
+    expect(texts(card, '[data-part="was"], [data-part="unranked"], [data-part="entry-was"]')).toEqual([])
   })
 
   test('malformed details render the same card as an ordinary lookup', () => {
@@ -335,6 +335,8 @@ describe('Card: order details', () => {
       { status: 'ordered', positions: [[1, 0, 2, 4, 3]], offered: [5, 1] },
       { status: 'ordered', positions: [[1, 1, 2, 4, 3], [0]], offered: [5, 1] },
       { status: 'ordered', positions: [[1, 0, 2, 4, 3], [0]], offered: [6, 1] },
+      { status: 'ordered', positions: [[1, 0, 2, 4, 3], [0]], offered: [5, 1], entryPositions: [0, 0] },
+      { status: 'ordered', positions: [[1, 0, 2, 4, 3], [0]], offered: [5, 1], entryPositions: [1] },
       { status: 'fine' },
       'ordered',
     ]) {
@@ -442,6 +444,37 @@ describe('Card: order details', () => {
     card.showResult(result(), anchor, { status: 'ordered', positions: [[1, 0, 2, 4, 3], [0]], offered: [2, 1] })
     for (const part of ['order-status', 'unranked']) expect(shadow(card).querySelector(`[data-part="${part}"]`)!.textContent).not.toMatch(/[\d%]/)
     for (const tag of texts(card, '[data-part="was"]')) expect(tag).toMatch(/^was \d+(st|nd|rd|th)$/)
+  })
+
+  test('no score appears in the tag of an entry either', () => {
+    const { card } = makeCard()
+    const [noun, verb] = result().entries
+    card.showResult(result({ entries: [verb!, noun!] }), anchor, { status: 'ordered', positions: [[0], [1, 0, 2, 3, 4]], offered: [1, 5], entryPositions: [1, 0] })
+    expect(texts(card, '[data-part="entry-was"]')).toEqual(['was 2nd entry'])
+    for (const tag of texts(card, '[data-part="entry-was"]')) expect(tag).toMatch(/^was \d+(st|nd|rd|th) entry$/)
+  })
+
+  test('an entry moved first carries "was" and its dictionary position among the entries on its heading; the others carry nothing', () => {
+    const { card } = makeCard()
+    const [noun, verb] = result().entries
+    const adj = { lemma: 'mousy', partOfSpeech: 'adj', senses: [{ definition: 'Shy and quiet.', examples: [] }, { definition: 'Of a dull brown colour.', examples: [] }] }
+    // In dictionary order: noun, verb, adjective. The adjective moved first; no meaning moved inside its entry.
+    const details: OrderDetails = { status: 'ordered', positions: [[0, 1], [0, 1, 2, 3, 4], [0]], offered: [2, 5, 1], entryPositions: [2, 0, 1] }
+    card.showResult(result({ entries: [adj, noun!, verb!] }), anchor, details)
+    const heads = [...shadow(card).querySelectorAll('section.dc-entry .dc-head')]
+    expect(heads.map(head => head.querySelector('[data-part="entry-was"]')?.textContent ?? null)).toEqual(['was 3rd entry', null, null])
+    expect([...heads[0]!.children].map(child => child.getAttribute('data-part'))).toEqual(['lemma', 'pos', 'entry-was'])
+    expect(heads[0]!.querySelector('[data-part="entry-was"]')!.className).toBe('dc-was')
+    expect(texts(card, '[data-part="was"]')).toEqual([])
+    expect(statusLine(card)!.textContent).toBe('Ordered by context')
+    toggle(card).click()
+    expect(texts(card, '[data-part="entry-was"]')).toEqual(['was 3rd entry'])
+    // Entry positions that keep every entry in place tag nothing.
+    card.showResult(result(), anchor, { ...moved, entryPositions: [0, 1] })
+    expect(texts(card, '[data-part="entry-was"]')).toEqual([])
+    // With the switch off the controller passes no details: no tag, no status line.
+    card.showResult(result({ entries: [adj, noun!, verb!] }), anchor)
+    expect(texts(card, '[data-part="entry-was"], [data-part="order-status"]')).toEqual([])
   })
 
   test('order annotations use the shared card classes and contain text alone', () => {
