@@ -192,6 +192,15 @@ describe('buildSite', () => {
     }
   })
 
+  test('the README plays the film below the two screenshots: its GitHub attachment address on a line of its own', () => {
+    const lines = fs.readFileSync(new URL('../../../README.md', import.meta.url), 'utf8').split('\n')
+    const film = lines.findIndex(line => /^https:\/\/github\.com\/user-attachments\/assets\/[0-9a-f-]{36}$/.test(line))
+    expect(film).toBeGreaterThan(lines.findIndex(line => line.includes('docs/images/hamlet-moment-context.png')))
+    expect(film).toBeLessThan(lines.indexOf('## Install'))
+    expect(lines[film - 1]).toBe('')
+    expect(lines[film + 1]).toBe('')
+  })
+
   test('the home page says that an update with a new context model asks for that download again', () => {
     const answer = /<summary>How do I update or remove it\?<\/summary><p>([\s\S]*?)<\/p>/.exec(read('index.html'))?.[1] ?? ''
     expect(answer).toContain('Chrome updates it by itself')
