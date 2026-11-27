@@ -9,7 +9,7 @@ import { gunzipSync } from 'node:zlib'
 import { STORED_NAMES, assertManifest, publishedFiles, type AssetManifest } from '../../../src/assets/manifest'
 import { ASSET_MANIFEST } from '../../../src/assets/manifest'
 import {
-  MODEL_EXPORT_PATHS, MODEL_SOURCE, NOTICE_NAMES, ReleaseError, digestFile, downloadHubModel, gunzipDigest, gzipFile, hubFileUrl, hubSource, main,
+  MODEL_EXPORT_PATHS, MODEL_SOURCE, NOTICE_NAMES, ReleaseError, defaultHubCache, digestFile, downloadHubModel, gunzipDigest, gzipFile, hubFileUrl, hubModelDir, hubSource, main,
   parseOptions, pinnedManifest, publishRelease, releaseExists, releaseNotes, releaseTitle, releaseUrl, repoOf, stageRelease, traceRedirects,
   verifyDownload, formatPins,
   type HubSource, type Run, type StagedFile,
@@ -470,6 +470,12 @@ describe('the model from a pinned Hugging Face revision', () => {
     expect(hubSource(MODEL_SOURCE.repo, MODEL_SOURCE.revision)).toEqual({ repo: MODEL_SOURCE.repo, revision: MODEL_SOURCE.revision })
   })
 
+  test('the cache keeps a revision in <cache>/<owner>/<name>/<revision>/, under ~/.cache/contextual-dictionary/hf-models by default', () => {
+    expect(defaultHubCache('/home/maintainer')).toBe('/home/maintainer/.cache/contextual-dictionary/hf-models')
+    expect(hubModelDir('/c', SOURCE)).toBe(`/c/owner/model/${SOURCE.revision}`)
+    expect(hubModelDir(defaultHubCache('/h'), MODEL_SOURCE)).toBe(`/h/.cache/contextual-dictionary/hf-models/andrepaim/Ettin-150m-WSD-wiktionary/${MODEL_SOURCE.revision}`)
+  })
+
   test('hubFileUrl is the resolve URL of a file at the revision', () => {
     expect(hubFileUrl(SOURCE, 'onnx/model.int8.onnx')).toBe(urlOf(SOURCE, 'onnx/model.int8.onnx'))
     expect(Object.values(MODEL_EXPORT_PATHS).sort()).toEqual(Object.keys(CONTENT).sort())
@@ -560,7 +566,7 @@ describe('parseOptions and main', () => {
 
   test('parseOptions has defaults for the maintainer machine and reads overrides', () => {
     expect(parseOptions([], { root: ROOT, home: HOME })).toEqual({
-      dryRun: false, keep: false, out: undefined,
+      dryRun: false, fetchModel: false, keep: false, out: undefined,
       model: undefined,
       hubCache: '/home/maintainer/.cache/contextual-dictionary/hf-models',
       packPath: '/home/maintainer/.cache/contextual-dictionary/packs/wiktionary-en-v1.pack',
@@ -654,6 +660,33 @@ describe('parseOptions and main', () => {
     expect(await main(args, deps(fakeRun().run, other.fetch))).toBe(1)
     expect(log.join('\n')).toMatch(/ERROR [^\n]*do not match[\s\S]*tokenizer\.json/)
     expect(fs.readdirSync(again)).toEqual([])
+  })
+
+  test('--fetch-model downloads and checks the model of the manifest into the cache, and stages, publishes and reads nothing else', async () => {
+    const { setup, log, deps } = await mainSetup()
+    const hub = hubServer(MODEL_SOURCE)
+    const gh = fakeRun()
+    // No pack, notices or statistics file: none is needed to fetch the model.
+    expect(await main(['--fetch-model', `--out=${setup.out}`], { ...deps(gh.run, hub.fetch), manifest: { ...setup.manifest, tag: MODEL_SOURCE.tag } })).toBe(0)
+    const dir = hubModelDir(defaultHubCache(setup.dir), MODEL_SOURCE)
+    expect(hub.urls).toHaveLength(5)
+    for (const [name, data] of Object.entries(CONTENT)) expect(new Uint8Array(await fsp.readFile(path.join(dir, name)))).toEqual(data)
+    expect(gh.calls).toHaveLength(0)
+    expect(fs.readdirSync(setup.out)).toEqual([])
+    expect(log.join('\n')).toContain(dir)
+    expect(log.join('\n')).not.toContain('Staged')
+  })
+
+  test('--fetch-model refuses a local export and a download that differs from the stored pins', async () => {
+    const { setup, log, deps } = await mainSetup()
+    const manifest = { ...setup.manifest, tag: MODEL_SOURCE.tag }
+    expect(await main(['--fetch-model', '--model-dir=/m'], { ...deps(fakeRun().run, hubServer(MODEL_SOURCE).fetch), manifest })).toBe(1)
+    expect(log.join('\n')).toMatch(/ERROR .*--fetch-model/)
+    log.length = 0
+    Object.assign(setup.manifest.bundles.model[2]!, { storedSha256: 'c'.repeat(64) })
+    expect(await main(['--fetch-model'], { ...deps(fakeRun().run, hubServer(MODEL_SOURCE).fetch), manifest })).toBe(1)
+    expect(log.join('\n')).toMatch(/ERROR [\s\S]*calibration\.json/)
+    expect(fs.existsSync(path.join(hubModelDir(defaultHubCache(setup.dir), MODEL_SOURCE), 'calibration.json'))).toBe(false)
   })
 
   test('without a model source, refuses a manifest that has no default one', async () => {
