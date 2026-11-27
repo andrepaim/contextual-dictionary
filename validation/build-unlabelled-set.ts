@@ -1,5 +1,5 @@
 // Unlabelled prompts from Wikipedia paragraphs (training round 1, teacher-only stream; docs/validation.md).
-// Input: paragraphs sampled by validation/training/wiki_paragraphs.py from one English Wikipedia parquet shard.
+// Input: paragraphs sampled by validation/dataset/wiki_paragraphs.py from one English Wikipedia parquet shard.
 // For each paragraph (seeded order of its lower-case word tokens), the first word whose lookup in the real
 // pack gives a prompt (the extension's senseRequest via variantRequest, variants 24|c1600 and 127) and whose
 // lookup result has no held-out lemma (data/wiktionary-items.tsv, data/written-labels.tsv) and no lemma on the

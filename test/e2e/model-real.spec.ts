@@ -11,9 +11,10 @@ import { EXTENSION_DIR, launchExtension } from './helpers'
 // Runs the real Ettin-150m-WSD INT8 checkpoint with the built model worker
 // (dist/model-worker.js and dist/ort/) inside Chromium, on a cross-origin
 // isolated test page so WebAssembly threads work. Opt in with the directory
-// of a local sense-model export:
+// of a model export with the shipped model revision, for example the one
+// `node scripts/publish-assets.mjs --dry-run` downloads from Hugging Face:
 //
-//   CD_TEST_MODEL_DIR=~/src/sense-model/artifacts/upstream-english npm run test:e2e -- model-real
+//   CD_TEST_MODEL_DIR=~/.cache/contextual-dictionary/hf-models/andrepaim/Ettin-150m-WSD-wiktionary/0edcbab04bb30eadeeef6babb26e8055b173b8d7 npm run test:e2e -- model-real
 //
 // CD_TEST_MODEL_BENCH=1 also measures load time and warm latency by number of
 // candidates, with 8, 4 and 1 threads, and prints a table (docs/model-runtime.md).

@@ -69,7 +69,7 @@ wsd teacher --model sign/Ettin-1B-WSD --revision e6fc37a7e11fee91a600a0cd8e7423b
   --input $D/train-labelled.clean.jsonl $D/train-notoffered.clean.jsonl $D/unlabelled.clean.jsonl --output $T/teacher/cache-stage2-T2.jsonl
 # 7. The test prompts the models are scored on: both forms of the three test sets.
 mkdir -p $T/test-scores && for f in '24|c1600' 127; do python3 -I validation/candidate-model/compare.py --list-prompts --set wiktionary,written,simple --variant "$f"; done | sort -u > $T/test-scores/test-hashes.txt
-# 8. The entries' headwords (about 4 minutes), then the dataset (about a minute).
+# 8. The entries' headwords (about 8 minutes), then the dataset (about a minute).
 CD_VALIDATION_OUT=$WORK/tmp npx tsx validation/dataset/entry_lemmas.mts $WORK/lemmas-all.jsonl \
   $D/train-items.jsonl $D/dev-items.jsonl $D/unlabelled-items.jsonl $V/wiktionary-items.jsonl $V/written-items.jsonl
 $PY -I validation/dataset/assemble.py --out $DATASET --lemmas $WORK/lemmas-all.jsonl
@@ -82,7 +82,7 @@ $PY -I validation/dataset/assemble.py --out $DATASET --lemmas $WORK/lemmas-all.j
   published (also in `reports/assembly-checks.json`), with no local path in any file.
 - Compare `$DATASET/manifest.json` with the published one: for an unchanged build, every file under `data/`,
   `teacher/`, `eval/`, `sources/` and `reports/` has the same SHA-256. On 2026-11-27 this folder's scripts, run into a
-  new folder from the round's kept files, gave exactly that
+  new folder from the round's kept files, gave exactly that (and `entry_lemmas.mts` gave the published run's `lemmas-all.jsonl` byte for byte)
   against revision `84b6444`: only `scripts/` and two descriptions in the manifest differ (the paths of this move).
 - The dataset card, `README.md` at the dataset's root, is written by hand and not by `assemble.py`: start from the
   published one, and update its numbers, its links (it still names this repository's `validation/training/`, which

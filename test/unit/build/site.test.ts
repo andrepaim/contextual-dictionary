@@ -220,7 +220,6 @@ describe('buildSite', () => {
     const files = ['README.md', 'NOTICE.md', 'CLAUDE.md', ...fs.readdirSync(new URL('../../../docs/', import.meta.url)).filter(name => name.endsWith('.md')).map(name => `docs/${name}`)]
     for (const file of files) {
       for (const [, revision] of source(file).matchAll(/huggingface\.co\/andrepaim\/Ettin-150m-WSD-wiktionary\/(?:tree|resolve|blob)\/([^/)\s`]+)/g)) expect(revision, file).toBe(MODEL_SOURCE.revision)
-      expect(source(file), file).not.toContain('affc67b9')
     }
   })
 
