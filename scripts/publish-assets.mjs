@@ -3,6 +3,7 @@
 // src/assets/manifest.ts, once. Run from a maintainer machine
 // that holds the inputs, after `npm ci`, with `gh` signed in:
 //
+//   node scripts/publish-assets.mjs --fetch-model # only download and check the model files into the cache
 //   node scripts/publish-assets.mjs --dry-run     # verify, stage, print pins and notes
 //   node scripts/publish-assets.mjs               # the same, then publish and verify
 //

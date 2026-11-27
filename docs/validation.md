@@ -469,10 +469,11 @@ The showcases of the site and the store (`site/_examples.json` and the demonstra
 
 ## How to rerun
 
-All scripts read local inputs (the Kaikki extracts, the pack, the model export; defaults as in `CLAUDE.md`, overridden by `CD_KAIKKI`, `CD_KAIKKI_SIMPLE`, `CD_PACK`, `CD_MODEL_DIR`) and write under `~/.cache/contextual-dictionary/validation/` (`CD_VALIDATION_OUT`). None runs in CI.
+All scripts read local inputs (the Kaikki extracts, the pack, the model export; defaults as in `CLAUDE.md`, overridden by `CD_KAIKKI`, `CD_KAIKKI_SIMPLE`, `CD_PACK`, `CD_MODEL_DIR`) and write under `~/.cache/contextual-dictionary/validation/` (`CD_VALIDATION_OUT`). None runs in CI. The model export is by default the model the build pins, in `~/.cache/contextual-dictionary/hf-models/andrepaim/Ettin-150m-WSD-wiktionary/<revision>/`: fetch it once with `node scripts/publish-assets.mjs --fetch-model` (207 MB, checked against the stored pins). The measurements of `assets-v1` above ran with `CD_MODEL_DIR` at its export (`~/src/sense-model/artifacts/upstream-english`); the evaluation builders give the same prompts with either, whose format, calibration and tokenizer files are the same.
 
 ```bash
 npm ci && npm run build
+node scripts/publish-assets.mjs --fetch-model         # once: the pinned model, the default CD_MODEL_DIR
 npx tsx validation/build-wiktionary-set.ts            # 40 s; regenerates validation/data/wiktionary-items.tsv (git diff should be empty)
 npx tsx validation/build-written-set.ts               # --list prints each sentence's meanings for labelling
 npx tsx validation/build-simple-set.ts                # 30 s; reads CD_KAIKKI_SIMPLE too; regenerates validation/data/simple-items.tsv (git diff should be empty)

@@ -34,9 +34,10 @@ committed here before their paths became parameters; `assemble.py` now copies bo
   3.12 environment that imports it (its `wsd.tokenizer` needs PyTorch) with `pyarrow`, for example sense-model's
   locked environment or the one of its `docs/wiktionary-round1-requirements.txt`. `check_leaks.py` and
   `split_overlap.py` need only the standard library.
-- `prepare_examples.py` reads the answer letters from `model_metadata.json` of `CD_MODEL_DIR` (default
-  `~/src/sense-model/artifacts/upstream-english`, as `validation/common.ts`; any export of the shipped contract has
-  the same letters, for example the download that `node scripts/publish-assets.mjs --dry-run` makes).
+- The builders and `prepare_examples.py` read the answer letters, the format and the tokenizer from the model export
+  at `CD_MODEL_DIR`, by default the model the build pins, which `node scripts/publish-assets.mjs --fetch-model`
+  downloads into `~/.cache/contextual-dictionary/hf-models/andrepaim/Ettin-150m-WSD-wiktionary/<revision>/` (the
+  round used `assets-v1`'s export, whose format, calibration and tokenizer files are the same).
 - A CUDA GPU for the teacher's soft labels (step 6), and Node.js with `npm ci` here.
 
 ## Rebuild

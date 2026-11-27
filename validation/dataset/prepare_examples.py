@@ -10,9 +10,10 @@ Identical prompts of one item (both variants the same) appear once.
   python -I validation/dataset/prepare_examples.py --items train-items.jsonl --prompts train-prompts.jsonl --out train-labelled.jsonl [--unlabelled-out FILE] [--kind labelled|unlabelled]
 
 Imports sense-model's wsd package from the checkout at $SENSE_MODEL_DIR (default ~/src/sense-model), and reads the
-answer letters from model_metadata.json of the model export at $CD_MODEL_DIR (default
-~/src/sense-model/artifacts/upstream-english, as validation/common.ts; any export of the compact-v1 contract has the
-same letters).
+answer letters from model_metadata.json of the model export at $CD_MODEL_DIR (default: the model the build pins, in
+~/.cache/contextual-dictionary/hf-models/andrepaim/Ettin-150m-WSD-wiktionary/<revision>/, as validation/common.ts;
+`node scripts/publish-assets.mjs --fetch-model` downloads it. Any export of the compact-v1 contract has the same
+letters).
 """
 import argparse
 import json
@@ -26,7 +27,10 @@ sys.path.insert(0, str(SENSE_MODEL / "src"))
 from wsd.schema import Candidate, Example, Target  # noqa: E402
 from wsd.tokenizer import format_prompt  # noqa: E402
 
-MODEL_DIR = Path(os.environ.get("CD_MODEL_DIR") or Path.home() / "src/sense-model/artifacts/upstream-english").expanduser()
+PINNED = Path.home() / ".cache/contextual-dictionary/hf-models/andrepaim/Ettin-150m-WSD-wiktionary/0edcbab04bb30eadeeef6babb26e8055b173b8d7"  # MODEL_SOURCE
+MODEL_DIR = Path(os.environ.get("CD_MODEL_DIR") or PINNED).expanduser()
+if not (MODEL_DIR / "model_metadata.json").exists():
+    sys.exit(f"No model export at {MODEL_DIR}: fetch the pinned model with `node scripts/publish-assets.mjs --fetch-model`, or set CD_MODEL_DIR")
 META = json.loads((MODEL_DIR / "model_metadata.json").read_text())
 
 

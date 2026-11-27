@@ -225,6 +225,12 @@ export function hubSource(repo: string, revision: string): HubSource {
   return { repo, revision }
 }
 
+/** Where the release script keeps Hugging Face downloads unless told otherwise. */
+export const defaultHubCache = (home: string) => path.join(home, '.cache/contextual-dictionary/hf-models')
+
+/** The folder of `source` in `cacheDir`: `<cacheDir>/<owner>/<name>/<revision>`, in the layout of a model export. */
+export const hubModelDir = (cacheDir: string, source: HubSource) => path.join(cacheDir, ...source.repo.split('/'), source.revision)
+
 export const hubFileUrl = (source: HubSource, relative: string) => `https://huggingface.co/${source.repo}/resolve/${source.revision}/${relative}`
 
 /** The model source of `manifest` when none is given: MODEL_SOURCE for its tag, or a refusal. */
@@ -294,7 +300,7 @@ export async function downloadHubModel(fetch: Fetch, manifest: AssetManifest, so
     else wanted.push({ relative, expected: { size: file.storedSize, sha256: file.storedSha256 } })
   }
   if (problems.length) throw new ReleaseError('Cannot take the model from Hugging Face', problems)
-  const dir = path.join(cacheDir, ...source.repo.split('/'), source.revision)
+  const dir = hubModelDir(cacheDir, source)
   log(`Model files of ${source.repo} at revision ${source.revision}, into ${dir}:`)
   for (const { relative, expected } of wanted) {
     const target = path.join(dir, relative)
@@ -543,6 +549,8 @@ export async function publishRelease(options: PublishOptions): Promise<DownloadC
 
 export interface Options {
   dryRun: boolean
+  /** Only download and check the model files into the cache; stage and publish nothing. */
+  fetchModel: boolean
   keep: boolean
   out: string | undefined
   /** A local model export, a Hugging Face revision, or undefined for the default source of the manifest. */
@@ -563,6 +571,7 @@ export function parseOptions(argv: string[], where: { root: string; home: string
     allowPositionals: false,
     options: {
       'dry-run': { type: 'boolean', default: false },
+      'fetch-model': { type: 'boolean', default: false },
       keep: { type: 'boolean', default: false },
       out: { type: 'string' },
       'model-dir': { type: 'string' },
@@ -586,13 +595,15 @@ export function parseOptions(argv: string[], where: { root: string; home: string
   if (repo === undefined && revision !== undefined) throw new ReleaseError('--hf-revision needs --hf-repo')
   if (repo !== undefined && revision === undefined) throw new ReleaseError('--hf-repo needs --hf-revision (a full commit hash)')
   if (repo !== undefined && values['model-dir'] !== undefined) throw new ReleaseError('Give either --model-dir or --hf-repo with --hf-revision, not both')
+  if (values['fetch-model'] && values['model-dir'] !== undefined) throw new ReleaseError('--fetch-model downloads from Hugging Face; it does not take --model-dir')
   const model = values['model-dir'] !== undefined ? { dir: values['model-dir'] } : repo !== undefined ? hubSource(repo, revision!) : undefined
   return {
     dryRun: values['dry-run'] ?? false,
+    fetchModel: values['fetch-model'] ?? false,
     keep: values.keep ?? false,
     out: values.out,
     model,
-    hubCache: values['hf-cache'] ?? path.join(where.home, '.cache/contextual-dictionary/hf-models'),
+    hubCache: values['hf-cache'] ?? defaultHubCache(where.home),
     packPath: values.pack ?? path.join(where.home, '.cache/contextual-dictionary/packs/wiktionary-en-v1.pack'),
     packSha256: sha256,
     packSize: size,
@@ -623,6 +634,11 @@ export async function main(argv: string[], deps: MainDeps): Promise<number> {
     const options = parseOptions(argv, deps)
     const title = releaseTitle(deps.manifest.tag)
     const model = options.model ?? defaultModelSource(deps.manifest)
+    if (options.fetchModel && !('dir' in model)) {
+      const dir = await downloadHubModel(deps.fetch, deps.manifest, model, options.hubCache, deps.log)
+      deps.log(`The model files of ${deps.manifest.tag} are in ${dir}; nothing was staged.`)
+      return 0
+    }
     const stats = JSON.parse(await fsp.readFile(options.statsFile, 'utf8')) as { snapshot: string; pack: { bytes: number; sha256: string } }
     const pack = { size: options.packSize ?? stats.pack.bytes, sha256: options.packSha256 ?? stats.pack.sha256 }
     if (options.out) outDir = options.out

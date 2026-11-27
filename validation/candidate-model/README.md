@@ -33,7 +33,7 @@ the run folder (default `~/.cache/contextual-dictionary/validation/candidate-mod
   `build-written-set.ts`, `build-simple-set.ts`), and `threads-subset.txt` there.
 - Two model exports in the layout of the release's model files (`onnx/model.int8.onnx`, `model_metadata.json`,
   `calibration.json`, `tokenizer.json`, `tokenizer_config.json`):
-  - the shipped model: `node scripts/publish-assets.mjs --dry-run` downloads it from its pinned Hugging Face revision
+  - the shipped model: `node scripts/publish-assets.mjs --fetch-model` downloads it from its pinned Hugging Face revision
     into `~/.cache/contextual-dictionary/hf-models/andrepaim/Ettin-150m-WSD-wiktionary/<revision>/`
     (`MODEL_SOURCE` in `scripts/assets-release.ts`);
   - the candidate: the output folder of sense-model's `wsd export --quantize`, or a download of its Hugging Face
