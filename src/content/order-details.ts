@@ -26,6 +26,7 @@ export function ordinal(n: number): string {
 /** The card's status line for usable details. */
 export function orderStatusText(details: OrderDetails): string {
   const moved = details.positions?.some(entry => entry.some((position, place) => position !== place))
+    || details.entryPositions?.some((position, place) => position !== place)
   return details.status === 'ordered' && !moved ? `${ORDER_STATUS_TEXT.ordered} · same as dictionary order` : ORDER_STATUS_TEXT[details.status]
 }
 
@@ -46,16 +47,18 @@ function isPermutation(value: unknown, length: number): value is number[] {
 /**
  * `details` as the card may show them, or undefined when they are missing or
  * do not match `result`: an unknown status, or with "ordered" positions that
- * are not a permutation of each entry's meanings or counts out of range.
+ * are not a permutation of each entry's meanings, counts out of range, or
+ * entry positions (optional) that are not a permutation of the entries.
  * Positions and counts are kept only with "ordered".
  */
 export function usableDetails(result: DictionaryResult, details: unknown): OrderDetails | undefined {
   if (!isRecord(details) || !ORDER_STATUSES.includes(details.status as OrderStatus)) return undefined
   const status = details.status as OrderStatus
   if (status !== 'ordered') return { status }
-  const { positions, offered } = details
+  const { positions, offered, entryPositions } = details
   const entries = result.entries
   if (!Array.isArray(positions) || !Array.isArray(offered) || positions.length !== entries.length || offered.length !== entries.length) return undefined
   if (!entries.every((entry, e) => isPermutation(positions[e], entry.senses.length) && isCount(offered[e], entry.senses.length))) return undefined
-  return { status, positions: positions as number[][], offered: offered as number[] }
+  if (entryPositions !== undefined && !isPermutation(entryPositions, entries.length)) return undefined
+  return { status, positions: positions as number[][], offered: offered as number[], ...(entryPositions === undefined ? {} : { entryPositions }) }
 }

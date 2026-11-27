@@ -403,7 +403,7 @@ describe('OffscreenHost: order details', () => {
     await fixture.host.handle({ type: 'settings' }, settings({ orderByContext: true }))
     await fixture.host.idle()
     const { order } = await define(fixture, 'r1', { orderByContext: true })
-    const values = JSON.stringify(order).match(/"[^"]*"/g)!.filter(text => !['"status"', '"positions"', '"offered"'].includes(text))
+    const values = JSON.stringify(order).match(/"[^"]*"/g)!.filter(text => !['"status"', '"positions"', '"offered"', '"entryPositions"'].includes(text))
     expect(values).toEqual(['"ordered"'])
   })
 })

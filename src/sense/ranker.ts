@@ -26,6 +26,8 @@ export interface SenseRankerOptions {
   maxCandidates?: number
   /** The longest prompt, in characters; fewer meanings are offered to stay within it. */
   maxPromptChars?: number
+  /** How much higher, in probability, the best meaning must be than the first entry's best for its entry to move first. */
+  entryMargin?: number
   /** The pause before a failed model is loaded again. */
   retryMs?: number
   /** Loading (including `createWorker`) taking longer than this fails with LOAD_TIMEOUT. */
@@ -45,6 +47,12 @@ export const RANKER_DEFAULTS = {
   // or 4 threads (docs/validation.md). Below 2,048 characters the worker can
   // never refuse a prompt as over its 2,048-token limit.
   ...SENSE_PROMPT_DEFAULTS,
+  // The entry holding the best meaning moves first when that meaning's
+  // probability beats the first entry's best by at least this much. Chosen on
+  // training round 1's development set, which cut the cards made worse by
+  // about half at no cost in cards gained (docs/validation.md, "The best
+  // entry first").
+  entryMargin: 0.25,
   retryMs: 60_000,
   loadTimeoutMs: 120_000,
   runTimeoutMs: 10_000,
@@ -86,6 +94,7 @@ export class SenseRanker implements Ranker {
   private budgetMs: number
   private maxCandidates: number
   private readonly maxPromptChars: number
+  private readonly entryMargin: number
   private readonly retryMs: number
   private readonly loadTimeoutMs: number
   private readonly runTimeoutMs: number
@@ -96,6 +105,7 @@ export class SenseRanker implements Ranker {
     this.budgetMs = options.budgetMs ?? RANKER_DEFAULTS.budgetMs
     this.maxCandidates = options.maxCandidates ?? RANKER_DEFAULTS.maxCandidates
     this.maxPromptChars = options.maxPromptChars ?? RANKER_DEFAULTS.maxPromptChars
+    this.entryMargin = options.entryMargin ?? RANKER_DEFAULTS.entryMargin
     this.retryMs = options.retryMs ?? RANKER_DEFAULTS.retryMs
     this.loadTimeoutMs = options.loadTimeoutMs ?? RANKER_DEFAULTS.loadTimeoutMs
     this.runTimeoutMs = options.runTimeoutMs ?? RANKER_DEFAULTS.runTimeoutMs
@@ -133,7 +143,9 @@ export class SenseRanker implements Ranker {
   }
 
   /**
-   * `result` with the meanings of each entry in contextual order, or `result`
+   * `result` with the meanings of each entry in contextual order and the
+   * entry holding the best meaning first when it beats the first entry by
+   * `entryMargin`, or `result`
    * itself whenever the model is not ready, the input is unsupported, the
    * model rejects every meaning, the budget runs out, `signal` aborts or
    * anything goes wrong; with details saying which (docs/order-details-plan.md).
@@ -162,10 +174,10 @@ export class SenseRanker implements Ranker {
         if (typeof scored === 'string') return unchanged(result, scored)
         logits = scored
       }
-      const outcome = contextualOrder(result, request, logits, format)
+      const outcome = contextualOrder(result, request, logits, format, { bestEntryFirst: true, entryMargin: this.entryMargin })
       if (!outcome.applied) return unchanged(result, outcome.reason === 'NONE_FITS' ? 'none-fits' : 'unavailable')
       this.stats.applied++
-      return { result: outcome.result, details: { status: 'ordered', positions: outcome.positions, offered: outcome.offered } }
+      return { result: outcome.result, details: { status: 'ordered', positions: outcome.positions, offered: outcome.offered, entryPositions: outcome.entryPositions } }
     } catch {
       return unchanged(result, 'unavailable')
     }
