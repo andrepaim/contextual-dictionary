@@ -263,6 +263,8 @@ describe('buildSite', () => {
       expect(text, name).toContain('href="https://github.com/andrepaim/contextual-dictionary"')
       expect(text, name).toContain('href="https://github.com/andrepaim/contextual-dictionary/releases/latest"')
       expect(text, name).toContain('SHA256SUMS.txt')
+      expect(text, name).toContain('release workflow built from that source')
+      expect(text, name).not.toContain('uploaded to the store')
       expect(text, name).not.toMatch(/turn (it |Safe Browsing |Enhanced protection )?off|switch (it |Safe Browsing |Enhanced protection )?off/i)
     }
     expect(fs.readFileSync(new URL('../../../README.md', import.meta.url), 'utf8')).toContain('docs/user-guide.md#install')
