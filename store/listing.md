@@ -124,3 +124,7 @@ Free, public, all regions.
 - A content script on all sites usually means a longer, in-depth review.
 - If a reviewer asks about the downloads: they are data files from this repository's release `assets-v2`, described in `docs/assets.md` and `docs/privacy.md`.
 - Each upload needs a higher version than the last; the release workflow enforces that the tag equals the version.
+
+## Enhanced Safe Browsing warning
+
+People who have Enhanced protection on in Chrome see a dialog headed "Proceed with caution" that says "This extension is not trusted by Enhanced Safe Browsing." when they install the extension ([issue #38](https://github.com/andrepaim/contextual-dictionary/issues/38)). Google trusts an extension when its developer follows the Developer Program Policies, and a new developer generally takes a few months ([Google's help page](https://support.google.com/chrome_webstore/answer/2664769)), so this status is a matter of the developer account's age and conduct. Nothing in the listing or the package changes it, and Google gives no date. To check it, install from the store in a Chrome profile with **Settings > Privacy and security > Security > Enhanced protection** selected: while the account is not trusted the dialog above appears, and once it is trusted Chrome asks only to **Add extension**. The guide and the home page explain the warning to readers.
