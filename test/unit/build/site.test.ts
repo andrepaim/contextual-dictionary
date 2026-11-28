@@ -251,6 +251,25 @@ describe('buildSite', () => {
     expect(answer).not.toContain('your downloads and settings are kept')
   })
 
+  test('the home page and the guide explain the warning Chrome shows with Enhanced protection, and what can be checked', () => {
+    const answer = /<summary>Why does Chrome say “Proceed with caution”\?<\/summary><p>([\s\S]*?)<\/p>/.exec(read('index.html'))?.[1] ?? ''
+    const install = /<h2 id="install">Install<\/h2>([\s\S]*?)<h2/.exec(read('guide.html'))?.[1] ?? ''
+    for (const [name, text] of [['index.html', answer], ['guide.html', install]] as const) {
+      expect(text, name).toContain('This extension is not trusted by Enhanced Safe Browsing.')
+      expect(text, name).toContain('Enhanced protection')
+      expect(text, name).toContain('Continue to install')
+      expect(text, name).toContain('href="https://support.google.com/chrome_webstore/answer/2664769"')
+      expect(text, name).toContain('href="privacy.html"')
+      expect(text, name).toContain('href="https://github.com/andrepaim/contextual-dictionary"')
+      expect(text, name).toContain('href="https://github.com/andrepaim/contextual-dictionary/releases/latest"')
+      expect(text, name).toContain('SHA256SUMS.txt')
+      expect(text, name).toContain('release workflow built from that source')
+      expect(text, name).not.toContain('uploaded to the store')
+      expect(text, name).not.toMatch(/turn (it |Safe Browsing |Enhanced protection )?off|switch (it |Safe Browsing |Enhanced protection )?off/i)
+    }
+    expect(fs.readFileSync(new URL('../../../README.md', import.meta.url), 'utf8')).toContain('docs/user-guide.md#install')
+  })
+
   test('the pages run no scripts and load nothing from other sites', () => {
     for (const name of PAGES) {
       const page = read(name)
